@@ -114,4 +114,40 @@ describe("DataWorkspaceController", () => {
     expect(state.datasets[0].status).toBe("review");
     expect(state.results[0]?.summary).toContain("review");
   });
+
+  it("keeps a multi-dataset consultation bundle and returns a consultation response", () => {
+    const controller = new DataWorkspaceController(
+      new StubDatasetRepository([
+        {
+          id: "dataset-1",
+          name: "Doc Sync Coverage",
+          category: "document",
+          recordCount: 12,
+          status: "ready",
+          updatedAt: "2026-03-14T08:30:00Z"
+        },
+        {
+          id: "dataset-2",
+          name: "Correction Result Summary",
+          category: "result",
+          recordCount: 5,
+          status: "draft",
+          updatedAt: "2026-03-14T09:30:00Z"
+        }
+      ])
+    );
+
+    const selected = controller.toggleDatasetSelection("dataset-1", {
+      selectedDatasetIds: ["dataset-2"]
+    });
+    const consulted = controller.consultDatasets({
+      ...selected.consultation,
+      focusPrompt: "anomaly を確認したい"
+    });
+
+    expect(selected.consultation.selectedDatasetIds).toEqual(["dataset-2", "dataset-1"]);
+    expect(consulted.selectedDatasets).toHaveLength(2);
+    expect(consulted.consultation.lastResponse?.summary).toContain("2 件");
+    expect(consulted.consultation.lastResponse?.nextAction).toContain("anomaly");
+  });
 });

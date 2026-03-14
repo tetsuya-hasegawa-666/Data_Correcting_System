@@ -82,6 +82,27 @@ describe("DashboardController", () => {
     expect(container.textContent).toContain("phase-gated-read-only");
   });
 
+  it("runs data consultation from the selected bundle", () => {
+    const container = document.createElement("div");
+    const controller = createController(container);
+
+    controller.start();
+    (container.querySelector("[data-workspace-id='data']") as HTMLButtonElement).click();
+    const focusInput = container.querySelector(
+      "[data-role='data-consultation-focus-input']"
+    ) as HTMLTextAreaElement;
+    focusInput.value = "anomaly を確認したい";
+    focusInput.dispatchEvent(new Event("input", { bubbles: true }));
+    (
+      container.querySelector("[data-role='data-consultation-form']") as HTMLFormElement
+    ).dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+    expect(container.querySelector("[data-role='data-bundle-count']")?.textContent).toContain("1");
+    expect(container.querySelector("[data-role='data-consultation-response']")?.textContent).toContain(
+      "Summary"
+    );
+  });
+
   it("runs document consultation from the selected bundle", () => {
     const container = document.createElement("div");
     const controller = createController(container);

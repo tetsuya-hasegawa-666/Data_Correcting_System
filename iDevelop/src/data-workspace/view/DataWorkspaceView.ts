@@ -7,7 +7,13 @@ export class DataWorkspaceView {
     const maxRecordCount = Math.max(...state.summary.byStatus.map((item) => item.recordCount), 1);
 
     const rowsMarkup = state.datasets
-      .map((dataset) => this.renderDatasetRow(dataset, state.isReadOnly))
+      .map((dataset) =>
+        this.renderDatasetRow(
+          dataset,
+          state.isReadOnly,
+          state.selectedDatasets.some((selected) => selected.id === dataset.id)
+        )
+      )
       .join("");
 
     const resultMarkup = state.results
@@ -65,13 +71,50 @@ export class DataWorkspaceView {
           <p class="eyebrow">更新結果</p>
           <ul class="result-list">${resultMarkup || "<li>まだ更新結果はありません。</li>"}</ul>
         </section>
+        <section class="status-chart">
+          <p class="eyebrow">Data Consultation</p>
+          <p data-role="data-bundle-count">選択 ${state.selectedDatasets.length} 件</p>
+          <ul data-role="data-bundle-list" class="result-list">
+            ${state.selectedDatasets
+              .map(
+                (dataset) =>
+                  `<li>${this.escapeHtml(dataset.name)} <span>${this.escapeHtml(dataset.status)}</span></li>`
+              )
+              .join("")}
+          </ul>
+          <form data-role="data-consultation-form">
+            <textarea
+              class="document-editor"
+              data-role="data-consultation-focus-input"
+              name="data-consultation-focus"
+              placeholder="相談したい観点を入力"
+            >${this.escapeHtml(state.consultation.focusPrompt)}</textarea>
+            <button class="document-item is-selected" data-role="run-data-consultation" type="submit">相談する</button>
+          </form>
+          ${
+            state.consultation.lastResponse
+              ? `
+                <div class="document-body" data-role="data-consultation-response">
+                  <p><strong>Summary</strong> ${this.escapeHtml(state.consultation.lastResponse.summary)}</p>
+                  <ul>
+                    ${state.consultation.lastResponse.evidence
+                      .map((evidence) => `<li>${this.escapeHtml(evidence)}</li>`)
+                      .join("")}
+                  </ul>
+                  <p><strong>Next Action</strong> ${this.escapeHtml(state.consultation.lastResponse.nextAction)}</p>
+                </div>
+              `
+              : ""
+          }
+        </section>
       </section>
     `;
   }
 
   private renderDatasetRow(
     dataset: DataWorkspaceState["datasets"][number],
-    isReadOnly: boolean
+    isReadOnly: boolean,
+    isSelected: boolean
   ): string {
     const statusCell = isReadOnly
       ? this.escapeHtml(this.getStatusLabel(dataset.status))
@@ -102,6 +145,16 @@ export class DataWorkspaceView {
         <td>${recordCountCell}</td>
         <td>${this.escapeHtml(dataset.updatedAt)}</td>
         <td>${actionCell}</td>
+        <td>
+          <button
+            class="document-item ${isSelected ? "is-selected" : ""}"
+            data-role="toggle-dataset-bundle"
+            data-dataset-id="${this.escapeHtml(dataset.id)}"
+            type="button"
+          >
+            ${isSelected ? "相談対象から外す" : "相談対象に追加"}
+          </button>
+        </td>
       </tr>
     `;
   }

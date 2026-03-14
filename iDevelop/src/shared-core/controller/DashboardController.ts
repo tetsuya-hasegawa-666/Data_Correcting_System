@@ -4,6 +4,7 @@ import { CodeWorkspaceView } from "../../code-workspace/view/CodeWorkspaceView";
 import { DataWorkspaceController } from "../../data-workspace/controller/DataWorkspaceController";
 import type { DatasetRepository } from "../../data-workspace/model/DatasetRepository";
 import { DataWorkspaceView } from "../../data-workspace/view/DataWorkspaceView";
+import type { DataConsultationState } from "../../data-workspace/controller/DataWorkspaceController";
 import type {
   DocumentConsultationState,
   DocumentEditorState
@@ -46,6 +47,7 @@ export class DashboardController {
   private selectedDocumentId?: string;
   private editorState?: Partial<DocumentEditorState>;
   private documentConsultationState?: Partial<DocumentConsultationState>;
+  private dataConsultationState?: Partial<DataConsultationState>;
   private errorMessage: string | null = null;
   private readonly statusState: DashboardStatusState;
 
@@ -102,6 +104,15 @@ export class DashboardController {
           this.documentConsultationState
         );
         this.documentConsultationState = state.consultation;
+        return;
+      }
+
+      if (target instanceof HTMLTextAreaElement && target.name === "data-consultation-focus") {
+        const state = this.dataController.updateConsultationFocus(
+          target.value,
+          this.dataConsultationState
+        );
+        this.dataConsultationState = state.consultation;
       }
     });
 
@@ -214,6 +225,19 @@ export class DashboardController {
         return;
       }
 
+      const toggleDatasetButton = target.closest<HTMLElement>("[data-role='toggle-dataset-bundle']");
+      if (toggleDatasetButton?.dataset.datasetId) {
+        const state = this.dataController.toggleDatasetSelection(
+          toggleDatasetButton.dataset.datasetId,
+          this.dataConsultationState
+        );
+        this.dataConsultationState = state.consultation;
+        this.workspaceId = "data";
+        this.errorMessage = null;
+        this.render();
+        return;
+      }
+
       if (
         this.workspaceId === "document" &&
         this.editorState?.isEditing &&
@@ -255,6 +279,17 @@ export class DashboardController {
         this.selectedDocumentId = state.selectedDocument?.id;
         this.editorState = state.editor;
         this.documentConsultationState = state.consultation;
+        this.errorMessage = null;
+        this.render();
+        return;
+      }
+
+      if (form.dataset.role === "data-consultation-form") {
+        event.preventDefault();
+
+        const state = this.dataController.consultDatasets(this.dataConsultationState);
+        this.dataConsultationState = state.consultation;
+        this.workspaceId = "data";
         this.errorMessage = null;
         this.render();
         return;
@@ -417,7 +452,11 @@ export class DashboardController {
         break;
       }
       case "data":
-        new DataWorkspaceView(content).render(this.dataController.createState());
+        {
+          const state = this.dataController.createState(this.dataConsultationState);
+          this.dataConsultationState = state.consultation;
+          new DataWorkspaceView(content).render(state);
+        }
         break;
       case "code":
         new CodeWorkspaceView(content).render(this.codeController.createState());
@@ -463,7 +502,7 @@ export class DashboardController {
         return createConsultationSession({
           workspaceId: "data",
           sourcePolicy: state.sourcePolicy,
-          bundle: this.createDataBundle(state.datasets)
+          bundle: this.createDataBundle(state.selectedDatasets)
         });
       }
       case "code": {
@@ -480,17 +519,12 @@ export class DashboardController {
   private createDataBundle(
     datasets: Array<{ id: string; name: string; category: string }>
   ): ConsultationBundleItem[] {
-    const primary = datasets[0];
-    return primary
-      ? [
-          {
-            id: primary.id,
-            kind: "dataset",
-            label: primary.id,
-            path: `${primary.category}/${primary.name}`
-          }
-        ]
-      : [];
+    return datasets.map((dataset) => ({
+      id: dataset.id,
+      kind: "dataset",
+      label: dataset.id,
+      path: `${dataset.category}/${dataset.name}`
+    }));
   }
 
   private createCodeBundle(
