@@ -36,3 +36,7 @@ Proceed in this order:
 
 - `mRL-5-1`: integration recommendation
 
+## Do-Not-Start Rule
+
+- do not start with full multi-sensor optimization, long outdoor runs, or direct upstream integration
+- start with controllable shared-camera bootstrap and proof of contract compatibility

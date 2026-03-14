@@ -24,3 +24,6 @@
 
 - integrate replacement or abandon `ARCore`
 
+## Governance Constraint
+
+- release-line planning, documentation updates, and UX validation must remain at the same granularity and precision level as `iSensorium`
