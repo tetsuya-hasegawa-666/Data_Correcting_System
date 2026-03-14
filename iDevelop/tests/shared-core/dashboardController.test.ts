@@ -20,6 +20,13 @@ function createController(
         path: "docs/artifact/north_star.md",
         body: "Original body.",
         tags: ["artifact"]
+      },
+      {
+        id: "doc-2",
+        title: "Research Operation",
+        path: "docs/process/research_operation.md",
+        body: "BDD and TDD operating rules.",
+        tags: ["process"]
       }
     ]),
     new StaticDatasetRepository([
@@ -73,6 +80,31 @@ describe("DashboardController", () => {
     expect(container.textContent).toContain("コード");
     expect(container.textContent).toContain("読み取り専用の確認対象");
     expect(container.textContent).toContain("phase-gated-read-only");
+  });
+
+  it("runs document consultation from the selected bundle", () => {
+    const container = document.createElement("div");
+    const controller = createController(container);
+
+    controller.start();
+
+    (container.querySelector("[data-role='toggle-document-bundle'][data-document-id='doc-2']") as HTMLButtonElement).click();
+    const focusInput = container.querySelector(
+      "[data-role='consultation-focus-input']"
+    ) as HTMLTextAreaElement;
+    focusInput.value = "BDD の根拠を確認したい";
+    focusInput.dispatchEvent(new Event("input", { bubbles: true }));
+    (
+      container.querySelector("[data-role='document-consultation-form']") as HTMLFormElement
+    ).dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+    expect(container.querySelector("[data-role='document-bundle-count']")?.textContent).toContain(
+      "2"
+    );
+    expect(
+      container.querySelector("[data-role='document-consultation-response']")?.textContent
+    ).toContain("2 件の文書");
+    expect(container.textContent).toContain("BDD の根拠を確認したい");
   });
 
   it("cancels editing when cancel is clicked", () => {

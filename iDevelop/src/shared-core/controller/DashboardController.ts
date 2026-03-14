@@ -4,7 +4,10 @@ import { CodeWorkspaceView } from "../../code-workspace/view/CodeWorkspaceView";
 import { DataWorkspaceController } from "../../data-workspace/controller/DataWorkspaceController";
 import type { DatasetRepository } from "../../data-workspace/model/DatasetRepository";
 import { DataWorkspaceView } from "../../data-workspace/view/DataWorkspaceView";
-import type { DocumentEditorState } from "../../document-workspace/controller/DocumentWorkspaceController";
+import type {
+  DocumentConsultationState,
+  DocumentEditorState
+} from "../../document-workspace/controller/DocumentWorkspaceController";
 import { DocumentWorkspaceController } from "../../document-workspace/controller/DocumentWorkspaceController";
 import type { DocumentRepository } from "../../document-workspace/model/DocumentRepository";
 import { DocumentWorkspaceView } from "../../document-workspace/view/DocumentWorkspaceView";
@@ -42,6 +45,7 @@ export class DashboardController {
   private query = "";
   private selectedDocumentId?: string;
   private editorState?: Partial<DocumentEditorState>;
+  private documentConsultationState?: Partial<DocumentConsultationState>;
   private errorMessage: string | null = null;
   private readonly statusState: DashboardStatusState;
 
@@ -86,6 +90,18 @@ export class DashboardController {
           }),
           draftBody: target.value
         };
+        return;
+      }
+
+      if (target instanceof HTMLTextAreaElement && target.name === "consultation-focus") {
+        const state = this.documentController.updateConsultationFocus(
+          this.query,
+          target.value,
+          this.selectedDocumentId,
+          this.editorState,
+          this.documentConsultationState
+        );
+        this.documentConsultationState = state.consultation;
       }
     });
 
@@ -112,9 +128,14 @@ export class DashboardController {
 
       const editButton = target.closest<HTMLElement>("[data-role='edit-document']");
       if (editButton?.dataset.documentId) {
-        const state = this.documentController.startEditing(this.query, editButton.dataset.documentId);
+        const state = this.documentController.startEditing(
+          this.query,
+          editButton.dataset.documentId,
+          this.documentConsultationState
+        );
         this.selectedDocumentId = state.selectedDocument?.id;
         this.editorState = state.editor;
+        this.documentConsultationState = state.consultation;
         this.errorMessage = null;
         this.render();
         return;
@@ -122,9 +143,14 @@ export class DashboardController {
 
       const cancelButton = target.closest<HTMLElement>("[data-role='cancel-document']");
       if (cancelButton?.dataset.documentId) {
-        const state = this.documentController.cancelEditing(this.query, cancelButton.dataset.documentId);
+        const state = this.documentController.cancelEditing(
+          this.query,
+          cancelButton.dataset.documentId,
+          this.documentConsultationState
+        );
         this.selectedDocumentId = state.selectedDocument?.id;
         this.editorState = state.editor;
+        this.documentConsultationState = state.consultation;
         this.errorMessage = null;
         this.render();
         return;
@@ -160,10 +186,29 @@ export class DashboardController {
         const state = this.documentController.createState(
           this.query,
           documentItem.dataset.documentId,
-          this.editorState
+          this.editorState,
+          this.documentConsultationState
         );
         this.selectedDocumentId = state.selectedDocument?.id;
         this.editorState = state.editor;
+        this.documentConsultationState = state.consultation;
+        this.errorMessage = null;
+        this.render();
+        return;
+      }
+
+      const toggleBundleButton = target.closest<HTMLElement>("[data-role='toggle-document-bundle']");
+      if (toggleBundleButton?.dataset.documentId) {
+        const state = this.documentController.toggleBundleSelection(
+          this.query,
+          toggleBundleButton.dataset.documentId,
+          this.selectedDocumentId,
+          this.editorState,
+          this.documentConsultationState
+        );
+        this.selectedDocumentId = state.selectedDocument?.id;
+        this.editorState = state.editor;
+        this.documentConsultationState = state.consultation;
         this.errorMessage = null;
         this.render();
         return;
@@ -177,9 +222,14 @@ export class DashboardController {
         const documentId = this.selectedDocumentId;
 
         if (documentId) {
-          const state = this.documentController.cancelEditing(this.query, documentId);
+          const state = this.documentController.cancelEditing(
+            this.query,
+            documentId,
+            this.documentConsultationState
+          );
           this.selectedDocumentId = state.selectedDocument?.id;
           this.editorState = state.editor;
+          this.documentConsultationState = state.consultation;
           this.errorMessage = null;
           this.render();
         }
@@ -189,7 +239,28 @@ export class DashboardController {
     this.rootElement.addEventListener("submit", (event) => {
       const form = event.target;
 
-      if (!(form instanceof HTMLFormElement) || form.dataset.role !== "document-edit-form") {
+      if (!(form instanceof HTMLFormElement)) {
+        return;
+      }
+
+      if (form.dataset.role === "document-consultation-form") {
+        event.preventDefault();
+
+        const state = this.documentController.consultDocuments(
+          this.query,
+          this.selectedDocumentId,
+          this.editorState,
+          this.documentConsultationState
+        );
+        this.selectedDocumentId = state.selectedDocument?.id;
+        this.editorState = state.editor;
+        this.documentConsultationState = state.consultation;
+        this.errorMessage = null;
+        this.render();
+        return;
+      }
+
+      if (form.dataset.role !== "document-edit-form") {
         return;
       }
 
@@ -205,10 +276,12 @@ export class DashboardController {
         const state = this.documentController.saveDocument(
           this.query,
           this.selectedDocumentId,
-          draftBody
+          draftBody,
+          this.documentConsultationState
         );
         this.selectedDocumentId = state.selectedDocument?.id;
         this.editorState = state.editor;
+        this.documentConsultationState = state.consultation;
         this.errorMessage = null;
       } catch (error) {
         this.errorMessage = error instanceof Error ? error.message : "保存に失敗しました。";
@@ -334,10 +407,12 @@ export class DashboardController {
         const state = this.documentController.createState(
           this.query,
           this.selectedDocumentId,
-          this.editorState
+          this.editorState,
+          this.documentConsultationState
         );
         this.selectedDocumentId = state.selectedDocument?.id;
         this.editorState = state.editor;
+        this.documentConsultationState = state.consultation;
         new DocumentWorkspaceView(content).render(state);
         break;
       }
@@ -369,21 +444,18 @@ export class DashboardController {
         const state = this.documentController.createState(
           this.query,
           this.selectedDocumentId,
-          this.editorState
+          this.editorState,
+          this.documentConsultationState
         );
         return createConsultationSession({
           workspaceId: "document",
           sourcePolicy: state.sourcePolicy,
-          bundle: state.selectedDocument
-            ? [
-                {
-                  id: state.selectedDocument.id,
-                  kind: "document",
-                  label: state.selectedDocument.title,
-                  path: state.selectedDocument.path
-                }
-              ]
-            : []
+          bundle: state.selectedBundle.map((document) => ({
+            id: document.id,
+            kind: "document",
+            label: document.title,
+            path: document.path
+          }))
         });
       }
       case "data": {
