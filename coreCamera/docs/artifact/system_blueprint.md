@@ -32,8 +32,10 @@
 - `ArCorePoseSampler` は offscreen GL context を維持し、outer adapter boundary を変えずに `Session.update()` から実際の `arcore_pose.jsonl` sample を出力する
 - `SessionContinuityAnalyzer` は凍結済み `ARCore ON/OFF` baselines に対して camera-gap continuity を評価し、monotonic timestamp continuity を検証し、`swapReadiness` または blocker を直接 `session_manifest.json` に記録する
 - `IntegrationRecommendationPlanner` は target-device evidence と recorder finalization 状態から guarded upstream trial 可否を決め、`integrationRecommendation` を manifest に記録する
+- `SessionSensorCollectors` は `imu.csv`、`gnss.csv`、`ble_scan.jsonl` を replacement stack 内で実出力する
+- `UpstreamTrialPackagePlanner` は required artifacts、permissions、rollback rule を `upstreamTrialPackage` として manifest に記録する
 - `SharedCameraSessionController` は intentional stop と runtime failure を分離し、停止時 disconnect を error として上書きしない
-- start/stop lifecycle、continuity-analysis logic、integration recommendation は unit test と debug assembly により build 時に検証され、target hardware evidence は Xperia 5 III 実機 session `session-20260315-043204` で確認済み
+- start/stop lifecycle、continuity-analysis logic、integration recommendation、upstream trial package は unit test と debug assembly により build 時に検証され、target hardware evidence は Xperia 5 III 実機 session `session-20260315-044922` で確認済み
 
 ## Replacement Boundary
 
@@ -65,4 +67,15 @@
 - target hardware: Xperia 5 III (`SO-53B`)
 - confirmed evidence session: `session-20260315-043204`
 - decision output: `integrationRecommendation.status = RECOMMEND_GUARDED_UPSTREAM_TRIAL`
-- guardrail: `shared-camera-session-adapter` を維持し、full sensor integration、長時間試験、上流統合にはまだ進まない
+- guardrail: `shared-camera-session-adapter` を維持し、長時間試験だけは後段へ送る
+
+## Implemented MRL-6 Full Sensor Integration
+
+- confirmed evidence session: `session-20260315-044637`
+- emitted sensor outputs: `imu.csv`, `gnss.csv`, `ble_scan.jsonl`
+
+## Implemented MRL-7 Upstream Trial Package
+
+- confirmed evidence session: `session-20260315-044922`
+- package output: `upstreamTrialPackage.status = READY`
+- package contents: required artifacts, required runtime permissions, preserved operations, rollback rule

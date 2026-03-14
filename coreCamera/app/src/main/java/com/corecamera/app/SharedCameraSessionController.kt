@@ -42,6 +42,7 @@ class SharedCameraSessionController(
     private val statusListener: (SharedCameraUiState) -> Unit,
 ) : DefaultLifecycleObserver, SharedCameraSessionAdapter {
     private val artifactStore = SessionArtifactStore(context)
+    private val sensorCollectors = SessionSensorCollectors(context, artifactStore, ::updateCollectorStatus)
     private val lifecycleMachine = SharedCameraLifecycleMachine()
     private val cameraThread = HandlerThread("shared-camera-thread").apply { start() }
     private val cameraHandler = Handler(cameraThread.looper)
@@ -52,25 +53,29 @@ class SharedCameraSessionController(
     private var cameraDevice: CameraDevice? = null
     private var captureSession: CameraCaptureSession? = null
     private var previewSurface: Surface? = null
-    private var videoRecorder: SessionVideoRecorder? = null
+    private var videoRecorder: CpuImageVideoRecorder? = null
     private var poseSampler: ArCorePoseSampler? = null
     private var hostResumed = false
     private var sharedCameraResumed = false
+    private var closingRuntime = false
     private var collectorStatus: MutableMap<String, String> = mutableMapOf(
         "camera2" to "idle",
         "sharedCamera" to "idle",
         "arcore" to "idle",
         "video" to "idle",
         "pose" to "idle",
+        "imu" to "idle",
+        "gnss" to "idle",
+        "ble" to "idle",
     )
 
     init {
         lifecycleOwner.lifecycle.addObserver(this)
         bindPreviewListener()
         emitStatus(
-            statusText = "MRL-2 implementation loaded. Ready for contract-compatible shared-camera output validation.",
-            currentMicroRelease = "mRL-2-3",
-            nextMicroRelease = "mRL-3-1",
+            statusText = "MRL-7 implementation loaded. Ready to validate the guarded upstream trial package around the adapter seam.",
+            currentMicroRelease = "mRL-7-1",
+            nextMicroRelease = "hold",
             blocker = null,
         )
     }
@@ -93,7 +98,7 @@ class SharedCameraSessionController(
 
     override fun startSession() {
         if (!previewTextureView.isAvailable) {
-            emitStatus("Preview surface is not ready yet.", "mRL-2-1", "mRL-2-2", "TextureView not available")
+            emitStatus("Preview surface is not ready yet.", "mRL-7-1", "hold", "TextureView not available")
             return
         }
         if (lifecycleMachine.state == SharedCameraLifecycleState.RUNNING || lifecycleMachine.state == SharedCameraLifecycleState.STARTING) {
@@ -107,15 +112,19 @@ class SharedCameraSessionController(
             "arcore" to "starting",
             "video" to "starting",
             "pose" to "starting",
+            "imu" to "starting",
+            "gnss" to "starting",
+            "ble" to "starting",
         )
         currentSession = artifactStore.createSession()
         currentSession?.let {
             artifactStore.appendLifecycleEvent(it, "start_requested", mapOf("adapterSeamId" to ReplacementCameraContract.adapterSeamId))
         }
+        currentSession?.let(sensorCollectors::start)
         emitStatus(
-            "Starting contract-compatible Camera2 + Shared Camera recording.",
-            "mRL-2-1",
-            "mRL-2-2",
+            "Starting shared-camera session with integration-recommendation evidence enabled.",
+            "mRL-7-1",
+            "hold",
             null,
         )
         initializeSharedCamera()
@@ -141,11 +150,17 @@ class SharedCameraSessionController(
                 ) + runtimeMetadata + artifactStore.collectOutputMetrics(it),
             )
         }
+        val analysis = session?.let(artifactStore::evaluateSession)
+        val blocker = analysis?.blockers?.firstOrNull()
         emitStatus(
-            "mRL-2 complete. Contract-compatible shared-camera artifacts captured; ready for continuity validation.",
-            "mRL-3-1",
-            "mRL-3-2",
-            null,
+            statusText = if (analysis?.swapReadinessStatus == "READY") {
+                "MRL-7 complete. Guarded upstream trial package is ready at the adapter seam."
+            } else {
+                "MRL-7 remains blocked: ${blocker ?: "upstream trial package evidence pending"}."
+            },
+            currentMicroRelease = "mRL-7-1",
+            nextMicroRelease = "hold",
+            blocker = blocker,
         )
     }
 
@@ -165,14 +180,14 @@ class SharedCameraSessionController(
     private fun bindPreviewListener() {
         if (previewTextureView.isAvailable) {
             lifecycleMachine.markPreviewReady()
-            emitStatus("Preview ready. Start mRL-2 contract-output capture when needed.", "mRL-2-1", "mRL-2-2", null)
+            emitStatus("Preview ready. Start an MRL-7 upstream-trial-package capture when needed.", "mRL-7-1", "hold", null)
             return
         }
 
         previewTextureView.surfaceTextureListener = object : TextureView.SurfaceTextureListener {
             override fun onSurfaceTextureAvailable(surface: SurfaceTexture, width: Int, height: Int) {
                 lifecycleMachine.markPreviewReady()
-                emitStatus("Preview ready. Start mRL-2 contract-output capture when needed.", "mRL-2-1", "mRL-2-2", null)
+                emitStatus("Preview ready. Start an MRL-7 upstream-trial-package capture when needed.", "mRL-7-1", "hold", null)
             }
 
             override fun onSurfaceTextureSizeChanged(surface: SurfaceTexture, width: Int, height: Int) = Unit
@@ -240,15 +255,19 @@ class SharedCameraSessionController(
                 }
 
                 override fun onDisconnected(device: CameraDevice) {
-                    collectorStatus["camera2"] = "camera_disconnected"
+                    collectorStatus["camera2"] = if (closingRuntime) "camera_disconnected_during_stop" else "camera_disconnected"
                     device.close()
-                    failSession("Camera disconnected during shared-camera bootstrap.", null)
+                    if (!closingRuntime) {
+                        failSession("Camera disconnected during shared-camera bootstrap.", null)
+                    }
                 }
 
                 override fun onError(device: CameraDevice, error: Int) {
-                    collectorStatus["camera2"] = "camera_error_$error"
+                    collectorStatus["camera2"] = if (closingRuntime) "camera_error_${error}_during_stop" else "camera_error_$error"
                     device.close()
-                    failSession("Camera open failed with error $error.", null)
+                    if (!closingRuntime) {
+                        failSession("Camera open failed with error $error.", null)
+                    }
                 }
             },
             cameraHandler,
@@ -272,11 +291,10 @@ class SharedCameraSessionController(
         val recorderSurface = checkNotNull(videoRecorder?.surface) { "Video recorder surface missing." }
         session.sharedCamera.setAppSurfaces(
             collectorStatus["cameraId"] ?: resolveBackCameraId(session),
-            listOf(previewSurface!!, recorderSurface),
+            listOf(recorderSurface),
         )
         val targets = buildList {
             addAll(session.sharedCamera.arCoreSurfaces)
-            add(previewSurface!!)
             add(recorderSurface)
         }
         val request = device.createCaptureRequest(CameraDevice.TEMPLATE_RECORD).apply {
@@ -324,9 +342,9 @@ class SharedCameraSessionController(
                         ),
                     )
                     emitStatus(
-                        "mRL-2 running. Shared camera is emitting contract-compatible video and timestamps.",
-                        "mRL-2-3",
-                        "mRL-3-1",
+                        "mRL-7 running. Shared camera is emitting upstream-trial-package evidence and adapter metadata.",
+                        "mRL-7-1",
+                        "hold",
                         null,
                     )
                 }
@@ -388,6 +406,8 @@ class SharedCameraSessionController(
     }
 
     private fun closeRuntime(): Map<String, Any> {
+        closingRuntime = true
+        sensorCollectors.stop()
         pauseArSession()
         if (collectorStatus["pose"] == "paused") {
             collectorStatus["pose"] = "stopped"
@@ -401,9 +421,12 @@ class SharedCameraSessionController(
         cameraDevice = null
         runCatching { arSession?.close() }
         arSession = null
-        collectorStatus["camera2"] = "closed"
+        if (!collectorStatus["camera2"].orEmpty().contains("during_stop")) {
+            collectorStatus["camera2"] = "closed"
+        }
         collectorStatus["sharedCamera"] = "closed"
         collectorStatus["arcore"] = "closed"
+        closingRuntime = false
         return mapOf("videoBytes" to videoBytes)
     }
 
@@ -428,41 +451,40 @@ class SharedCameraSessionController(
         }
         closeRuntime()
         lifecycleMachine.markPreviewReady()
-        emitStatus(message, "mRL-2-1", "mRL-2-2", message)
+        emitStatus(message, "mRL-7-1", "hold", message)
     }
 
     private fun prepareOutputRuntime(artifacts: SessionArtifacts, cameraId: String) {
         val recordingSize = selectRecordingSize(cameraId)
         videoRecorder?.release()
-        videoRecorder = SessionVideoRecorder(artifacts.videoFile, recordingSize).also { recorder ->
+        videoRecorder = CpuImageVideoRecorder(artifacts.videoFile, recordingSize, cameraHandler).also { recorder ->
             recorder.prepare()
         }
         collectorStatus["video"] = "prepared"
     }
 
     private fun selectRecordingSize(cameraId: String): Size {
-        val streamMap = cameraManager.getCameraCharacteristics(cameraId)
-            .get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-            ?: error("No stream configuration map for camera $cameraId")
-        val supportedSizes = streamMap.getOutputSizes(android.media.MediaRecorder::class.java)
-            ?.sortedByDescending { it.width * it.height }
-            .orEmpty()
-        return supportedSizes.firstOrNull { it.width == 1280 && it.height == 720 }
-            ?: supportedSizes.firstOrNull { it.width <= 1920 && it.height <= 1080 }
-            ?: supportedSizes.firstOrNull()
-            ?: Size(1280, 720)
+        return Size(640, 480)
     }
 
     private fun stopVideoRecorder(): Long {
         val recorder = videoRecorder ?: return currentSession?.videoFile?.length() ?: 0L
         val videoBytes = runCatching { recorder.stopAndRelease() }
-            .onSuccess {
-                collectorStatus["video"] = if (it > 0L) "captured" else "empty_output"
-            }
-            .onFailure {
-                collectorStatus["video"] = "stop_failed_${it.javaClass.simpleName}"
-            }
-            .getOrDefault(currentSession?.videoFile?.length() ?: 0L)
+            .fold(
+                onSuccess = {
+                    collectorStatus["video"] = if (it > 0L) "captured" else "empty_output"
+                    it
+                },
+                onFailure = {
+                    val fallbackBytes = currentSession?.videoFile?.length() ?: 0L
+                    collectorStatus["video"] = if (fallbackBytes > 0L) {
+                        "captured_with_finalize_warning"
+                    } else {
+                        "stop_failed_${it.javaClass.simpleName}"
+                    }
+                    fallbackBytes
+                },
+            )
         videoRecorder = null
         return videoBytes
     }
@@ -473,15 +495,29 @@ class SharedCameraSessionController(
         nextMicroRelease: String,
         blocker: String?,
     ) {
-        statusListener(
-            SharedCameraUiState(
-                lifecycleState = lifecycleMachine.state,
-                statusText = statusText,
-                currentSession = currentSession,
-                currentMicroRelease = currentMicroRelease,
-                nextMicroRelease = nextMicroRelease,
-                blocker = blocker,
-            ),
+        val state = SharedCameraUiState(
+            lifecycleState = lifecycleMachine.state,
+            statusText = statusText,
+            currentSession = currentSession,
+            currentMicroRelease = currentMicroRelease,
+            nextMicroRelease = nextMicroRelease,
+            blocker = blocker,
         )
+        if (Thread.currentThread() === context.mainLooper.thread) {
+            statusListener(state)
+        } else {
+            previewTextureView.post { statusListener(state) }
+        }
+    }
+
+    private fun updateCollectorStatus(collector: String, status: String) {
+        collectorStatus[collector] = status
+        currentSession?.let { artifacts ->
+            artifactStore.appendLifecycleEvent(
+                artifacts,
+                "collector_status_changed",
+                mapOf("collector" to collector, "status" to status),
+            )
+        }
     }
 }

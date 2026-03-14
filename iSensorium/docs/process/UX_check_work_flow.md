@@ -1,5 +1,27 @@
 # UX Check Work Flow
 
+> [!IMPORTANT]
+> **Rollback Notice: 次の upstream trial で `iSensorium/` を編集する前に rollback anchor を固定済み**
+> 理由: `coreCamera` 側で guarded upstream trial に必要な package まで揃い、次セッションでは `iSensorium/` 実装変更の可能性があるためです。現在の `iSensorium/` implementation-only snapshot は `rollback-isensorium-pre-upstream-trial-2026-03-15-001` に固定しました。実装相当は約 `4.54 MiB` で、`app/build/` や `.gradle/` を含めると約 `82.33 MiB` まで増えるため、rollback 基準は生成物ではなく tag を使います。
+>
+> **Rollback 指示方法**
+>
+> ```powershell
+> cd C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium
+> git fetch origin --tags
+> git switch <戻したいブランチ名>
+> git reset --hard rollback-isensorium-pre-upstream-trial-2026-03-15-001
+> git clean -fd
+> ```
+>
+> **remote 側も戻す必要がある場合**
+>
+> ```powershell
+> git push --force-with-lease origin <戻したいブランチ名>
+> ```
+>
+> anchor commit: `c5656973ee190e2bb1e99d3cd806f813d4b7ce7a`
+
 ## Purpose
 
 この手順は、Windows 初心者でも `iSensorium` の recording session を自分で体験し、結果を見て UX 観点で評価できるようにするためのワークフローです。

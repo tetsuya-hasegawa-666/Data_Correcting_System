@@ -72,6 +72,15 @@
 - affected_documents: `coreCamera/app/`, `coreCamera/docs/index.md`, `coreCamera/docs/artifact/project_contract.md`, `coreCamera/docs/artifact/system_blueprint.md`, `coreCamera/docs/artifact/story_release_map.md`, `coreCamera/docs/artifact/adapter_integration_plan.md`, `coreCamera/docs/observability/current_state.md`, `coreCamera/develop/index.md`, `coreCamera/SESSION_HANDOVER.md`, `coreCamera/USER_PREPARATION.md`
 - expected_effect: 後続 session は `mRL-5-1` の再実施なしで、isolated のまま guarded upstream trial 前提の次判断へ進める
 
+## 2026-03-15-005 mrl6-mrl7-sensor-and-trial-package
+
+- target_behavior: replacement stack を camera-only 証跡から full sensor outputs と upstream trial package まで引き上げる
+- intended_change: `imu.csv`、`gnss.csv`、`ble_scan.jsonl` の実出力と `upstreamTrialPackage` manifest section を code-backed に固定する
+- background_reason: `MRL-5` 完了後も non-camera streams が placeholder のままだと、guarded upstream trial を package 単位で引き渡せなかった
+- change_summary: sensor collectors と runtime permissions を追加し、Xperia 5 III 実機 session `session-20260315-044637` と `session-20260315-044922` で `MRL-6` / `MRL-7` を確認し、paired docs/develop history を更新した
+- affected_documents: `coreCamera/app/`, `coreCamera/app/src/main/AndroidManifest.xml`, `coreCamera/docs/index.md`, `coreCamera/docs/artifact/project_contract.md`, `coreCamera/docs/artifact/story_release_map.md`, `coreCamera/docs/artifact/system_blueprint.md`, `coreCamera/docs/artifact/adapter_integration_plan.md`, `coreCamera/docs/observability/current_state.md`, `coreCamera/develop/index.md`, `coreCamera/SESSION_HANDOVER.md`, `coreCamera/USER_PREPARATION.md`
+- expected_effect: 後続 session は `coreCamera/` 内では実装をほぼ閉じた状態で、workspace boundary 許可が出れば上流 trial へ接続できる
+
 ## 2026-03-15-005 continuation-window-alignment
 
 - target_behavior: active な market release line の途中で 15 分前後に止まりにくくする
@@ -80,3 +89,11 @@
 - change_summary: `docs/index.md`、`research_operation.md`、`current_state.md`、`develop/index.md`、`SESSION_HANDOVER.md` に continuation window rule を追加し、paired history を更新した
 - affected_documents: `coreCamera/docs/index.md`, `coreCamera/docs/process/research_operation.md`, `coreCamera/docs/observability/current_state.md`, `coreCamera/develop/index.md`, `coreCamera/SESSION_HANDOVER.md`
 - expected_effect: active な MRL がある間は、user block または 6 時間上限に達するまで同一 session で exit criteria 到達まで進めやすくなる
+## 2026-03-15-006 rollback-anchor-notice-for-upstream-trial
+
+- target_behavior: guarded upstream trial 開始前に `iSensorium/` rollback 基準を迷わず実行できる
+- intended_change: UX check 冒頭へ rollback notice を追加し、develop 側からも current state / handover 経由で anchor を辿れるようにする
+- background_reason: 次セッションで `iSensorium/` を編集可能にするには、rollback 手順が chat ではなく文書に固定されている必要がある
+- change_summary: `coreCamera/docs/process/UX_check_work_flow.md`、`coreCamera/docs/observability/current_state.md`、`coreCamera/SESSION_HANDOVER.md` に rollback anchor `rollback-isensorium-pre-upstream-trial-2026-03-15-001` を反映した
+- affected_documents: `coreCamera/docs/process/UX_check_work_flow.md`, `coreCamera/docs/observability/current_state.md`, `coreCamera/SESSION_HANDOVER.md`, `coreCamera/docs/history/docs/summary/summary.md`, `coreCamera/develop/history/summary/summary.md`
+- expected_effect: 次セッションの upstream trial 準備で rollback 起点と操作方法を即座に参照できる

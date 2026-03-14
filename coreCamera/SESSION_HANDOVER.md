@@ -8,6 +8,9 @@
 - release line、docs history、UX check の運用粒度は `iSensorium` と同等に保つ
 - `shared-camera-session-adapter` を現時点で唯一の swap seam として維持する
 - 上流実装の変更前に、isolated adapter 内で `MRL-5` を完了させる
+- 長時間試験は発熱や熱制限を含む長時間連続動作の耐久確認として後段へ送る
+- それを除き、`coreCamera/` 内では full sensor integration と上流 trial 準備を進めてよい
+- `MRL-7` まで完了したので、次の実上流 trial には `iSensorium/` 側変更許可が必要
 
 ## Verified Facts To Carry Forward
 
@@ -21,6 +24,7 @@
 - isolated `session_manifest.json` は、凍結 baseline との continuity 比較、timestamp contract 検証、`swapReadiness` または blocker を記録する
 - isolated `session_manifest.json` は、保持すべき operation binding と cutover gate を固定する `integrationAdapterPlan` metadata を記録する
 - isolated `session_manifest.json` は、target-device evidence に基づく `integrationRecommendation` を記録する
+- isolated `session_manifest.json` は、guarded upstream trial 条件を `upstreamTrialPackage` として記録する
 
 ## Constraint
 
@@ -33,6 +37,8 @@
 
 - replacement seam は、downstream parser や validation flow を再設計せずに swap できるだけの明確さが必要
 - `MRL-5` は Xperia 5 III 実機 session `session-20260315-043204` により完了し、`RECOMMEND_GUARDED_UPSTREAM_TRIAL` を返している
+- `MRL-6` は Xperia 5 III 実機 session `session-20260315-044637` により完了し、`imu.csv`、`gnss.csv`、`ble_scan.jsonl` を実出力している
+- `MRL-7` は Xperia 5 III 実機 session `session-20260315-044922` により完了し、`upstreamTrialPackage.status = READY` を返している
 
 ## Risks And Assumptions
 
@@ -48,4 +54,9 @@
 3. `coreCamera/USER_PREPARATION.md` を読む
 4. `coreCamera/docs/artifact/project_contract.md` を読む
 5. `coreCamera/develop/index.md` を読む
-6. `coreCamera/develop/plans/2026-03-14-001/` を `MRL-5` 状態から継続する
+6. `coreCamera/develop/plans/2026-03-14-001/` を `MRL-7` 状態から継続する
+## Rollback Reminder
+
+- `iSensorium/` を触る guarded upstream trial に入る前の rollback anchor は `rollback-isensorium-pre-upstream-trial-2026-03-15-001`
+- anchor commit は `c5656973ee190e2bb1e99d3cd806f813d4b7ce7a`
+- rollback 手順は `coreCamera/docs/process/UX_check_work_flow.md` と `iSensorium/docs/process/UX_check_work_flow.md` の先頭ハイライトに集約した

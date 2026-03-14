@@ -4,7 +4,7 @@
 
 ## Position
 
-- project status: integration recommendation まで実装済み
+- project status: full sensor integration と upstream trial package まで実装済み
 - next session の entry point: `coreCamera/develop/index.md`
 - integration target: 将来の `iSensorium` camera 実装の置換
 - current user preparation file: `coreCamera/USER_PREPARATION.md`

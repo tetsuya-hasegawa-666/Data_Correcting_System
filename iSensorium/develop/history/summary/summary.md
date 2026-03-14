@@ -183,3 +183,11 @@
 - change_summary: updated `docs/index.md`, `docs/process/change_protocol.md`, `docs/process/research_operation.md`, `docs/history` snapshot rules, `docs/observability/current_state.md`, `develop/index.md`, and local/workspace agent entry docs to close the continuation gap
 - affected_documents: `AGENTS.md`, `README.md`, `iSensorium/AGENTS.md`, `iSensorium/docs/index.md`, `iSensorium/docs/process/change_protocol.md`, `iSensorium/docs/process/research_operation.md`, `iSensorium/docs/history/README.md`, `iSensorium/docs/history/docs/snapshot/README.md`, `iSensorium/docs/history/docs/summary/summary.md`, `iSensorium/docs/observability/current_state.md`, `iSensorium/develop/index.md`, `iSensorium/develop/history/summary/summary.md`, `iSensorium/scripts/create_history_snapshot.ps1`
 - expected_effect: future sessions keep working until a true blocker or explicit plan exit, and default context loading will no longer recurse into snapshot storage
+## 2026-03-15-002 rollback-anchor-notice-before-upstream-trial
+
+- target_behavior: `iSensorium/` 編集開始前に rollback anchor と実行手順を即座に参照できる
+- intended_change: UX check 冒頭にハイライト付き rollback notice を追加し、develop 側からも current state 経由で anchor を辿れるようにする
+- background_reason: `coreCamera` の upstream trial 準備が `MRL-7` まで進み、次セッションでは `iSensorium/` 変更許可の条件として rollback 可能性の明文化が必要になった
+- change_summary: `iSensorium/docs/process/UX_check_work_flow.md` と `iSensorium/docs/observability/current_state.md` に tag `rollback-isensorium-pre-upstream-trial-2026-03-15-001`、anchor commit、サイズ判断、rollback 手順参照先を反映した
+- affected_documents: `iSensorium/docs/process/UX_check_work_flow.md`, `iSensorium/docs/observability/current_state.md`, `iSensorium/docs/history/docs/summary/summary.md`, `iSensorium/develop/history/summary/summary.md`
+- expected_effect: upstream trial 前に rollback 起点が chat 依存にならず、branch を問わず同じ手順で復帰できる

@@ -36,7 +36,17 @@
 
 - `mRL-5-1`: integration recommendation
 
+## MRL-6
+
+- `mRL-6-1`: `imu.csv` を実出力する
+- `mRL-6-2`: `gnss.csv` を実出力する
+- `mRL-6-3`: `ble_scan.jsonl` を実出力する
+
+## MRL-7
+
+- `mRL-7-1`: 上流 trial 用の integration package を固定する
+
 ## Do-Not-Start Rule
 
-- full multi-sensor optimization、長時間 outdoor run、直接の上流 integration から始めない
+- full multi-sensor optimization と長時間 outdoor run から始めない
 - 制御可能な shared-camera bootstrap と contract compatibility の証明から始める

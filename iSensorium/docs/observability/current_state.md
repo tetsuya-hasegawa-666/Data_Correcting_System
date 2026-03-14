@@ -27,3 +27,9 @@
 - 次の新規実装セッションでは、開始時に `develop/index.md` を読み、active dated plan set と active micro release を明記する。
 - broad search や context gathering は `docs/history/docs/snapshot/**` を除外して行う。
 - 実際の blocker や外部依存がない限り、15 分観測窓では停止せず、最大 6 時間まで継続する。
+## Rollback Anchor
+
+- `coreCamera` からの guarded upstream trial に備えて、`iSensorium/` 実装状態の rollback anchor を Git tag `rollback-isensorium-pre-upstream-trial-2026-03-15-001` として固定した
+- anchor commit: `c5656973ee190e2bb1e99d3cd806f813d4b7ce7a`
+- implementation-only size は約 `4.54 MiB`、`.gradle/` と `app/build/` を含む生成物込みでは約 `82.33 MiB`
+- 実際の rollback 指示方法は `iSensorium/docs/process/UX_check_work_flow.md` と `coreCamera/docs/process/UX_check_work_flow.md` の先頭ハイライトに集約した

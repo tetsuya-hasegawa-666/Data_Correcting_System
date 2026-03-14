@@ -5,7 +5,7 @@
 ## Active Plan Set
 
 - current: `develop/plans/2026-03-14-001/`
-- status: `mRL-5-1` まで進行済み
+- status: `mRL-7-1` まで完了
 - rule: この thread では `iSensorium/` へ統合しない
 - supporting handover files:
   - `coreCamera/docs/observability/current_state.md`
@@ -17,7 +17,7 @@
 - replacement 実装は `coreCamera/` 配下に isolated のまま保つ
 - 現在の `iSensorium` in/out contract を維持する
 - 既に `iSensorium` で使っている release-line の進め方を維持する
-- 現在の完了順: `mRL-0-1 -> mRL-0-2 -> mRL-0-3 -> mRL-1-1 -> mRL-1-2 -> mRL-2-1 -> mRL-2-2 -> mRL-2-3 -> mRL-3-1 -> mRL-3-2 -> mRL-3-3 -> mRL-4-1 -> mRL-4-2 -> mRL-5-1`
+- 現在の完了順: `mRL-0-1 -> mRL-0-2 -> mRL-0-3 -> mRL-1-1 -> mRL-1-2 -> mRL-2-1 -> mRL-2-2 -> mRL-2-3 -> mRL-3-1 -> mRL-3-2 -> mRL-3-3 -> mRL-4-1 -> mRL-4-2 -> mRL-5-1 -> mRL-6-1 -> mRL-6-2 -> mRL-6-3 -> mRL-7-1`
 - active な market release line がある場合、15 分前後で区切らず、user block または 6 時間上限に達するまで同一 session で exit criteria 到達まで継続する
 
 ## Restart Order

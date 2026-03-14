@@ -7,6 +7,7 @@ import android.os.SystemClock
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.Writer
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -83,6 +84,16 @@ class SessionArtifactStore(private val context: Context) {
                 "camera_sensor_timestamp_ns,elapsed_realtime_ns,wall_time_ms,frame_number,session_elapsed_ns\n",
             )
         }
+        if (artifacts.imuFile.length() == 0L) {
+            artifacts.imuFile.writeText(
+                "sensor_type,event_timestamp_ns,elapsed_realtime_ns,wall_time_ms,x,y,z,accuracy,session_elapsed_ns\n",
+            )
+        }
+        if (artifacts.gnssFile.length() == 0L) {
+            artifacts.gnssFile.writeText(
+                "provider,elapsed_realtime_ns,wall_time_ms,latitude,longitude,altitude,accuracy_m,speed_mps,bearing_deg,vertical_accuracy_m,session_elapsed_ns\n",
+            )
+        }
     }
 
     fun writeManifest(
@@ -92,6 +103,11 @@ class SessionArtifactStore(private val context: Context) {
         collectorStatus: Map<String, String>,
         additionalMetadata: Map<String, Any?> = emptyMap(),
     ) {
+        val analysis = SessionContinuityAnalyzer.analyze(artifacts)
+        val analysisJson = SessionContinuityAnalyzer.toJson(analysis)
+        val integrationPlanJson = IntegrationCutoverPlanner.buildManifestSection(analysis)
+        val integrationRecommendation = IntegrationRecommendationPlanner.build(analysis, collectorStatus)
+        val upstreamTrialPackage = UpstreamTrialPackagePlanner.build(artifacts, analysis)
         val manifest = JSONObject()
             .put("sessionId", artifacts.sessionId)
             .put("status", status)
@@ -136,6 +152,12 @@ class SessionArtifactStore(private val context: Context) {
                     }
                 },
             )
+            .put("continuityValidation", analysisJson.getJSONObject("continuityValidation"))
+            .put("timestampContract", analysisJson.getJSONObject("timestampContract"))
+            .put("swapReadiness", analysisJson.getJSONObject("swapReadiness"))
+            .put("integrationAdapterPlan", integrationPlanJson)
+            .put("integrationRecommendation", IntegrationRecommendationPlanner.toJson(integrationRecommendation))
+            .put("upstreamTrialPackage", UpstreamTrialPackagePlanner.toJson(upstreamTrialPackage))
 
         additionalMetadata.forEach { (key, value) ->
             manifest.put(key, value)
@@ -190,10 +212,91 @@ class SessionArtifactStore(private val context: Context) {
         artifacts.arcoreFile.appendText("$payload\n")
     }
 
+    fun appendImuSample(
+        artifacts: SessionArtifacts,
+        sensorType: String,
+        eventTimestampNs: Long,
+        elapsedRealtimeNs: Long,
+        wallTimeMs: Long,
+        x: Float,
+        y: Float,
+        z: Float,
+        accuracy: Int,
+        writer: Writer? = null,
+    ) {
+        val sessionElapsedNs = elapsedRealtimeNs - artifacts.startedElapsedRealtimeNs
+        val line = "$sensorType,$eventTimestampNs,$elapsedRealtimeNs,$wallTimeMs,$x,$y,$z,$accuracy,$sessionElapsedNs\n"
+        if (writer != null) {
+            synchronized(writer) {
+                writer.write(line)
+            }
+        } else {
+            artifacts.imuFile.appendText(line)
+        }
+    }
+
+    fun appendGnssSample(
+        artifacts: SessionArtifacts,
+        provider: String,
+        elapsedRealtimeNs: Long,
+        wallTimeMs: Long,
+        latitude: Double,
+        longitude: Double,
+        altitude: Double,
+        accuracyMeters: Float,
+        speedMetersPerSecond: Float,
+        bearingDegrees: Float,
+        verticalAccuracyMeters: Float?,
+        writer: Writer? = null,
+    ) {
+        val sessionElapsedNs = elapsedRealtimeNs - artifacts.startedElapsedRealtimeNs
+        val line = "$provider,$elapsedRealtimeNs,$wallTimeMs,$latitude,$longitude,$altitude,$accuracyMeters,$speedMetersPerSecond,$bearingDegrees,${verticalAccuracyMeters ?: ""},$sessionElapsedNs\n"
+        if (writer != null) {
+            synchronized(writer) {
+                writer.write(line)
+            }
+        } else {
+            artifacts.gnssFile.appendText(line)
+        }
+    }
+
+    fun appendBleSample(
+        artifacts: SessionArtifacts,
+        elapsedRealtimeNs: Long,
+        wallTimeMs: Long,
+        callbackType: String,
+        address: String?,
+        rssi: Int?,
+        name: String?,
+        manufacturerDataHex: String?,
+        errorCode: Int?,
+        writer: Writer? = null,
+    ) {
+        val payload = JSONObject()
+            .put("elapsedRealtimeNanos", elapsedRealtimeNs)
+            .put("wallTimeMillis", wallTimeMs)
+            .put("sessionElapsedNanos", elapsedRealtimeNs - artifacts.startedElapsedRealtimeNs)
+            .put("callbackType", callbackType)
+            .put("address", address)
+            .put("rssi", rssi)
+            .put("name", name)
+            .put("manufacturerDataHex", manufacturerDataHex)
+            .put("errorCode", errorCode)
+        val line = "$payload\n"
+        if (writer != null) {
+            synchronized(writer) {
+                writer.write(line)
+            }
+        } else {
+            artifacts.bleFile.appendText(line)
+        }
+    }
+
     fun collectOutputMetrics(artifacts: SessionArtifacts): Map<String, Any> = mapOf(
         "videoBytes" to artifacts.videoFile.length(),
         "frameTimestampRows" to countDataLines(artifacts.frameTimestampFile, hasHeader = true),
         "arcorePoseRows" to countDataLines(artifacts.arcoreFile, hasHeader = false),
+        "swapReadinessStatus" to evaluateSession(artifacts).swapReadinessStatus,
     )
 
     fun finalizeSession(
@@ -239,12 +342,15 @@ class SessionArtifactStore(private val context: Context) {
         )
     }
 
+    fun evaluateSession(artifacts: SessionArtifacts): SessionAnalysis = SessionContinuityAnalyzer.analyze(artifacts)
+
     private fun buildStreamEntries(artifacts: SessionArtifacts): List<JSONObject> =
         ReplacementCameraContract.requiredStreamDescriptors.map { descriptor ->
             val file = File(artifacts.sessionDir, descriptor.fileName)
             val dataRows = when (descriptor.fileName) {
                 "video.mp4" -> 0
                 "video_frame_timestamps.csv" -> countDataLines(file, hasHeader = true)
+                "imu.csv", "gnss.csv" -> countDataLines(file, hasHeader = true)
                 else -> countDataLines(file, hasHeader = false)
             }
             JSONObject()
@@ -283,10 +389,16 @@ class SessionArtifactStore(private val context: Context) {
     private fun buildCompatibilityNote(artifacts: SessionArtifacts): String {
         val videoReady = artifacts.videoFile.length() > 0L
         val poseReady = countDataLines(artifacts.arcoreFile, hasHeader = false) > 0
-        return if (videoReady && poseReady) {
-            "MRL-2 preserves the outer session contract and now emits shared-camera video plus ARCore pose outputs from the isolated adapter."
+        val sensorsReady =
+            countDataLines(artifacts.imuFile, hasHeader = true) > 0 &&
+                countDataLines(artifacts.gnssFile, hasHeader = true) > 0 &&
+                countDataLines(artifacts.bleFile, hasHeader = false) > 0
+        return if (videoReady && poseReady && sensorsReady) {
+            "MRL-7 preserves the outer session contract, emits shared-camera and full sensor evidence, and packages the guarded upstream trial boundary from the isolated adapter."
+        } else if (videoReady && poseReady) {
+            "MRL-5 preserves the outer session contract, emits shared-camera evidence, and records continuity plus swap-readiness evaluation from the isolated adapter."
         } else {
-            "MRL-2 preserves the outer session contract while the isolated adapter is still collecting runtime outputs."
+            "MRL-5 preserves the outer session contract while the isolated adapter is still collecting continuity-validation evidence."
         }
     }
 

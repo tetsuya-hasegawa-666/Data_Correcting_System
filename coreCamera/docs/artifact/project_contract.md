@@ -19,6 +19,7 @@
 - monotonic alignment に基づく timestamp contract
 - file-name compatibility を壊さない範囲で、追加の validation/readiness fields を含む parser-compatible manifest
 - target-device evidence に基づく integration recommendation
+- guarded upstream trial 条件を表す package metadata
 - `shared-camera-session-adapter` という名前の adapter seam
 
 ## Frozen Compatibility Boundary

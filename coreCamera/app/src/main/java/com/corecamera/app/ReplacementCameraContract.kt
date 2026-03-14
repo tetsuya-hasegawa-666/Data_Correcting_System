@@ -1,7 +1,7 @@
 package com.corecamera.app
 
 object ReplacementCameraContract {
-    const val marketReleaseLine = "MRL-2"
+    const val marketReleaseLine = "MRL-7"
     const val activePlanSet = "2026-03-14-001"
     const val adapterSeamId = "shared-camera-session-adapter"
 

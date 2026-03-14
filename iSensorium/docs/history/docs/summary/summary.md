@@ -141,3 +141,9 @@
 - trigger: active docs could be misread as `MRL reached = stop`, and recursive snapshot trees were still heavy enough to disrupt broad context gathering
 - resulting_direction: distinguish historical baseline from active execution target, formalize `15 min != stop condition` and `6h max continuous work`, and exclude `docs/history/docs/snapshot/**` from default search and snapshot recursion
 - expected_benefit: future sessions keep running until a real blocker, external dependency, or active plan exit, instead of stopping after a short observation window or a stale completion marker
+## 2026-03-15-002 rollback-anchor-notice-before-upstream-trial
+
+- scope: documentation system
+- trigger: `coreCamera` 側の guarded upstream trial を `iSensorium/` へ広げる前提として、現実装へ確実に戻せる rollback 指示を文書化する必要が出た
+- resulting_direction: `iSensorium/docs/process/UX_check_work_flow.md` 先頭に理由付き rollback notice を追加し、`current_state` に anchor tag とサイズ判断を記録した
+- expected_benefit: 新セッションで `iSensorium/` を編集する前に rollback 基準と手順を source-of-truth から直接参照できる

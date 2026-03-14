@@ -2,6 +2,7 @@ package com.corecamera.app
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -27,8 +28,8 @@ class MainActivity : AppCompatActivity() {
                         lifecycleState = SharedCameraLifecycleState.IDLE,
                         statusText = "Camera permission is required for contract-compatible shared-camera capture.",
                         currentSession = controller.findLatestSession(),
-                        currentMicroRelease = "mRL-2-1",
-                        nextMicroRelease = "mRL-2-2",
+                        currentMicroRelease = "mRL-7-1",
+                        nextMicroRelease = "hold",
                         blocker = "Camera permission missing",
                     ),
                 )
@@ -62,8 +63,8 @@ class MainActivity : AppCompatActivity() {
                     lifecycleState = SharedCameraLifecycleState.PREVIEW_READY,
                     statusText = if (latest == null) "No saved session found yet." else "Latest isolated session reloaded.",
                     currentSession = latest,
-                    currentMicroRelease = "mRL-2-3",
-                    nextMicroRelease = "mRL-3-1",
+                    currentMicroRelease = "mRL-7-1",
+                    nextMicroRelease = "hold",
                     blocker = null,
                 ),
             )
@@ -77,10 +78,10 @@ class MainActivity : AppCompatActivity() {
         renderState(
             SharedCameraUiState(
                 lifecycleState = SharedCameraLifecycleState.IDLE,
-                statusText = "Readiness check: MRL-2 implementation loaded, waiting for contract-compatible capture start.",
+                statusText = "Readiness check: MRL-7 implementation loaded, waiting for upstream-trial-package capture start.",
                 currentSession = controller.findLatestSession(),
-                currentMicroRelease = "mRL-2-3",
-                nextMicroRelease = "mRL-3-1",
+                currentMicroRelease = "mRL-7-1",
+                nextMicroRelease = "hold",
                 blocker = null,
             ),
         )
@@ -112,6 +113,14 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
-        private val requiredPermissions = arrayOf(Manifest.permission.CAMERA)
+        private val requiredPermissions: Array<String>
+            get() = buildList {
+                add(Manifest.permission.CAMERA)
+                add(Manifest.permission.ACCESS_FINE_LOCATION)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    add(Manifest.permission.BLUETOOTH_SCAN)
+                    add(Manifest.permission.BLUETOOTH_CONNECT)
+                }
+            }.toTypedArray()
     }
 }

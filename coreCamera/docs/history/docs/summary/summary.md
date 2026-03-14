@@ -56,9 +56,22 @@
 - resulting_direction: source-of-truth に `MRL-5` 完了、external blocker 解消、`integrationRecommendation = RECOMMEND_GUARDED_UPSTREAM_TRIAL` を固定した
 - expected_benefit: 後続 session は blocker 解消の再確認ではなく、guarded upstream trial をどう扱うかの判断に集中できる
 
+## 2026-03-15-005 mrl6-mrl7-sensor-and-trial-package
+
+- scope: documentation system
+- trigger: Xperia 5 III 実機 session `session-20260315-044637` と `session-20260315-044922` で full sensor integration と upstream trial package が確認できた
+- resulting_direction: source-of-truth に `MRL-6` / `MRL-7` 完了、`upstreamTrialPackage = READY`、および実上流 trial には `iSensorium/` 側変更許可が必要という境界を固定した
+- expected_benefit: 後続 session は sensor placeholder の再実装なしで、workspace boundary を越えるべきかどうかの判断に進める
+
 ## 2026-03-15-005 continuation-window-alignment
 
 - scope: documentation system
 - trigger: 15 分前後で継続作業が止まりやすく、`coreCamera` 側に 6 時間上限まで継続する明示ルールが不足していた
 - resulting_direction: source-of-truth、process、develop entry、handover に continuation window rule を追加し、active な market release line がある限り 15 分任意停止を前提にしないよう揃えた
 - expected_benefit: 次回以降は active な MRL の exit criteria 到達まで同一 session で継続しやすくなり、15 分前後での premature stop を避けやすくなる
+## 2026-03-15-006 rollback-anchor-notice-for-upstream-trial
+
+- scope: documentation system
+- trigger: `iSensorium/` 変更許可の前提として guarded upstream trial 前の rollback 指示を source-of-truth に固定する必要が出た
+- resulting_direction: `coreCamera/docs/process/UX_check_work_flow.md` 先頭に理由付き rollback notice を追加し、`current_state` と handover に anchor tag と参照先を明記した
+- expected_benefit: 次セッションで `iSensorium/` を触る前に rollback 基準と指示方法を即座に参照できる
