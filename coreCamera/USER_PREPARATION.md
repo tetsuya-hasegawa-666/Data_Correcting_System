@@ -2,15 +2,16 @@
 
 ## Current External Blockers
 
-- none
+- 現在、外部 blocker はない
 
 ## Start Preconditions For Later Sessions
 
-- keep development isolated inside `coreCamera/`
-- do not modify `iSensorium/app/` during the isolated build phase
-- keep the current `iSensorium` session in/out contract unchanged
+- 開発は `coreCamera/` 内に隔離したまま進める
+- isolated build phase の間は `iSensorium/app/` を変更しない
+- 現在の `iSensorium` session in/out contract を変えない
+- guarded upstream trial や長時間試験に進むときだけ、追加の target-device 操作を要求する
 
 ## Notes
 
-- this file should only list items that truly require user action or external device access
-- implementation has not started yet, so there is no pending user action at this point
+- この file には、本当に user action や外部 device access が必要な項目だけを書く
+- 進行が実際に block されていない限り、ここへ他の user action を追加しない

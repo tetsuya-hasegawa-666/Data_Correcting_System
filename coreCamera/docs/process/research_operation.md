@@ -12,16 +12,27 @@
 
 ## Scope Rule
 
-Develop the replacement stack only inside `coreCamera/` until later integration is explicitly started.
+後の integration が明示的に始まるまで、replacement stack の開発は `coreCamera/` 内だけで行う。
 
 ## First Implementation Objective
 
-- create a minimal `Camera2 + Shared Camera` skeleton that can start and stop without changing any `iSensorium` code
-- preserve the current outer recording contract so later swap-in can happen through code replacement rather than workflow redesign
+- `iSensorium` の code を変えずに start/stop できる、最小の `Camera2 + Shared Camera` skeleton を作る
+- 後で workflow redesign ではなく code replacement で swap-in できるよう、現在の outer recording contract を維持する
 
 ## Validation Standard
 
-- compare `ARCore OFF` and `ARCore ON` continuity against frozen `iSensorium` evidence
-- preserve the current in/out contract
-- update docs/develop/history with the same discipline level as `iSensorium`
-- keep user-facing evaluation route simple enough for later experience-based testing
+- 凍結済み `iSensorium` evidence と比較して `ARCore OFF` / `ARCore ON` の continuity を評価する
+- 現在の in/out contract を維持する
+- docs/develop/history は `iSensorium` と同じ discipline で更新する
+- 後の experience-based testing に向けて、user-facing evaluation route を十分に単純に保つ
+- `.md` の narrative と operational note は、意味的に別言語が必要でない限り日本語で保つ
+
+## Continuation Window Rule
+
+- active な market release line がある場合、同一 session 内ではその exit criteria を満たすまで micro release を順送りで進める
+- 1 つの micro release が完了しても、同じ market release line 内の次 micro release へ自動で進んでよい
+- 15 分前後で任意停止する運用は取らない
+- 停止条件は次に限定する
+  - user 操作、追加データ、明示承認が必要で進められない
+  - active な market release line の exit criteria を満たした
+  - 継続時間が 6 時間上限に到達した

@@ -1,4 +1,3 @@
 # Docs Snapshot
 
-Snapshot storage for `coreCamera/docs`.
-
+`coreCamera/docs` 用の snapshot 保管場所。

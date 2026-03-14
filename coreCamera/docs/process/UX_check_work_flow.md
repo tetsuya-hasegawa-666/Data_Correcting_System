@@ -2,27 +2,26 @@
 
 ## Purpose
 
-This document defines how the replacement-camera stack will be validated once implementation begins.
+この文書は、implementation 開始後に replacement-camera stack をどのように検証するかを定義する。
 
 ## Evaluation Focus
 
-- recording can start and stop reliably
-- preview continuity remains acceptable during capture
-- `ARCore ON` no longer introduces multi-second camera stalls
-- output artifacts remain contract-compatible with `iSensorium`
+- recording を確実に start/stop できること
+- capture 中も preview continuity が許容範囲にあること
+- `ARCore ON` によって multi-second camera stall が再導入されないこと
+- output artifacts が `iSensorium` と contract-compatible であり続けること
 
 ## First UX Route For Later Sessions
 
-1. build and install the isolated prototype
-2. start one short recording with `ARCore OFF`
-3. start one short recording with `ARCore ON`
-4. compare preview continuity and saved session artifacts
-5. compare continuity metrics against frozen baseline
+1. isolated prototype を build して install する
+2. `ARCore OFF` で短い recording を 1 回開始する
+3. `ARCore ON` で短い recording を 1 回開始する
+4. preview continuity と保存された session artifacts を比較する
+5. continuity metrics を凍結 baseline と比較する
 
 ## Expected Evidence
 
 - session directory path
 - file list
 - continuity metrics
-- explicit judgment: better than frozen baseline or not
-
+- 明示的な判断: 凍結 baseline より良いかどうか

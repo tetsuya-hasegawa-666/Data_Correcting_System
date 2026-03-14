@@ -1,11 +1,11 @@
 # coreCamera
 
-Isolated `Camera2 + ARCore Shared Camera` replacement-camera project for `iSensorium`.
+`iSensorium` 向けの、isolated な `Camera2 + ARCore Shared Camera` 置換カメラ project です。
 
-- This project is intentionally non-interfering with `iSensorium/` and `iDevelop/`.
-- Development starts in a later session.
-- Integration into `iSensorium/` is deferred until the replacement stack proves the current in/out contract.
-- Restart entry order:
+- この project は意図的に `iSensorium/` と `iDevelop/` へ干渉しません。
+- 開発は後続 session で開始します。
+- `iSensorium/` への統合は、置換 stack が現在の in/out contract を証明するまで保留です。
+- 再開時の入口順:
   1. `coreCamera/docs/index.md`
   2. `coreCamera/docs/observability/current_state.md`
   3. `coreCamera/USER_PREPARATION.md`

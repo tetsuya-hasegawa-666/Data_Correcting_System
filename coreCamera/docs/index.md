@@ -1,26 +1,28 @@
 # Documentation Index
 
-`coreCamera/` is a standalone replacement-camera project dedicated to a `Camera2 + ARCore Shared Camera` implementation that can later replace the current `iSensorium` camera spine.
+`coreCamera/` は、後に現在の `iSensorium` camera spine を置き換えるための、`Camera2 + ARCore Shared Camera` 専用 standalone replacement-camera project である。
 
 ## Position
 
-- project status: contract-compatible shared-camera output implemented
-- entry point for next session: `coreCamera/develop/index.md`
-- integration target: future replacement of the current `iSensorium` camera implementation
+- project status: integration recommendation まで実装済み
+- next session の entry point: `coreCamera/develop/index.md`
+- integration target: 将来の `iSensorium` camera 実装の置換
 - current user preparation file: `coreCamera/USER_PREPARATION.md`
 
 ## Boundary Rule
 
-- do not modify `iSensorium/` implementation from this project during the isolated build phase
-- do not modify `iDevelop/` implementation from this project
-- preserve the current `iSensorium` in/out contract so the replacement can be swapped in later
-- keep the isolated adapter seam named `shared-camera-session-adapter` as the only intended swap boundary for now
+- isolated build phase の間、この project から `iSensorium/` 実装を変更しない
+- この project から `iDevelop/` 実装を変更しない
+- 現在の `iSensorium` in/out contract を維持し、後で replacement を差し替え可能にする
+- `shared-camera-session-adapter` という isolated adapter seam を、現時点で唯一の swap boundary として維持する
 
 ## Governance Principle
 
-- update source-of-truth first, then reflect the same decision in `develop/`
-- preserve the release-line planning style already used in `iSensorium`
-- keep UX validation and documentation discipline at the same granularity as `iSensorium`
+- まず source-of-truth を更新し、その後に同じ決定を `develop/` へ反映する
+- `iSensorium` で既に使っている release-line planning の流儀を維持する
+- UX validation と documentation discipline は `iSensorium` と同じ粒度で保つ
+- `.md` は、意味・引用・API 名・技術精度のために別言語が必要な場合を除き、日本語で書く
+- active な market release line がある間は、15 分前後で任意停止せず、user block または 6 時間上限に達するまで同一 session で継続する
 
 ## Source-of-Truth Files
 
@@ -28,6 +30,7 @@
 - `docs/artifact/system_blueprint.md`
 - `docs/artifact/story_release_map.md`
 - `docs/artifact/project_contract.md`
+- `docs/artifact/adapter_integration_plan.md`
 - `docs/process/research_operation.md`
 - `docs/process/change_protocol.md`
 - `docs/process/UX_check_work_flow.md`

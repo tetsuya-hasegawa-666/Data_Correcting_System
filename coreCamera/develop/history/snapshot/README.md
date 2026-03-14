@@ -1,4 +1,3 @@
 # Develop Snapshot
 
-Snapshot storage for `coreCamera/develop`.
-
+`coreCamera/develop` 用の snapshot 保管場所。

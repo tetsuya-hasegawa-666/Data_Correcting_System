@@ -2,41 +2,43 @@
 
 ## Frozen Fact From iSensorium
 
-- `ARCore OFF`: camera timestamp max gap about `139.6 ms`
-- `ARCore ON`: camera timestamp max gap about `2634 ms`
-- `IMU` remained stable in both runs
-- therefore the blocking defect is in the camera path
+- `ARCore OFF`: camera timestamp max gap は約 `139.6 ms`
+- `ARCore ON`: camera timestamp max gap は約 `2634 ms`
+- `IMU` は両 run で安定していた
+- したがって blocking defect は camera path 側にある
 
 ## Target Architecture
 
 - `Camera2`
 - `ARCore Session.Feature.SHARED_CAMERA`
-- adapter boundary that preserves the current `iSensorium` session in/out contract
-- isolated Android app under `coreCamera/app/`
-- controller entrypoint: `SharedCameraSessionController`
+- 現在の `iSensorium` session in/out contract を維持する adapter boundary
+- `coreCamera/app/` 配下の isolated Android app
+- controller の entrypoint: `SharedCameraSessionController`
 - swap seam: `SharedCameraSessionAdapter`
 
 ## Preserved Interface Shape
 
-- start recording
-- stop recording
-- session directory discovery
-- manifest emission
-- per-stream file emission using the current `iSensorium` naming set
+- recording を開始する
+- recording を停止する
+- session directory を発見する
+- manifest を出力する
+- 現在の `iSensorium` naming set に従って各 stream file を出力する
 
-## Implemented MRL-2 Output Path
+## Implemented Validation Path
 
-- `MainActivity` owns an isolated `TextureView` preview and start/stop controls
-- `SharedCameraSessionController` initializes `Session.Feature.SHARED_CAMERA`, opens the back camera with wrapped ARCore callbacks, and creates a controlled `CameraCaptureSession` that includes preview, ARCore, and recording surfaces
-- `SessionVideoRecorder` emits real `video.mp4` output through the shared-camera capture graph while `video_frame_timestamps.csv` is appended from `TotalCaptureResult`
-- `ArCorePoseSampler` maintains an offscreen GL context so `Session.update()` can emit real `arcore_pose.jsonl` samples without changing the outer adapter boundary
-- `SessionArtifactStore` writes a compatibility-preserving `session_manifest.json` whose stream entries now report real output state, sizes, and row counts
-- start/stop lifecycle is still validated at build time by unit tests and debug assembly, while on-device continuity proof remains pending
+- `MainActivity` は isolated な `TextureView` preview と start/stop control を持つ
+- `SharedCameraSessionController` は `Session.Feature.SHARED_CAMERA` を初期化し、ARCore callback を巻いた back camera を開き、ARCore と recording surfaces を含む制御可能な `CameraCaptureSession` を作る
+- `CpuImageVideoRecorder` は shared-camera capture graph に `ImageReader` surface を追加して実際の `video.mp4` を出力し、`video_frame_timestamps.csv` は `TotalCaptureResult` から追記する
+- `ArCorePoseSampler` は offscreen GL context を維持し、outer adapter boundary を変えずに `Session.update()` から実際の `arcore_pose.jsonl` sample を出力する
+- `SessionContinuityAnalyzer` は凍結済み `ARCore ON/OFF` baselines に対して camera-gap continuity を評価し、monotonic timestamp continuity を検証し、`swapReadiness` または blocker を直接 `session_manifest.json` に記録する
+- `IntegrationRecommendationPlanner` は target-device evidence と recorder finalization 状態から guarded upstream trial 可否を決め、`integrationRecommendation` を manifest に記録する
+- `SharedCameraSessionController` は intentional stop と runtime failure を分離し、停止時 disconnect を error として上書きしない
+- start/stop lifecycle、continuity-analysis logic、integration recommendation は unit test と debug assembly により build 時に検証され、target hardware evidence は Xperia 5 III 実機 session `session-20260315-043204` で確認済み
 
 ## Replacement Boundary
 
-- implementation starts in `coreCamera/` only
-- output contract should remain compatible with:
+- 実装開始は `coreCamera/` のみ
+- output contract は次と互換を保つ:
   - `video.mp4`
   - `imu.csv`
   - `gnss.csv`
@@ -48,6 +50,19 @@
 
 ## Integration Rule
 
-- no direct replacement inside `iSensorium/` until continuity validation is complete
-- swap-in must be possible through an adapter seam rather than a full upstream rewrite
-- isolated development may define internal abstractions freely, but the outer contract must stay compatible
+- continuity validation が完了するまで、`iSensorium/` 内で直接置換しない
+- swap-in は全面的な上流 rewrite ではなく adapter seam 経由で可能でなければならない
+- isolated 開発では内部 abstraction を自由に定義してよいが、outer contract は互換を維持する
+
+## Implemented MRL-4 Swap Plan
+
+- `IntegrationCutoverPlanner` は、後で `startSession` / `stopSession` / `findLatestSession` を `SharedCameraSessionAdapter` に結び付ける binding を凍結する
+- 各 session manifest は、seam id、adapter plan version、cutover steps、blocker-aware gate state を含む `integrationAdapterPlan` metadata を持つ
+- project-level の cutover source-of-truth は `docs/artifact/adapter_integration_plan.md` に置く
+
+## Implemented MRL-5 Integration Decision
+
+- target hardware: Xperia 5 III (`SO-53B`)
+- confirmed evidence session: `session-20260315-043204`
+- decision output: `integrationRecommendation.status = RECOMMEND_GUARDED_UPSTREAM_TRIAL`
+- guardrail: `shared-camera-session-adapter` を維持し、full sensor integration、長時間試験、上流統合にはまだ進まない

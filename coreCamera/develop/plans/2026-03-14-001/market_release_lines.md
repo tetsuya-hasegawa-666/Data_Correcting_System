@@ -2,28 +2,28 @@
 
 ## MRL-0: Contract Capture
 
-- inherited contract and failure facts documented
+- 継承した contract と failure facts が文書化されている
 
 ## MRL-1: Shared-Camera Skeleton
 
-- isolated `Camera2 + Shared Camera` stack can initialize and enter a controlled recording lifecycle
+- isolated な `Camera2 + Shared Camera` stack が初期化でき、制御された recording lifecycle に入れる
 
 ## MRL-2: Contract-Compatible Session Output
 
-- replacement stack emits session artifacts compatible with current `iSensorium`
+- replacement stack が現在の `iSensorium` と互換な session artifacts を出力する
 
 ## MRL-3: Continuity Validation
 
-- `ARCore ON` camera-path continuity is materially better than the frozen baseline
+- `ARCore ON` 時の camera-path continuity が凍結 baseline より明確に良い
 
 ## MRL-4: Swap Readiness
 
-- adapter-ready for later integration into `iSensorium`
+- 後の `iSensorium` 統合に向けて adapter-ready である
 
 ## MRL-5: Integration Decision
 
-- integrate replacement or abandon `ARCore`
+- replacement を統合するか `ARCore` を断念するか決める
 
 ## Governance Constraint
 
-- release-line planning, documentation updates, and UX validation must remain at the same granularity and precision level as `iSensorium`
+- release-line planning、documentation update、UX validation は `iSensorium` と同じ粒度と精度で維持しなければならない

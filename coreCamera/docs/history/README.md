@@ -1,4 +1,3 @@
 # Docs History
 
-History root for `coreCamera/docs`.
-
+`coreCamera/docs` 用の history root。
