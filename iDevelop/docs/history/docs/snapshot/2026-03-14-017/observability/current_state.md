@@ -3,9 +3,9 @@
 ## Current Position
 
 - current plan set: `2026-03-14-004`
-- current market release: MRL-6
-- current micro release: mRL-6-1
-- thread purpose: MRL-5 を完了扱いにし、filesystem read line の最初の実装入口へ進む
+- current market release: MRL-2
+- current micro release: mRL-2-1
+- thread purpose: generic project contract を固定し、filesystem read line の最初の実装入口へ進む
 
 ## Completed
 
@@ -17,7 +17,6 @@
 - `npm test` が green
 - `npm run build` が green
 - 次フェーズ用の plan set `2026-03-14-004` を active に切り替えた
-- `2026-03-14-004 / MRL-5` の generic project contract line を完了した
 - generic project contract、recursive read rule、generic setup を source-of-truth に追加した
 
 ## Active Risks
@@ -34,7 +33,7 @@
 
 ## Next Validation Point
 
-- `develop/plans/2026-03-14-004/market_release_lines.md` と `micro_release_lines.md` に沿って `mRL-6-1` の document filesystem repository contract を固める
+- `develop/plans/2026-03-14-004/market_release_lines.md` と `micro_release_lines.md` に沿って `mRL-2-1` の document filesystem repository contract を固める
 
 ## Handoff Note
 
@@ -51,9 +50,9 @@
 
 ### Next Actions
 
-1. `mRL-6-1` の document filesystem repository contract を failing test 前提で整理する
-2. `mRL-6-2` の data filesystem repository contract を同じ naming でそろえる
-3. refresh UX を `mRL-6-3` の検証出口として定義する
+1. `mRL-2-1` の document filesystem repository contract を failing test 前提で整理する
+2. `mRL-2-2` の data filesystem repository contract を同じ naming でそろえる
+3. refresh UX を `mRL-2-3` の検証出口として定義する
 
 ### Risks / Assumptions
 

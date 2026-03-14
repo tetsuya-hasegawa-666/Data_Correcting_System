@@ -51,7 +51,7 @@
 - projectRoot 外の path へ出ない
 - code workspace は read-only を維持し、実行や attach を許可しない
 
-## MRL-5 BDD Story
+## MRL-1 BDD Story
 
 - story summary:
   Codex と人間は、他 project に `iDevelop` を持ち込む前に、同じ manifest と recursive read rule を共有し、path 差異があっても同じ言葉で setup できる。
@@ -66,15 +66,15 @@
 
 ## MRL-1 TDD/Verification Notes
 
-- `mRL-5-1`
+- `mRL-1-1`
   contract doc review で manifest schema を固定する
-- `mRL-5-2`
+- `mRL-1-2`
   BDD/TDD review で recursive read rule を固定する
-- `mRL-5-3`
+- `mRL-1-3`
   `UX_check_work_flow.md` を generic setup へ更新して exit する
 
 ## Current Implementation Status
 
 - dummy dashboard の UX は成立済み
 - 次の実装対象は filesystem repository と refresh policy
-- current target は `2026-03-14-004 / MRL-6 / mRL-6-1` へ進む前提で contract を固定済みとする
+- current target は `2026-03-14-004 / MRL-2 / mRL-2-1` へ進む前提で contract を固定済みとする

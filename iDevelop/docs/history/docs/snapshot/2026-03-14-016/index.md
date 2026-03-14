@@ -32,7 +32,6 @@
 | Layer | File | Purpose | Fixed Content | Changeable Content |
 |---|---|---|---|---|
 | Artifact | `docs/artifact/north_star.md` | 目的、対象範囲、非交渉条件 | Human Goal、採用原則、非交渉条件 | 判断更新 |
-| Artifact | `docs/artifact/project_contract.md` | 他 project へ持ち込む project contract | manifest schema、recursive read rule、安全境界 | path や ignore の具体化 |
 | Artifact | `docs/artifact/system_blueprint.md` | アーキテクチャと責務境界 | 画面責務、MVC 境界、設計方針 | 実装方針、契約詳細 |
 | Process | `docs/process/research_operation.md` | BDD/TDD と開発運用 | 実装サイクル、test 方針、運用ルール | 新ルール、詳細運用 |
 | Process | `docs/process/UX_check_work_flow.md` | 体験確認手順 | 起動方法、確認手順、停止方法 | 現行 UI に合わせた操作更新 |

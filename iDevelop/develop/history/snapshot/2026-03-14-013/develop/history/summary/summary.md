@@ -1,14 +1,5 @@
 # Develop History Summary
 
-## 2026-03-14-014 release-line-renumber-correction
-
-- target_behavior: active plan set の release line 番号が連番規則と一致している
-- intended_change: `2026-03-14-004` の market / micro release 番号を `MRL-5` 開始へ修正する
-- background_reason: user 指摘により、新 plan set でも release line は前回の続き番号を使う必要があると確認された
-- change_summary: `market_release_lines.md`、`micro_release_lines.md`、関連 docs の current target 表記を `MRL-5` 開始へ振り直した
-- affected_documents: `develop/history/summary/summary.md`, `develop/plans/2026-03-14-004/market_release_lines.md`, `develop/plans/2026-03-14-004/micro_release_lines.md`
-- expected_effect: `MRL-5` 完了後の次ターゲットが `MRL-6 / mRL-6-1` として一貫する
-
 ## 2026-03-14-013 sequence-and-data-stability-rule
 
 - target_behavior: 今後の release line 計画を飛び番や命名揺れなく継続できる
@@ -25,7 +16,7 @@
 - background_reason: dummy dashboard の UX は評価可能になったため、次は変化し続ける実体 project への接続計画が必要になった
 - change_summary: 新しい market/micro release line 文書を追加し、`current_state.md` を新 active set に切り替えた
 - affected_documents: `develop/history/summary/summary.md`, `develop/plans/2026-03-14-004/market_release_lines.md`, `develop/plans/2026-03-14-004/micro_release_lines.md`
-- expected_effect: 次の実装は `mRL-5-1` の project manifest contract から迷わず開始できる
+- expected_effect: 次の実装は `mRL-1-1` の project manifest contract から迷わず開始できる
 
 ## 2026-03-14-011 mrl5-ux-fix-implementation
 

@@ -1,17 +1,10 @@
 # Docs History Summary
 
-## 2026-03-14-018 release-line-renumber-correction
-
-- scope: dashboard documentation system
-- trigger: `2026-03-14-004` の release line は連番規則に従い `MRL-5` 開始であるべきと判明した
-- resulting_direction: plan set、system blueprint、current state、history の MRL / mRL 番号を `MRL-5` 開始へ修正し、`MRL-5` 完了後の current target を `MRL-6 / mRL-6-1` にそろえた
-- expected_benefit: 連番運用ルールと active plan の現在位置が一致し、次の実装開始点がぶれない
-
 ## 2026-03-14-017 generic-project-contract-line
 
 - scope: dashboard documentation system
-- trigger: `2026-03-14-004 / MRL-5` の generic project contract line を source-of-truth 文書で閉じた
-- resulting_direction: `project_contract.md`、`north_star.md`、`system_blueprint.md`、`UX_check_work_flow.md`、`current_state.md` を更新し、next target を `MRL-6 / mRL-6-1` に進めた
+- trigger: `2026-03-14-004 / MRL-1` の generic project contract line を source-of-truth 文書で閉じた
+- resulting_direction: `project_contract.md`、`north_star.md`、`system_blueprint.md`、`UX_check_work_flow.md`、`current_state.md` を更新し、next target を `MRL-2 / mRL-2-1` に進めた
 - expected_benefit: 次セッションで filesystem repository と recursive live read 実装に直行できる
 
 ## 2026-03-14-016 sequence-and-data-stability-rule
