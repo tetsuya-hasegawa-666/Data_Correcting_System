@@ -4,7 +4,7 @@
 
 ## Position
 
-- project status: prepared, implementation not started
+- project status: contract-compatible shared-camera output implemented
 - entry point for next session: `coreCamera/develop/index.md`
 - integration target: future replacement of the current `iSensorium` camera implementation
 - current user preparation file: `coreCamera/USER_PREPARATION.md`
@@ -14,6 +14,7 @@
 - do not modify `iSensorium/` implementation from this project during the isolated build phase
 - do not modify `iDevelop/` implementation from this project
 - preserve the current `iSensorium` in/out contract so the replacement can be swapped in later
+- keep the isolated adapter seam named `shared-camera-session-adapter` as the only intended swap boundary for now
 
 ## Governance Principle
 

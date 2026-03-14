@@ -12,6 +12,9 @@
 - `Camera2`
 - `ARCore Session.Feature.SHARED_CAMERA`
 - adapter boundary that preserves the current `iSensorium` session in/out contract
+- isolated Android app under `coreCamera/app/`
+- controller entrypoint: `SharedCameraSessionController`
+- swap seam: `SharedCameraSessionAdapter`
 
 ## Preserved Interface Shape
 
@@ -20,6 +23,15 @@
 - session directory discovery
 - manifest emission
 - per-stream file emission using the current `iSensorium` naming set
+
+## Implemented MRL-2 Output Path
+
+- `MainActivity` owns an isolated `TextureView` preview and start/stop controls
+- `SharedCameraSessionController` initializes `Session.Feature.SHARED_CAMERA`, opens the back camera with wrapped ARCore callbacks, and creates a controlled `CameraCaptureSession` that includes preview, ARCore, and recording surfaces
+- `SessionVideoRecorder` emits real `video.mp4` output through the shared-camera capture graph while `video_frame_timestamps.csv` is appended from `TotalCaptureResult`
+- `ArCorePoseSampler` maintains an offscreen GL context so `Session.update()` can emit real `arcore_pose.jsonl` samples without changing the outer adapter boundary
+- `SessionArtifactStore` writes a compatibility-preserving `session_manifest.json` whose stream entries now report real output state, sizes, and row counts
+- start/stop lifecycle is still validated at build time by unit tests and debug assembly, while on-device continuity proof remains pending
 
 ## Replacement Boundary
 
