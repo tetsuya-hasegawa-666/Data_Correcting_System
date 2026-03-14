@@ -9,6 +9,11 @@ import { DocumentWorkspaceController } from "../../document-workspace/controller
 import type { DocumentRepository } from "../../document-workspace/model/DocumentRepository";
 import { DocumentWorkspaceView } from "../../document-workspace/view/DocumentWorkspaceView";
 import type { DashboardBootstrap } from "../bootstrap/loadDashboardBootstrap";
+import {
+  createConsultationSession,
+  type ConsultationBundleItem,
+  type ConsultationSessionState
+} from "../model/ConsultationSession";
 
 type WorkspaceId = "document" | "data" | "code";
 type RefreshOutcome = "changed" | "unchanged" | "failed";
@@ -254,6 +259,22 @@ export class DashboardController {
           `<li><strong>${this.escapeHtml(item.outcome)}</strong> ${this.escapeHtml(item.timestamp)} ${this.escapeHtml(item.message)}</li>`
       )
       .join("");
+    const consultationSession = this.createConsultationSession();
+    const consultationBundleMarkup =
+      consultationSession.bundle.length > 0
+        ? consultationSession.bundle
+            .map(
+              (item) =>
+                `<li><strong>${this.escapeHtml(item.kind)}</strong> ${this.escapeHtml(item.label)} <span>${this.escapeHtml(item.path)}</span></li>`
+            )
+            .join("")
+        : "<li>まだ bundle は選択されていません。</li>";
+    const responseFieldMarkup = consultationSession.responseFields
+      .map(
+        (field) =>
+          `<li><strong>${this.escapeHtml(field.label)}</strong> ${this.escapeHtml(field.description)}</li>`
+      )
+      .join("");
 
     this.rootElement.innerHTML = `
       <div class="shell-nav">
@@ -274,6 +295,29 @@ export class DashboardController {
       <section class="status-log">
         <p class="eyebrow">Refresh Evidence</p>
         <ul data-role="refresh-evidence">${evidenceMarkup || "<li>まだ evidence はありません。</li>"}</ul>
+      </section>
+      <section class="status-log consultation-contract" data-role="consultation-contract">
+        <p class="eyebrow">Consultation Contract</p>
+        <p><strong>${this.escapeHtml(consultationSession.storyId)}</strong> ${this.escapeHtml(consultationSession.storySummary)}</p>
+        <p data-role="consultation-approval-state">approval state: ${this.escapeHtml(consultationSession.approvalState)}</p>
+        <p>${this.escapeHtml(consultationSession.approvalGuidance)}</p>
+        <div class="consultation-grid">
+          <div>
+            <p class="eyebrow">Input Bundle</p>
+            <p>source policy: ${this.escapeHtml(consultationSession.bundleSourcePolicy)}</p>
+            <ul data-role="consultation-bundle">${consultationBundleMarkup}</ul>
+          </div>
+          <div>
+            <p class="eyebrow">Response Contract</p>
+            <ul data-role="consultation-response-fields">${responseFieldMarkup}</ul>
+          </div>
+          <div>
+            <p class="eyebrow">Touchpoints</p>
+            <ul>${consultationSession.touchpoints
+              .map((touchpoint) => `<li>${this.escapeHtml(touchpoint)}</li>`)
+              .join("")}</ul>
+          </div>
+        </div>
       </section>
       ${this.errorMessage ? `<p class="error-banner" data-role="error-banner">${this.errorMessage}</p>` : ""}
       <div data-role="workspace-content"></div>
@@ -317,6 +361,80 @@ export class DashboardController {
         ${label}
       </button>
     `;
+  }
+
+  private createConsultationSession(): ConsultationSessionState {
+    switch (this.workspaceId) {
+      case "document": {
+        const state = this.documentController.createState(
+          this.query,
+          this.selectedDocumentId,
+          this.editorState
+        );
+        return createConsultationSession({
+          workspaceId: "document",
+          sourcePolicy: state.sourcePolicy,
+          bundle: state.selectedDocument
+            ? [
+                {
+                  id: state.selectedDocument.id,
+                  kind: "document",
+                  label: state.selectedDocument.title,
+                  path: state.selectedDocument.path
+                }
+              ]
+            : []
+        });
+      }
+      case "data": {
+        const state = this.dataController.createState();
+        return createConsultationSession({
+          workspaceId: "data",
+          sourcePolicy: state.sourcePolicy,
+          bundle: this.createDataBundle(state.datasets)
+        });
+      }
+      case "code": {
+        const state = this.codeController.createState();
+        return createConsultationSession({
+          workspaceId: "code",
+          sourcePolicy: state.sourcePolicy,
+          bundle: this.createCodeBundle(state.targets)
+        });
+      }
+    }
+  }
+
+  private createDataBundle(
+    datasets: Array<{ id: string; name: string; category: string }>
+  ): ConsultationBundleItem[] {
+    const primary = datasets[0];
+    return primary
+      ? [
+          {
+            id: primary.id,
+            kind: "dataset",
+            label: primary.id,
+            path: `${primary.category}/${primary.name}`
+          }
+        ]
+      : [];
+  }
+
+  private createCodeBundle(
+    targets: Array<{ id: string; title: string; path: string }>
+  ): ConsultationBundleItem[] {
+    const primary = targets[0];
+    return primary
+      ? [
+          {
+            id: primary.id,
+            kind: "code",
+            label: primary.title,
+            path: primary.path
+          }
+        ]
+      : [];
   }
 
   private isStale(): boolean {

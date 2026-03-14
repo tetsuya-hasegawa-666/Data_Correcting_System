@@ -60,13 +60,19 @@ describe("DashboardController", () => {
 
     controller.start();
 
+    expect(container.textContent).toContain("Consultation Contract");
+    expect(container.textContent).toContain("North Star");
+    expect(container.textContent).toContain("consultation-only");
+
     (container.querySelector("[data-workspace-id='data']") as HTMLButtonElement).click();
     expect(container.textContent).toContain("データ");
     expect(container.textContent).toContain("更新結果");
+    expect(container.textContent).toContain("dataset-1");
 
     (container.querySelector("[data-workspace-id='code']") as HTMLButtonElement).click();
     expect(container.textContent).toContain("コード");
     expect(container.textContent).toContain("読み取り専用の確認対象");
+    expect(container.textContent).toContain("phase-gated-read-only");
   });
 
   it("cancels editing when cancel is clicked", () => {
