@@ -5,7 +5,10 @@ import type { DocumentRecord } from "../../src/document-workspace/model/Document
 import type { DocumentRepository } from "../../src/document-workspace/model/DocumentRepository";
 
 class StubDocumentRepository implements DocumentRepository {
-  public constructor(private readonly documents: DocumentRecord[]) {}
+  public constructor(
+    private readonly documents: DocumentRecord[],
+    private readonly readOnly = false
+  ) {}
 
   public listDocuments(): DocumentRecord[] {
     return this.documents;
@@ -23,7 +26,11 @@ class StubDocumentRepository implements DocumentRepository {
   }
 
   public getSourcePolicy(): string {
-    return "Seed bootstrap + in-app save";
+    return this.readOnly ? "filesystem recursive read-only" : "Seed bootstrap + in-app save";
+  }
+
+  public isReadOnly(): boolean {
+    return this.readOnly;
   }
 }
 
@@ -57,6 +64,7 @@ describe("DocumentWorkspaceController", () => {
     ]);
     expect(state.selectedDocument?.id).toBe("doc-1");
     expect(state.sourcePolicy).toContain("Seed");
+    expect(state.isReadOnly).toBe(false);
   });
 
   it("filters documents by case-insensitive keyword match across title, path, and body", () => {
@@ -104,26 +112,28 @@ describe("DocumentWorkspaceController", () => {
     expect(editing.editor.isEditing).toBe(true);
     expect(editing.editor.draftBody).toBe("Original body.");
     expect(saved.selectedDocument?.body).toBe("Updated body.");
-    expect(saved.editor.saveMessage).toBe("保存しました");
+    expect(saved.editor.saveMessage).toBe("保存しました。");
   });
 
-  it("cancels editing and restores the saved body", () => {
+  it("keeps the document read-only when the repository is read-only", () => {
     const controller = new DocumentWorkspaceController(
-      new StubDocumentRepository([
-        {
-          id: "doc-1",
-          title: "North Star",
-          path: "docs/artifact/north_star.md",
-          body: "Original body.",
-          tags: ["artifact"]
-        }
-      ])
+      new StubDocumentRepository(
+        [
+          {
+            id: "doc-1",
+            title: "North Star",
+            path: "docs/artifact/north_star.md",
+            body: "Original body.",
+            tags: ["artifact"]
+          }
+        ],
+        true
+      )
     );
 
-    const state = controller.cancelEditing("", "doc-1");
+    const state = controller.startEditing("", "doc-1");
 
+    expect(state.isReadOnly).toBe(true);
     expect(state.editor.isEditing).toBe(false);
-    expect(state.editor.draftBody).toBe("Original body.");
-    expect(state.editor.saveMessage).toBeNull();
   });
 });

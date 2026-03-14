@@ -7,7 +7,10 @@ import type { DatasetRepository, DatasetResultRecord } from "../../src/data-work
 class StubDatasetRepository implements DatasetRepository {
   private readonly results: DatasetResultRecord[] = [];
 
-  public constructor(private readonly datasets: DatasetRecord[]) {}
+  public constructor(
+    private readonly datasets: DatasetRecord[],
+    private readonly readOnly = false
+  ) {}
 
   public listDatasets(): DatasetRecord[] {
     return this.datasets;
@@ -33,6 +36,14 @@ class StubDatasetRepository implements DatasetRepository {
 
   public listResults(): DatasetResultRecord[] {
     return this.results;
+  }
+
+  public getSourcePolicy(): string {
+    return this.readOnly ? "filesystem recursive read-only" : "Seed bootstrap + in-app update";
+  }
+
+  public isReadOnly(): boolean {
+    return this.readOnly;
   }
 }
 
@@ -80,6 +91,8 @@ describe("DataWorkspaceController", () => {
       { status: "draft", datasetCount: 1, recordCount: 5 },
       { status: "ready", datasetCount: 2, recordCount: 19 }
     ]);
+    expect(state.sourcePolicy).toContain("Seed");
+    expect(state.isReadOnly).toBe(false);
   });
 
   it("records a result summary when a dataset is updated", () => {

@@ -2,10 +2,17 @@ import type { DocumentRecord } from "./DocumentRecord";
 import type { DocumentRepository } from "./DocumentRepository";
 
 export class StaticDocumentRepository implements DocumentRepository {
-  private readonly documentsById: Map<string, DocumentRecord>;
+  private documentsById: Map<string, DocumentRecord>;
+  private sourcePolicy: string;
+  private readOnly: boolean;
 
-  public constructor(documents: DocumentRecord[]) {
+  public constructor(
+    documents: DocumentRecord[],
+    options?: { sourcePolicy?: string; readOnly?: boolean }
+  ) {
     this.documentsById = new Map(documents.map((document) => [document.id, { ...document }]));
+    this.sourcePolicy = options?.sourcePolicy ?? "Seed bootstrap + in-app save";
+    this.readOnly = options?.readOnly ?? false;
   }
 
   public listDocuments(): DocumentRecord[] {
@@ -13,6 +20,10 @@ export class StaticDocumentRepository implements DocumentRepository {
   }
 
   public saveDocument(documentId: string, body: string): DocumentRecord {
+    if (this.readOnly) {
+      throw new Error("この文書ソースは読み取り専用です。");
+    }
+
     const current = this.documentsById.get(documentId);
 
     if (!current) {
@@ -25,6 +36,19 @@ export class StaticDocumentRepository implements DocumentRepository {
   }
 
   public getSourcePolicy(): string {
-    return "Seed bootstrap + in-app save";
+    return this.sourcePolicy;
+  }
+
+  public isReadOnly(): boolean {
+    return this.readOnly;
+  }
+
+  public replaceDocuments(
+    documents: DocumentRecord[],
+    options: { sourcePolicy: string; readOnly: boolean }
+  ): void {
+    this.documentsById = new Map(documents.map((document) => [document.id, { ...document }]));
+    this.sourcePolicy = options.sourcePolicy;
+    this.readOnly = options.readOnly;
   }
 }

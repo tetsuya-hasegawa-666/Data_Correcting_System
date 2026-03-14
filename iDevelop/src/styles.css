@@ -23,8 +23,55 @@ body {
 
 .shell-nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   padding: 24px 24px 0;
+}
+
+.status-strip,
+.status-log {
+  margin: 16px 24px 0;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(19, 34, 56, 0.1);
+}
+
+.status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.status-fresh {
+  background: rgba(55, 132, 91, 0.12);
+  color: #205537;
+}
+
+.status-refreshed {
+  background: rgba(35, 84, 126, 0.12);
+  color: #23547e;
+}
+
+.status-stale {
+  background: rgba(180, 117, 27, 0.14);
+  color: #8a5a11;
+}
+
+.status-log ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
 }
 
 .tab-button {

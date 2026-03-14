@@ -8,8 +8,26 @@ import type { DocumentEditorState } from "../../document-workspace/controller/Do
 import { DocumentWorkspaceController } from "../../document-workspace/controller/DocumentWorkspaceController";
 import type { DocumentRepository } from "../../document-workspace/model/DocumentRepository";
 import { DocumentWorkspaceView } from "../../document-workspace/view/DocumentWorkspaceView";
+import type { DashboardBootstrap } from "../bootstrap/loadDashboardBootstrap";
 
 type WorkspaceId = "document" | "data" | "code";
+type RefreshOutcome = "changed" | "unchanged" | "failed";
+
+interface RefreshEvidence {
+  timestamp: string;
+  outcome: RefreshOutcome;
+  message: string;
+}
+
+interface DashboardStatusState {
+  loadedAt: string;
+  sourceSignature: string;
+  staleAfterMs: number;
+  lastRefreshOutcome: RefreshOutcome | null;
+  evidence: RefreshEvidence[];
+}
+
+const REFRESH_EVIDENCE_STORAGE_KEY = "idevelop.refreshEvidence";
 
 export class DashboardController {
   private readonly documentController: DocumentWorkspaceController;
@@ -20,16 +38,26 @@ export class DashboardController {
   private selectedDocumentId?: string;
   private editorState?: Partial<DocumentEditorState>;
   private errorMessage: string | null = null;
+  private readonly statusState: DashboardStatusState;
 
   public constructor(
     private readonly rootElement: HTMLElement,
     documentRepository: DocumentRepository,
     datasetRepository: DatasetRepository,
-    codeTargetRepository: CodeTargetRepository
+    codeTargetRepository: CodeTargetRepository,
+    bootstrap: Pick<DashboardBootstrap, "loadedAt" | "sourceSignature">,
+    private readonly refreshDashboard?: () => Promise<DashboardBootstrap>
   ) {
     this.documentController = new DocumentWorkspaceController(documentRepository);
     this.dataController = new DataWorkspaceController(datasetRepository);
     this.codeController = new CodeWorkspaceController(codeTargetRepository);
+    this.statusState = {
+      loadedAt: bootstrap.loadedAt,
+      sourceSignature: bootstrap.sourceSignature,
+      staleAfterMs: 5 * 60 * 1000,
+      lastRefreshOutcome: null,
+      evidence: this.readEvidence()
+    };
   }
 
   public start(): void {
@@ -63,6 +91,12 @@ export class DashboardController {
         return;
       }
 
+      const refreshButton = target.closest<HTMLElement>("[data-role='refresh-dashboard']");
+      if (refreshButton) {
+        void this.handleRefresh();
+        return;
+      }
+
       const tab = target.closest<HTMLElement>("[data-role='workspace-tab']");
       if (tab?.dataset.workspaceId) {
         this.workspaceId = tab.dataset.workspaceId as WorkspaceId;
@@ -93,19 +127,24 @@ export class DashboardController {
 
       const datasetButton = target.closest<HTMLElement>("[data-role='save-dataset']");
       if (datasetButton?.dataset.datasetId) {
-        const datasetId = datasetButton.dataset.datasetId;
-        const row = datasetButton.closest("tr");
-        const statusInput = row?.querySelector<HTMLSelectElement>(
-          `[data-role='dataset-status'][data-dataset-id='${datasetId}']`
-        );
-        const countInput = row?.querySelector<HTMLInputElement>(
-          `[data-role='dataset-record-count'][data-dataset-id='${datasetId}']`
-        );
+        try {
+          const datasetId = datasetButton.dataset.datasetId;
+          const row = datasetButton.closest("tr");
+          const statusInput = row?.querySelector<HTMLSelectElement>(
+            `[data-role='dataset-status'][data-dataset-id='${datasetId}']`
+          );
+          const countInput = row?.querySelector<HTMLInputElement>(
+            `[data-role='dataset-record-count'][data-dataset-id='${datasetId}']`
+          );
 
-        if (statusInput && countInput) {
-          this.dataController.updateDataset(datasetId, statusInput.value, Number(countInput.value));
-          this.workspaceId = "data";
-          this.errorMessage = null;
+          if (statusInput && countInput) {
+            this.dataController.updateDataset(datasetId, statusInput.value, Number(countInput.value));
+            this.workspaceId = "data";
+            this.errorMessage = null;
+            this.render();
+          }
+        } catch (error) {
+          this.errorMessage = error instanceof Error ? error.message : "データ更新に失敗しました。";
           this.render();
         }
         return;
@@ -153,7 +192,7 @@ export class DashboardController {
 
       try {
         if (!this.selectedDocumentId) {
-          throw new Error("選択中のドキュメントが見つかりません。");
+          throw new Error("選択中の文書が見つかりません。");
         }
 
         const draftBody =
@@ -174,13 +213,68 @@ export class DashboardController {
     });
   }
 
+  private async handleRefresh(): Promise<void> {
+    if (!this.refreshDashboard) {
+      this.appendEvidence("unchanged", "再読み込みは seed mode のため省略しました。");
+      this.render();
+      return;
+    }
+
+    try {
+      const nextBootstrap = await this.refreshDashboard();
+      const previousSignature = this.statusState.sourceSignature;
+      const outcome: RefreshOutcome =
+        previousSignature === nextBootstrap.sourceSignature ? "unchanged" : "changed";
+      const message =
+        outcome === "changed"
+          ? "再読み込みでソースの変化を反映しました。"
+          : "再読み込みしましたが差分はありませんでした。";
+
+      this.statusState.loadedAt = nextBootstrap.loadedAt;
+      this.statusState.sourceSignature = nextBootstrap.sourceSignature;
+      this.statusState.lastRefreshOutcome = outcome;
+      this.appendEvidence(outcome, message);
+      this.errorMessage = null;
+    } catch (error) {
+      this.statusState.lastRefreshOutcome = "failed";
+      this.appendEvidence("failed", "再読み込みに失敗しました。");
+      this.errorMessage = error instanceof Error ? error.message : "再読み込みに失敗しました。";
+    }
+
+    this.render();
+  }
+
   private render(): void {
+    const staleStatus = this.isStale() ? "stale" : "fresh";
+    const refreshLabel = this.getRefreshLabel(staleStatus);
+    const evidenceMarkup = this.statusState.evidence
+      .slice(0, 3)
+      .map(
+        (item) =>
+          `<li><strong>${this.escapeHtml(item.outcome)}</strong> ${this.escapeHtml(item.timestamp)} ${this.escapeHtml(item.message)}</li>`
+      )
+      .join("");
+
     this.rootElement.innerHTML = `
       <div class="shell-nav">
-        ${this.renderTab("document", "ドキュメント")}
+        ${this.renderTab("document", "文書")}
         ${this.renderTab("data", "データ")}
         ${this.renderTab("code", "コード")}
+        <button class="tab-button" data-role="refresh-dashboard" type="button">再読み込み</button>
       </div>
+      <section class="status-strip">
+        <span class="status-badge status-${staleStatus}" data-role="stale-indicator">${refreshLabel}</span>
+        <span data-role="loaded-at">取得時刻: ${this.escapeHtml(this.statusState.loadedAt)}</span>
+        ${
+          this.statusState.lastRefreshOutcome
+            ? `<span data-role="refresh-outcome">直近結果: ${this.escapeHtml(this.statusState.lastRefreshOutcome)}</span>`
+            : ""
+        }
+      </section>
+      <section class="status-log">
+        <p class="eyebrow">Refresh Evidence</p>
+        <ul data-role="refresh-evidence">${evidenceMarkup || "<li>まだ evidence はありません。</li>"}</ul>
+      </section>
       ${this.errorMessage ? `<p class="error-banner" data-role="error-banner">${this.errorMessage}</p>` : ""}
       <div data-role="workspace-content"></div>
     `;
@@ -223,5 +317,59 @@ export class DashboardController {
         ${label}
       </button>
     `;
+  }
+
+  private isStale(): boolean {
+    const loadedAt = new Date(this.statusState.loadedAt).getTime();
+    return Number.isFinite(loadedAt) && Date.now() - loadedAt > this.statusState.staleAfterMs;
+  }
+
+  private getRefreshLabel(staleStatus: "fresh" | "stale"): string {
+    if (staleStatus === "stale") {
+      return "stale";
+    }
+
+    if (this.statusState.lastRefreshOutcome === "changed") {
+      return "refreshed";
+    }
+
+    return "fresh";
+  }
+
+  private appendEvidence(outcome: RefreshOutcome, message: string): void {
+    const evidence: RefreshEvidence = {
+      timestamp: new Date().toISOString(),
+      outcome,
+      message
+    };
+
+    this.statusState.evidence = [evidence, ...this.statusState.evidence].slice(0, 5);
+    this.writeEvidence(this.statusState.evidence);
+  }
+
+  private readEvidence(): RefreshEvidence[] {
+    try {
+      const raw = globalThis.localStorage?.getItem(REFRESH_EVIDENCE_STORAGE_KEY);
+      return raw ? (JSON.parse(raw) as RefreshEvidence[]) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  private writeEvidence(evidence: RefreshEvidence[]): void {
+    try {
+      globalThis.localStorage?.setItem(REFRESH_EVIDENCE_STORAGE_KEY, JSON.stringify(evidence));
+    } catch {
+      // ignore storage failures and keep in-memory evidence only
+    }
+  }
+
+  private escapeHtml(value: string): string {
+    return value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
   }
 }

@@ -11,4 +11,6 @@ export interface DatasetRepository {
   listDatasets(): DatasetRecord[];
   updateDataset(datasetId: string, status: string, recordCount: number): DatasetRecord;
   listResults(): DatasetResultRecord[];
+  getSourcePolicy(): string;
+  isReadOnly(): boolean;
 }

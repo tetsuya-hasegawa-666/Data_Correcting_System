@@ -28,7 +28,7 @@ export class BrowserDatasetRepository implements DatasetRepository {
     results.unshift({
       id: `result-${results.length + 1}`,
       datasetId,
-      summary: `${updated.name} を ${this.getStatusLabel(status)}に更新し、${recordCount} 件を保存しました。`,
+      summary: `${updated.name} を${this.getStatusLabel(status)}に更新し、${recordCount} 件を保存しました。`,
       createdAt: updatedAt
     });
     this.writeResults(results);
@@ -37,6 +37,14 @@ export class BrowserDatasetRepository implements DatasetRepository {
 
   public listResults(): DatasetResultRecord[] {
     return this.readResults();
+  }
+
+  public getSourcePolicy(): string {
+    return "seed 読み込み + localStorage 更新";
+  }
+
+  public isReadOnly(): boolean {
+    return false;
   }
 
   private readDatasets(): DatasetRecord[] {
@@ -71,6 +79,8 @@ export class BrowserDatasetRepository implements DatasetRepository {
         return "準備完了";
       case "review":
         return "レビュー中";
+      case "live":
+        return "ライブ";
       default:
         return status;
     }

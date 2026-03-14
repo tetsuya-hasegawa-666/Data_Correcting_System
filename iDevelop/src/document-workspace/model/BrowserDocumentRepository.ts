@@ -15,7 +15,7 @@ export class BrowserDocumentRepository implements DocumentRepository {
     const index = documents.findIndex((document) => document.id === documentId);
 
     if (index < 0) {
-      throw new Error(`ドキュメント '${documentId}' が見つかりません。`);
+      throw new Error(`文書 '${documentId}' が見つかりません。`);
     }
 
     const updated = { ...documents[index], body };
@@ -25,7 +25,11 @@ export class BrowserDocumentRepository implements DocumentRepository {
   }
 
   public getSourcePolicy(): string {
-    return "seed 読込 + localStorage 保存";
+    return "seed 読み込み + localStorage 保存";
+  }
+
+  public isReadOnly(): boolean {
+    return false;
   }
 
   private readDocuments(): DocumentRecord[] {

@@ -1,0 +1,9 @@
+{
+  "projectId": "idevelop",
+  "projectRoot": "C:/Users/tetsuya/playground/Data_Correcting_System/iDevelop",
+  "documentRoots": ["docs", "develop"],
+  "dataRoots": ["data"],
+  "codeRoots": ["src"],
+  "ignoreGlobs": ["**/node_modules/**", "**/.git/**", "**/dist/**", "**/build/**"],
+  "readOnly": true
+}

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { DocumentWorkspaceState } from "../../src/document-workspace/controller/DocumentWorkspaceController";
 import { DocumentWorkspaceView } from "../../src/document-workspace/view/DocumentWorkspaceView";
 
-const state: DocumentWorkspaceState = {
+const editableState: DocumentWorkspaceState = {
   query: "bdd",
   documents: [
     {
@@ -22,11 +22,12 @@ const state: DocumentWorkspaceState = {
     tags: ["process"]
   },
   sourcePolicy: "Seed bootstrap + in-app save",
+  isReadOnly: false,
   editor: {
     isEditing: true,
     draftBody: "BDD and TDD operating rules.",
     lastSavedBody: "BDD and TDD operating rules.",
-    saveMessage: "保存しました"
+    saveMessage: "保存しました。"
   }
 };
 
@@ -35,7 +36,7 @@ describe("DocumentWorkspaceView", () => {
     const container = document.createElement("section");
     const view = new DocumentWorkspaceView(container);
 
-    view.render(state);
+    view.render(editableState);
 
     expect(container.querySelector("[data-role='search-input']")?.getAttribute("value")).toBe(
       "bdd"
@@ -49,9 +50,29 @@ describe("DocumentWorkspaceView", () => {
       (container.querySelector("[data-role='document-editor']") as HTMLTextAreaElement | null)?.value
     ).toContain("BDD");
     expect(container.querySelector("[data-role='save-message']")?.textContent).toContain(
-      "保存しました"
+      "保存しました。"
     );
-    expect(container.textContent).toContain("ドキュメント");
+    expect(container.textContent).toContain("文書");
     expect(container.textContent).toContain("キャンセル");
+  });
+
+  it("shows read-only guidance and hides edit controls for live documents", () => {
+    const container = document.createElement("section");
+    const view = new DocumentWorkspaceView(container);
+
+    view.render({
+      ...editableState,
+      isReadOnly: true,
+      sourcePolicy: "filesystem recursive read-only",
+      editor: {
+        isEditing: false,
+        draftBody: editableState.selectedDocument?.body ?? "",
+        lastSavedBody: null,
+        saveMessage: null
+      }
+    });
+
+    expect(container.textContent).toContain("読み取り専用");
+    expect(container.querySelector("[data-role='edit-document']")).toBeNull();
   });
 });

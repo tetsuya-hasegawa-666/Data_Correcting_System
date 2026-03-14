@@ -30,6 +30,8 @@ const state: DataWorkspaceState = {
       createdAt: "2026-03-14T09:30:00Z"
     }
   ],
+  sourcePolicy: "Seed bootstrap + in-app update",
+  isReadOnly: false,
   summary: {
     totalDatasets: 2,
     totalRecords: 17,
@@ -50,7 +52,24 @@ describe("DataWorkspaceView", () => {
     expect(container.querySelector("[data-role='total-datasets']")?.textContent).toContain("2");
     expect(container.querySelector("[data-role='total-records']")?.textContent).toContain("17");
     expect(container.querySelectorAll("[data-role='dataset-row']")).toHaveLength(2);
-    expect(container.querySelector("[data-role='chart-bar'][data-status='ready']")?.getAttribute("style")).toContain("100%");
+    expect(
+      container.querySelector("[data-role='chart-bar'][data-status='ready']")?.getAttribute("style")
+    ).toContain("100%");
     expect(container.querySelectorAll("[data-role='result-row']")).toHaveLength(1);
+  });
+
+  it("renders read-only rows without edit controls for live data", () => {
+    const container = document.createElement("section");
+    const view = new DataWorkspaceView(container);
+
+    view.render({
+      ...state,
+      sourcePolicy: "filesystem recursive read-only",
+      isReadOnly: true
+    });
+
+    expect(container.textContent).toContain("読み取り専用");
+    expect(container.querySelector("[data-role='dataset-status']")).toBeNull();
+    expect(container.querySelector("[data-role='save-dataset']")).toBeNull();
   });
 });

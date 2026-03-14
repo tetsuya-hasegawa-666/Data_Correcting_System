@@ -10,6 +10,8 @@ export interface DatasetStatusSummary {
 export interface DataWorkspaceState {
   datasets: DatasetRecord[];
   results: DatasetResultRecord[];
+  sourcePolicy: string;
+  isReadOnly: boolean;
   summary: {
     totalDatasets: number;
     totalRecords: number;
@@ -48,6 +50,8 @@ export class DataWorkspaceController {
         .listResults()
         .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
         .slice(0, 5),
+      sourcePolicy: this.repository.getSourcePolicy(),
+      isReadOnly: this.repository.isReadOnly(),
       summary: {
         totalDatasets: datasets.length,
         totalRecords,

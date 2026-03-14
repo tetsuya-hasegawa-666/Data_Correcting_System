@@ -5,10 +5,12 @@ import "./styles.css";
 
 import { StaticCodeTargetRepository } from "./code-workspace/model/StaticCodeTargetRepository";
 import { BrowserDatasetRepository } from "./data-workspace/model/BrowserDatasetRepository";
-import { DashboardController } from "./shared-core/controller/DashboardController";
-import { BrowserDocumentRepository } from "./document-workspace/model/BrowserDocumentRepository";
 import { StaticDatasetRepository } from "./data-workspace/model/StaticDatasetRepository";
+import { BrowserDocumentRepository } from "./document-workspace/model/BrowserDocumentRepository";
 import { StaticDocumentRepository } from "./document-workspace/model/StaticDocumentRepository";
+import type { DashboardBootstrap } from "./shared-core/bootstrap/loadDashboardBootstrap";
+import { loadDashboardBootstrap } from "./shared-core/bootstrap/loadDashboardBootstrap";
+import { DashboardController } from "./shared-core/controller/DashboardController";
 
 const rootElement = document.querySelector<HTMLDivElement>("#app");
 
@@ -16,20 +18,62 @@ if (!rootElement) {
   throw new Error("Application root '#app' was not found.");
 }
 
-const documentRepository =
-  typeof window === "undefined"
-    ? new StaticDocumentRepository(documentSeed)
-    : new BrowserDocumentRepository(documentSeed);
-const datasetRepository =
-  typeof window === "undefined"
-    ? new StaticDatasetRepository(datasetSeed)
-    : new BrowserDatasetRepository(datasetSeed);
+const bootstrap = await loadDashboardBootstrap(documentSeed, datasetSeed);
 const codeTargetRepository = new StaticCodeTargetRepository(codeTargetSeed);
-const controller = new DashboardController(
-  rootElement,
-  documentRepository,
-  datasetRepository,
-  codeTargetRepository
-);
 
-controller.start();
+if (bootstrap.mode === "live") {
+  const documentRepository = new StaticDocumentRepository(bootstrap.documents, {
+    sourcePolicy: bootstrap.documentSourcePolicy,
+    readOnly: bootstrap.readOnly
+  });
+  const datasetRepository = new StaticDatasetRepository(bootstrap.datasets, {
+    sourcePolicy: bootstrap.datasetSourcePolicy,
+    readOnly: bootstrap.readOnly
+  });
+  const controller = new DashboardController(
+    rootElement,
+    documentRepository,
+    datasetRepository,
+    codeTargetRepository,
+    bootstrap,
+    async (): Promise<DashboardBootstrap> => {
+      const nextBootstrap = await loadDashboardBootstrap(documentSeed, datasetSeed);
+
+      if (nextBootstrap.mode !== "live") {
+        throw new Error("live source を再取得できませんでした。");
+      }
+
+      documentRepository.replaceDocuments(nextBootstrap.documents, {
+        sourcePolicy: nextBootstrap.documentSourcePolicy,
+        readOnly: nextBootstrap.readOnly
+      });
+      datasetRepository.replaceDatasets(nextBootstrap.datasets, {
+        sourcePolicy: nextBootstrap.datasetSourcePolicy,
+        readOnly: nextBootstrap.readOnly
+      });
+
+      return nextBootstrap;
+    }
+  );
+
+  controller.start();
+} else {
+  const documentRepository =
+    typeof window === "undefined"
+      ? new StaticDocumentRepository(documentSeed)
+      : new BrowserDocumentRepository(documentSeed);
+  const datasetRepository =
+    typeof window === "undefined"
+      ? new StaticDatasetRepository(datasetSeed)
+      : new BrowserDatasetRepository(datasetSeed);
+
+  const controller = new DashboardController(
+    rootElement,
+    documentRepository,
+    datasetRepository,
+    codeTargetRepository,
+    bootstrap
+  );
+
+  controller.start();
+}

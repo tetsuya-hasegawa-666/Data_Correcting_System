@@ -2,11 +2,18 @@ import type { DatasetRecord } from "./DatasetRecord";
 import type { DatasetRepository, DatasetResultRecord } from "./DatasetRepository";
 
 export class StaticDatasetRepository implements DatasetRepository {
-  private readonly datasetsById: Map<string, DatasetRecord>;
+  private datasetsById: Map<string, DatasetRecord>;
   private readonly results: DatasetResultRecord[] = [];
+  private sourcePolicy: string;
+  private readOnly: boolean;
 
-  public constructor(datasets: DatasetRecord[]) {
+  public constructor(
+    datasets: DatasetRecord[],
+    options?: { sourcePolicy?: string; readOnly?: boolean }
+  ) {
     this.datasetsById = new Map(datasets.map((dataset) => [dataset.id, { ...dataset }]));
+    this.sourcePolicy = options?.sourcePolicy ?? "Seed bootstrap + in-app update";
+    this.readOnly = options?.readOnly ?? false;
   }
 
   public listDatasets(): DatasetRecord[] {
@@ -14,6 +21,10 @@ export class StaticDatasetRepository implements DatasetRepository {
   }
 
   public updateDataset(datasetId: string, status: string, recordCount: number): DatasetRecord {
+    if (this.readOnly) {
+      throw new Error("このデータソースは読み取り専用です。");
+    }
+
     const current = this.datasetsById.get(datasetId);
 
     if (!current) {
@@ -34,5 +45,22 @@ export class StaticDatasetRepository implements DatasetRepository {
 
   public listResults(): DatasetResultRecord[] {
     return this.results.map((result) => ({ ...result }));
+  }
+
+  public getSourcePolicy(): string {
+    return this.sourcePolicy;
+  }
+
+  public isReadOnly(): boolean {
+    return this.readOnly;
+  }
+
+  public replaceDatasets(
+    datasets: DatasetRecord[],
+    options: { sourcePolicy: string; readOnly: boolean }
+  ): void {
+    this.datasetsById = new Map(datasets.map((dataset) => [dataset.id, { ...dataset }]));
+    this.sourcePolicy = options.sourcePolicy;
+    this.readOnly = options.readOnly;
   }
 }

@@ -20,7 +20,7 @@ export class CodeWorkspaceView {
       <section class="data-workspace">
         <div class="section-heading">
           <p class="eyebrow">コード</p>
-          <h2>参照専用の確認画面</h2>
+          <h2>読み取り専用の確認対象</h2>
           <p data-role="code-policy">${this.escapeHtml(state.policyNote)}</p>
         </div>
         <div class="document-list">${listMarkup}</div>

@@ -7,31 +7,7 @@ export class DataWorkspaceView {
     const maxRecordCount = Math.max(...state.summary.byStatus.map((item) => item.recordCount), 1);
 
     const rowsMarkup = state.datasets
-      .map(
-        (dataset) => `
-          <tr data-role="dataset-row">
-            <td>${this.escapeHtml(dataset.name)}</td>
-            <td>${this.escapeHtml(this.getCategoryLabel(dataset.category))}</td>
-            <td>
-              <select data-role="dataset-status" data-dataset-id="${this.escapeHtml(dataset.id)}">
-                ${["draft", "ready", "review"]
-                  .map(
-                    (status) =>
-                      `<option value="${status}" ${
-                        dataset.status === status ? "selected" : ""
-                      }>${this.getStatusLabel(status)}</option>`
-                  )
-                  .join("")}
-              </select>
-            </td>
-            <td>
-              <input data-role="dataset-record-count" data-dataset-id="${this.escapeHtml(dataset.id)}" type="number" min="0" value="${dataset.recordCount}" />
-            </td>
-            <td>${this.escapeHtml(dataset.updatedAt)}</td>
-            <td><button class="document-item" data-role="save-dataset" data-dataset-id="${this.escapeHtml(dataset.id)}" type="button">更新</button></td>
-          </tr>
-        `
-      )
+      .map((dataset) => this.renderDatasetRow(dataset, state.isReadOnly))
       .join("");
 
     const resultMarkup = state.results
@@ -52,8 +28,14 @@ export class DataWorkspaceView {
       <section class="data-workspace">
         <div class="section-heading">
           <p class="eyebrow">データ</p>
-          <h2>ダミーデータの確認と更新</h2>
-          <p>データ一覧、件数、状態別サマリーを確認し、仮更新の体験を試せます。</p>
+          <h2>データの確認と集計</h2>
+          <p>データ一覧、件数、更新結果の要約を確認します。</p>
+          <p class="result-count">読み込みポリシー: ${this.escapeHtml(state.sourcePolicy)}</p>
+          ${
+            state.isReadOnly
+              ? '<p class="result-count">現在の接続先は読み取り専用です。更新操作はできません。</p>'
+              : ""
+          }
         </div>
         <div class="metric-grid">
           <article class="metric-card">
@@ -69,8 +51,8 @@ export class DataWorkspaceView {
         <table class="dataset-table">
           <thead>
             <tr>
-              <th>名称</th>
-              <th>分類</th>
+              <th>名前</th>
+              <th>種別</th>
               <th>状態</th>
               <th>レコード数</th>
               <th>更新日時</th>
@@ -84,6 +66,43 @@ export class DataWorkspaceView {
           <ul class="result-list">${resultMarkup || "<li>まだ更新結果はありません。</li>"}</ul>
         </section>
       </section>
+    `;
+  }
+
+  private renderDatasetRow(
+    dataset: DataWorkspaceState["datasets"][number],
+    isReadOnly: boolean
+  ): string {
+    const statusCell = isReadOnly
+      ? this.escapeHtml(this.getStatusLabel(dataset.status))
+      : `
+        <select data-role="dataset-status" data-dataset-id="${this.escapeHtml(dataset.id)}">
+          ${["draft", "ready", "review"]
+            .map(
+              (status) =>
+                `<option value="${status}" ${
+                  dataset.status === status ? "selected" : ""
+                }>${this.getStatusLabel(status)}</option>`
+            )
+            .join("")}
+        </select>
+      `;
+    const recordCountCell = isReadOnly
+      ? this.escapeHtml(String(dataset.recordCount))
+      : `<input data-role="dataset-record-count" data-dataset-id="${this.escapeHtml(dataset.id)}" type="number" min="0" value="${dataset.recordCount}" />`;
+    const actionCell = isReadOnly
+      ? '<span class="eyebrow">読み取り専用</span>'
+      : `<button class="document-item" data-role="save-dataset" data-dataset-id="${this.escapeHtml(dataset.id)}" type="button">更新</button>`;
+
+    return `
+      <tr data-role="dataset-row">
+        <td>${this.escapeHtml(dataset.name)}</td>
+        <td>${this.escapeHtml(this.getCategoryLabel(dataset.category))}</td>
+        <td>${statusCell}</td>
+        <td>${recordCountCell}</td>
+        <td>${this.escapeHtml(dataset.updatedAt)}</td>
+        <td>${actionCell}</td>
+      </tr>
     `;
   }
 
@@ -114,6 +133,8 @@ export class DataWorkspaceView {
         return "準備完了";
       case "review":
         return "レビュー中";
+      case "live":
+        return "ライブ";
       default:
         return status;
     }
@@ -126,7 +147,15 @@ export class DataWorkspaceView {
       case "result":
         return "結果";
       case "process":
-        return "運用";
+        return "プロセス";
+      case "csv":
+        return "CSV";
+      case "json":
+        return "JSON";
+      case "markdown":
+        return "Markdown";
+      case "text":
+        return "Text";
       default:
         return category;
     }

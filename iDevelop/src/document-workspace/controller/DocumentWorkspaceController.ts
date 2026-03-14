@@ -13,6 +13,7 @@ export interface DocumentWorkspaceState {
   documents: DocumentRecord[];
   selectedDocument: DocumentRecord | null;
   sourcePolicy: string;
+  isReadOnly: boolean;
   editor: DocumentEditorState;
 }
 
@@ -39,6 +40,7 @@ export class DocumentWorkspaceController {
       documents,
       selectedDocument,
       sourcePolicy: this.repository.getSourcePolicy(),
+      isReadOnly: this.repository.isReadOnly(),
       editor: {
         isEditing: editorState?.isEditing ?? false,
         draftBody: editorState?.draftBody ?? defaultDraftBody,
@@ -51,7 +53,7 @@ export class DocumentWorkspaceController {
   public startEditing(query: string, documentId: string): DocumentWorkspaceState {
     const state = this.createState(query, documentId);
 
-    if (!state.selectedDocument) {
+    if (!state.selectedDocument || state.isReadOnly) {
       return state;
     }
 
@@ -70,7 +72,7 @@ export class DocumentWorkspaceController {
       isEditing: false,
       draftBody: savedDocument.body,
       lastSavedBody: savedDocument.body,
-      saveMessage: "保存しました"
+      saveMessage: "保存しました。"
     });
   }
 
@@ -95,7 +97,6 @@ export class DocumentWorkspaceController {
     }
 
     const haystacks = [document.title, document.path, document.body, document.tags.join(" ")];
-
     return haystacks.some((haystack) => haystack.toLowerCase().includes(query));
   }
 }
