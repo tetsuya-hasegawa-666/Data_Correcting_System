@@ -18,3 +18,6 @@
 - project 間の境界ルール変更だけを、両 project の該当文書へ反映する。
 - release line / plan set の採番は、ユーザーが別指定しない限り連番を使う。
 - いったん採用した記載データ、ID、名称、状態名、成果物名は、ユーザーが変更を指示しない限り継続利用する。
+- broad search や再帰読込では、各 project の `docs/history/**/snapshot/**` を既定で除外する。
+- 15 分前後の manual check は evidence 採取の窓であり、会話停止や作業停止の既定条件ではない。
+- 実 blocker や外部依存がない限り、active release line に対する自律継続作業は最大 6 時間まで続けてよい。
