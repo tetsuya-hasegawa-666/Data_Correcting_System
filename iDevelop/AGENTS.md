@@ -13,6 +13,8 @@
 - release line 計画は `develop/plans/YYYY-MM-DD-XXX/` に置き、対応する develop 履歴 entry id と一致させる。
 - plan set / release line の採番は、ユーザーが別指定しない限り直前の番号の次を使う。
 - plan、docs、history、current state に書く ID、名称、状態名、成果物名、データ名は、明示変更がない限り既存表記を再利用する。
+- user 操作待ち、追加データ待ち、承認待ちなどで本当に block しない限り、active な market release line の exit criteria を満たすまで同一 session で作業を継続する。
+- 継続時間は 15 分で区切らず、最大 6 時間を上限として扱う。
 
 ## Entry Point
 
