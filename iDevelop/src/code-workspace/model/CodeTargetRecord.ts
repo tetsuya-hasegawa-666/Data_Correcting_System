@@ -3,4 +3,6 @@ export interface CodeTargetRecord {
   title: string;
   path: string;
   description: string;
+  kind?: string;
+  updatedAt?: string;
 }

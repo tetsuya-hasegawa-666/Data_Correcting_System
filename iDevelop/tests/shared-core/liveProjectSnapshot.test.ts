@@ -45,6 +45,19 @@ describe("loadLiveProjectSnapshot", () => {
     expect(snapshot.datasets[1]?.recordCount).toBe(2);
     expect(snapshot.datasetSourcePolicy).toContain("filesystem");
   });
+
+  it("reads code roots recursively and returns read-only browse targets", () => {
+    const { manifestPath } = createProjectFixture();
+
+    const snapshot = loadLiveProjectSnapshot(manifestPath);
+
+    expect(snapshot.codeTargets.map((target) => target.path)).toEqual([
+      "src/app.ts",
+      "tools/build.ts"
+    ]);
+    expect(snapshot.codeTargets[0]?.description).toContain("lines");
+    expect(snapshot.codeSourcePolicy).toContain("read-only");
+  });
 });
 
 function createProjectFixture(): { manifestPath: string } {
@@ -54,6 +67,8 @@ function createProjectFixture(): { manifestPath: string } {
   mkdirSync(join(root, "docs", "guide"), { recursive: true });
   mkdirSync(join(root, "develop"), { recursive: true });
   mkdirSync(join(root, "data", "nested"), { recursive: true });
+  mkdirSync(join(root, "src"), { recursive: true });
+  mkdirSync(join(root, "tools"), { recursive: true });
   mkdirSync(join(root, "build"), { recursive: true });
 
   writeFileSync(join(root, "docs", "guide", "intro.md"), "# Intro\nGuide body\n", "utf8");
@@ -64,6 +79,8 @@ function createProjectFixture(): { manifestPath: string } {
     JSON.stringify([{ id: 1 }, { id: 2 }], null, 2),
     "utf8"
   );
+  writeFileSync(join(root, "src", "app.ts"), "export const app = 1;\nconsole.log(app);\n", "utf8");
+  writeFileSync(join(root, "tools", "build.ts"), "export function build() {}\n", "utf8");
   writeFileSync(join(root, "build", "ignored.md"), "ignored", "utf8");
 
   const manifestPath = join(root, "project-manifest.json");
@@ -75,7 +92,7 @@ function createProjectFixture(): { manifestPath: string } {
         projectRoot: root,
         documentRoots: ["docs", "develop"],
         dataRoots: ["data"],
-        codeRoots: ["src"],
+        codeRoots: ["src", "tools"],
         ignoreGlobs: ["**/node_modules/**", "**/.git/**", "**/dist/**", "**/build/**"],
         readOnly: true
       },

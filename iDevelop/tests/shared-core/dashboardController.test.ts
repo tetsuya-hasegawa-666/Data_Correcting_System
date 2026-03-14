@@ -119,8 +119,10 @@ describe("DashboardController", () => {
       mode: "live",
       documents: [],
       datasets: [],
+      codeTargets: [],
       documentSourcePolicy: "filesystem recursive read-only",
       datasetSourcePolicy: "filesystem recursive read-only",
+      codeSourcePolicy: "filesystem recursive read-only",
       readOnly: true,
       sourceSignature: "live:changed",
       loadedAt: "2026-03-14T10:05:00Z"

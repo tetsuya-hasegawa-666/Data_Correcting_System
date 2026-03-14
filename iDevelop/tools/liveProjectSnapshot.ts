@@ -3,6 +3,7 @@ import { basename, extname, join, relative, resolve, sep } from "node:path";
 
 import type { DatasetRecord } from "../src/data-workspace/model/DatasetRecord";
 import type { DocumentRecord } from "../src/document-workspace/model/DocumentRecord";
+import type { CodeTargetRecord } from "../src/code-workspace/model/CodeTargetRecord";
 
 export interface ProjectManifest {
   projectId: string;
@@ -17,8 +18,10 @@ export interface ProjectManifest {
 export interface LiveProjectSnapshot {
   documents: DocumentRecord[];
   datasets: DatasetRecord[];
+  codeTargets: CodeTargetRecord[];
   documentSourcePolicy: string;
   datasetSourcePolicy: string;
+  codeSourcePolicy: string;
   readOnly: boolean;
   sourceSignature: string;
 }
@@ -27,14 +30,17 @@ export function loadLiveProjectSnapshot(manifestPath: string): LiveProjectSnapsh
   const manifest = readManifest(manifestPath);
   const documents = collectDocuments(manifest);
   const datasets = collectDatasets(manifest);
+  const codeTargets = collectCodeTargets(manifest);
 
   return {
     documents,
     datasets,
+    codeTargets,
     documentSourcePolicy: "filesystem recursive read-only",
     datasetSourcePolicy: "filesystem recursive read-only",
+    codeSourcePolicy: "filesystem recursive read-only",
     readOnly: manifest.readOnly,
-    sourceSignature: buildSourceSignature(documents, datasets)
+    sourceSignature: buildSourceSignature(documents, datasets, codeTargets)
   };
 }
 
@@ -75,6 +81,27 @@ function collectDatasets(manifest: ProjectManifest): DatasetRecord[] {
       };
     })
     .sort((left, right) => left.name.localeCompare(right.name, "ja"));
+}
+
+function collectCodeTargets(manifest: ProjectManifest): CodeTargetRecord[] {
+  return collectFiles(manifest, manifest.codeRoots)
+    .map((filePath) => {
+      const projectRelativePath = toProjectRelativePath(manifest.projectRoot, filePath);
+      const stats = statSync(filePath);
+      const extension = extname(filePath).replace(".", "") || "file";
+      const body = readFileSync(filePath, "utf8");
+      const lineCount = body.split(/\r?\n/).length;
+
+      return {
+        id: projectRelativePath,
+        title: basename(filePath),
+        path: projectRelativePath,
+        description: `${extension} / ${lineCount} lines`,
+        kind: extension,
+        updatedAt: stats.mtime.toISOString()
+      };
+    })
+    .sort((left, right) => left.path.localeCompare(right.path, "ja"));
 }
 
 function collectFiles(manifest: ProjectManifest, roots: string[]): string[] {
@@ -134,10 +161,17 @@ function walkDirectory(manifest: ProjectManifest, currentPath: string, result: s
 
 function shouldIgnore(ignoreGlobs: string[], relativePath: string): boolean {
   const normalized = relativePath.replaceAll("\\", "/");
+  const segments = normalized.split("/");
 
   return ignoreGlobs.some((pattern) => {
     const token = pattern.replaceAll("**/", "").replaceAll("/**", "").replaceAll("*", "");
-    return token.length > 0 && normalized.includes(token);
+
+    if (token.length === 0) {
+      return false;
+    }
+
+    const normalizedToken = token.replaceAll("\\", "/").replace(/^\/+|\/+$/g, "");
+    return segments.includes(normalizedToken);
   });
 }
 
@@ -214,13 +248,18 @@ function countRecords(filePath: string): number {
   return Math.max(lines.length, 1);
 }
 
-function buildSourceSignature(documents: DocumentRecord[], datasets: DatasetRecord[]): string {
+function buildSourceSignature(
+  documents: DocumentRecord[],
+  datasets: DatasetRecord[],
+  codeTargets: CodeTargetRecord[]
+): string {
   const documentToken = documents
     .map((document) => `${document.path}:${document.body.length}`)
     .join("|");
   const datasetToken = datasets
     .map((dataset) => `${dataset.id}:${dataset.recordCount}:${dataset.updatedAt}`)
     .join("|");
+  const codeToken = codeTargets.map((target) => `${target.path}:${target.updatedAt}`).join("|");
 
-  return `${documents.length}:${datasets.length}:${documentToken}:${datasetToken}`;
+  return `${documents.length}:${datasets.length}:${codeTargets.length}:${documentToken}:${datasetToken}:${codeToken}`;
 }

@@ -6,8 +6,11 @@ export interface CodeWorkspaceState {
     title: string;
     path: string;
     description: string;
+    kind?: string;
+    updatedAt?: string;
   }>;
   policyNote: string;
+  sourcePolicy: string;
 }
 
 export class CodeWorkspaceController {
@@ -16,7 +19,8 @@ export class CodeWorkspaceController {
   public createState(): CodeWorkspaceState {
     return {
       targets: this.repository.listTargets(),
-      policyNote: "参照専用です。プロセス接続、実行、編集はできません。"
+      policyNote: "読み取り専用です。実行、attach、保存はできません。",
+      sourcePolicy: this.repository.getSourcePolicy()
     };
   }
 }

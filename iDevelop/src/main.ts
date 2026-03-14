@@ -18,8 +18,7 @@ if (!rootElement) {
   throw new Error("Application root '#app' was not found.");
 }
 
-const bootstrap = await loadDashboardBootstrap(documentSeed, datasetSeed);
-const codeTargetRepository = new StaticCodeTargetRepository(codeTargetSeed);
+const bootstrap = await loadDashboardBootstrap(documentSeed, datasetSeed, codeTargetSeed);
 
 if (bootstrap.mode === "live") {
   const documentRepository = new StaticDocumentRepository(bootstrap.documents, {
@@ -30,6 +29,10 @@ if (bootstrap.mode === "live") {
     sourcePolicy: bootstrap.datasetSourcePolicy,
     readOnly: bootstrap.readOnly
   });
+  const codeTargetRepository = new StaticCodeTargetRepository(
+    bootstrap.codeTargets,
+    bootstrap.codeSourcePolicy
+  );
   const controller = new DashboardController(
     rootElement,
     documentRepository,
@@ -37,7 +40,7 @@ if (bootstrap.mode === "live") {
     codeTargetRepository,
     bootstrap,
     async (): Promise<DashboardBootstrap> => {
-      const nextBootstrap = await loadDashboardBootstrap(documentSeed, datasetSeed);
+      const nextBootstrap = await loadDashboardBootstrap(documentSeed, datasetSeed, codeTargetSeed);
 
       if (nextBootstrap.mode !== "live") {
         throw new Error("live source を再取得できませんでした。");
@@ -51,6 +54,10 @@ if (bootstrap.mode === "live") {
         sourcePolicy: nextBootstrap.datasetSourcePolicy,
         readOnly: nextBootstrap.readOnly
       });
+      codeTargetRepository.replaceTargets(
+        nextBootstrap.codeTargets,
+        nextBootstrap.codeSourcePolicy
+      );
 
       return nextBootstrap;
     }
@@ -66,6 +73,7 @@ if (bootstrap.mode === "live") {
     typeof window === "undefined"
       ? new StaticDatasetRepository(datasetSeed)
       : new BrowserDatasetRepository(datasetSeed);
+  const codeTargetRepository = new StaticCodeTargetRepository(codeTargetSeed);
 
   const controller = new DashboardController(
     rootElement,
