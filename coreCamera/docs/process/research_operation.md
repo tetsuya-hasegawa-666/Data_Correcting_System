@@ -1,5 +1,7 @@
 # Research Operation
 
+> 共通文書ルール参照: `C:/Users/tetsuya/playground/Data_Correcting_System/DOCUMENTATION_RULE.md`
+
 ## First Re-entry Files
 
 1. `coreCamera/docs/index.md`

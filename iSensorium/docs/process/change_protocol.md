@@ -1,5 +1,7 @@
 # Change Protocol
 
+> 共通文書ルール参照: `C:/Users/tetsuya/playground/Data_Correcting_System/DOCUMENTATION_RULE.md`
+
 ## Purpose
 
 release line や価値定義の変更時に、人と Codex の意味理解を失わず、変更の影響を追跡できるようにする。

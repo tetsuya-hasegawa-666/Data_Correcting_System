@@ -224,3 +224,11 @@
 - change_summary: market/micro release line に `UX_check_work_flow.md` を成果物として追加し、current state の risk/handoff を実装実態へ更新した
 - affected_documents: `develop/history/summary/summary.md`, `develop/plans/2026-03-14-003/market_release_lines.md`, `develop/plans/2026-03-14-003/micro_release_lines.md`
 - expected_effect: 次の新 plan set で UX 改修や汎用化を始める前に、現行 line の完了条件を一意に読める
+## 2026-03-15-011 workspace-document-rule-centralization
+
+- target_behavior: `iDevelop` 文書が workspace 共通の日本語ルールを必ず参照し、UX check 手順も日本語で運用できる
+- intended_change: root `DOCUMENTATION_RULE.md` を基準にし、`iDevelop/docs/index.md` と `docs/process/*.md` に参照導線を追加し、`UX_check_work_flow.md` を日本語へ統一する
+- background_reason: workspace 全体で文書ルールを分散管理すると、`UX_check_work_flow.md` のような英語残りや project 間の表記ゆれが再発しやすい
+- change_summary: `DOCUMENTATION_RULE.md` と `AGENTS.md` を追加更新し、`iDevelop/docs/index.md`、`iDevelop/docs/process/change_protocol.md`、`iDevelop/docs/process/research_operation.md`、`iDevelop/docs/process/UX_check_work_flow.md` を root 文書ルール参照前提へ更新した
+- affected_documents: `DOCUMENTATION_RULE.md`, `AGENTS.md`, `iDevelop/docs/index.md`, `iDevelop/docs/process/change_protocol.md`, `iDevelop/docs/process/research_operation.md`, `iDevelop/docs/process/UX_check_work_flow.md`
+- expected_effect: 次回以降の `iDevelop` 文書更新で、workspace 共通ルールと dashboard 固有ルールを分離して維持できる

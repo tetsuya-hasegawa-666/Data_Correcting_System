@@ -1,5 +1,7 @@
 # Documentation Index
 
+> 共通文書ルール: `C:/Users/tetsuya/playground/Data_Correcting_System/DOCUMENTATION_RULE.md`
+
 `coreCamera/` は、後に現在の `iSensorium` camera spine を置き換えるための、`Camera2 + ARCore Shared Camera` 専用 standalone replacement-camera project である。
 
 ## Position

@@ -97,3 +97,11 @@
 - change_summary: `coreCamera/docs/process/UX_check_work_flow.md`、`coreCamera/docs/observability/current_state.md`、`coreCamera/SESSION_HANDOVER.md` に rollback anchor `rollback-isensorium-pre-upstream-trial-2026-03-15-001` を反映した
 - affected_documents: `coreCamera/docs/process/UX_check_work_flow.md`, `coreCamera/docs/observability/current_state.md`, `coreCamera/SESSION_HANDOVER.md`, `coreCamera/docs/history/docs/summary/summary.md`, `coreCamera/develop/history/summary/summary.md`
 - expected_effect: 次セッションの upstream trial 準備で rollback 起点と操作方法を即座に参照できる
+## 2026-03-15-007 workspace-document-rule-centralization
+
+- target_behavior: workspace 共通の文書ルールを `coreCamera` 側文書から一貫して参照できる
+- intended_change: root `DOCUMENTATION_RULE.md` を基準にし、`docs/index.md` と `docs/process/*.md` へ参照導線を追加する
+- background_reason: 日本語原則や文書ルールの置き場が project ごとに分散すると、`UX_check_work_flow.md` のような言語ぶれが再発しやすい
+- change_summary: `coreCamera/docs/index.md`、`coreCamera/docs/process/change_protocol.md`、`coreCamera/docs/process/research_operation.md`、`coreCamera/docs/process/UX_check_work_flow.md` を root 文書ルール参照前提へ更新した
+- affected_documents: `DOCUMENTATION_RULE.md`, `AGENTS.md`, `coreCamera/docs/index.md`, `coreCamera/docs/process/change_protocol.md`, `coreCamera/docs/process/research_operation.md`, `coreCamera/docs/process/UX_check_work_flow.md`
+- expected_effect: 次回以降の `coreCamera` 文書更新で、workspace 共通ルールと project 固有ルールを混ぜずに運用できる

@@ -1,5 +1,7 @@
 # Documentation Index
 
+> 共通文書ルール: `C:/Users/tetsuya/playground/Data_Correcting_System/DOCUMENTATION_RULE.md`
+
 このプロジェクトでは、`docs/` は運用規約と source-of-truth を扱う。
 `develop/` は実開発の計画、設計具体化、開発履歴、変更対象文書を扱う。
 

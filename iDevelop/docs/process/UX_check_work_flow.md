@@ -1,13 +1,15 @@
-# UX Check Work Flow
+# UX確認ワークフロー
 
-## Purpose
+> 共通文書ルール参照: `C:/Users/tetsuya/playground/Data_Correcting_System/DOCUMENTATION_RULE.md`
 
-Validate the consultation workspace as a completed baseline, including the post-completion UX clarifications for local draft unlock, consultation guidance, compact header cards, and overflow-safe preview layout.
+## 目的
 
-## Pre-Check
+consultation workspace の完成済み baseline を、local draft unlock、consultation guidance、compact header cards、preview overflow 対応まで含めて確認する。
 
-1. Confirm `config/project-manifest.json` points to the intended project roots.
-2. Run:
+## 事前確認
+
+1. `config/project-manifest.json` が意図した project root を指していることを確認する。
+2. 次を実行する。
 
 ```powershell
 cd C:\Users\tetsuya\playground\Data_Correcting_System\iDevelop
@@ -16,103 +18,103 @@ npm test
 npm run build
 ```
 
-3. Stop if either command fails.
+3. どれか 1 つでも失敗したらそこで止める。
 
-## Start
+## 起動
 
 ```powershell
 npm run dashboard
 ```
 
-Open `http://127.0.0.1:4173/`.
+`http://127.0.0.1:4173/` を開く。
 
-## Header Check
+## ヘッダー確認
 
-1. Confirm the top area is compressed into three cards: `Refresh`, `Consultation Contract`, `Shared Conversation`.
-2. Confirm the compact cards fit in about the top sixth of the screen on desktop.
-3. Hover or focus each card and confirm it expands full width.
-4. Move the pointer away and confirm the card returns to compact form.
+1. 画面上部が `Refresh`、`Consultation Contract`、`Shared Conversation` の 3 カードに圧縮されていることを確認する。
+2. desktop で上端のおよそ 6 分の 1 程度に収まっていることを確認する。
+3. 各カードに hover または focus すると横幅いっぱいに展開することを確認する。
+4. pointer を外すと compact 状態へ戻ることを確認する。
 
-## Document Check
+## 文書ワークスペース確認
 
-1. Open the `文書` tab.
-2. Confirm grouped directory boxes are visible.
-3. If the source is read-only, confirm `local draft` unlock guidance explains:
-   - unlock condition
-   - source is cloned into editable draft state
-   - original source remains unchanged until safe apply
-4. Start `local draft` and confirm edit controls become available.
-5. Confirm the selected document preview stays within the viewport and does not overflow right.
-6. Confirm the consultation panel explains `Summary`, `Evidence`, and `Next Action`.
-7. Run a consultation and confirm those three fields appear in the response panel.
+1. `文書` tab を開く。
+2. grouped directory box が見えることを確認する。
+3. source が read-only の場合は、`local draft` unlock guidance に次が書かれていることを確認する。
+   - unlock 条件
+   - source は editable draft 状態へ clone されること
+   - safe apply までは original source は変わらないこと
+4. `local draft` を開始して edit controls が有効になることを確認する。
+5. selected document preview が viewport の右にはみ出さないことを確認する。
+6. consultation panel が `Summary`、`Evidence`、`Next Action` を説明していることを確認する。
+7. consultation を 1 回実行し、response panel にその 3 項目が出ることを確認する。
 
-## Data Check
+## データワークスペース確認
 
-1. Open the `データ` tab.
-2. If the source is read-only, confirm `local draft` unlock guidance explains:
-   - unlock condition
-   - dataset list is cloned into editable draft state
-   - safe apply is still required before source change
-3. Start `local draft` and confirm status/count editing becomes available.
-4. Confirm the dataset table stays within the viewport and scrolls horizontally if needed.
-5. Confirm the consultation panel explains `Summary`, `Evidence`, and `Next Action`.
-6. Run a consultation and confirm those three fields appear in the response panel.
+1. `データ` tab を開く。
+2. source が read-only の場合は、`local draft` unlock guidance に次が書かれていることを確認する。
+   - unlock 条件
+   - dataset list は editable draft 状態へ clone されること
+   - source 反映前に safe apply が必要なこと
+3. `local draft` を開始して status/count 編集が有効になることを確認する。
+4. dataset table が viewport 内に収まり、必要なら横スクロールすることを確認する。
+5. consultation panel が `Summary`、`Evidence`、`Next Action` を説明していることを確認する。
+6. consultation を 1 回実行し、response panel にその 3 項目が出ることを確認する。
 
-## Code Check
+## コードワークスペース確認
 
-1. Open the `コード` tab.
-2. Confirm code targets remain read-only.
-3. Confirm approval state is `phase-gated-read-only`.
-4. Confirm `Apply Request` does not produce an apply preview.
+1. `コード` tab を開く。
+2. code targets が read-only のままであることを確認する。
+3. approval state が `phase-gated-read-only` であることを確認する。
+4. `Apply Request` が apply preview を出さないことを確認する。
 
-## Shared Shell Check
+## 共有シェル確認
 
-1. Run one document consultation.
-2. Run one data consultation.
-3. Confirm the shared shell shows prompt, bundle, summary, approval, and history.
-4. Confirm proposal actions are visible after a consultation response exists.
+1. 文書 consultation を 1 回実行する。
+2. データ consultation を 1 回実行する。
+3. shared shell に prompt、bundle、summary、approval、history が出ることを確認する。
+4. consultation response 後に proposal actions が見えることを確認する。
 
-## Safe Apply Check
+## Safe Apply 確認
 
-1. In editable or unlocked local draft document mode, run a consultation.
-2. Click `Apply Request` and confirm preview appears.
-3. Approve and confirm `[Applied Consultation]` is appended in document preview.
-4. In code workspace, confirm the same action remains blocked by the phase gate.
+1. editable または unlocked local draft の文書モードで consultation を実行する。
+2. `Apply Request` を押して preview が出ることを確認する。
+3. approve して document preview に `[Applied Consultation]` が追記されることを確認する。
+4. code workspace では同じ操作が phase gate により block されることを確認する。
 
-## Refresh Check
+## Refresh 確認
 
-1. Confirm refresh evidence appears in the `Refresh` header card.
-2. Trigger refresh and confirm `fresh`, `refreshed`, or `stale` updates appropriately.
+1. `Refresh` header card に refresh evidence が表示されることを確認する。
+2. refresh を実行し、`fresh`、`refreshed`、`stale` が適切に更新されることを確認する。
 
-## Evidence
+## 記録
 
-1. Record UX evidence in [UX_evidence_log.md](C:\Users\tetsuya\playground\Data_Correcting_System\iDevelop\docs\observability\UX_evidence_log.md).
-2. If a failure occurs, note the rollback trigger and visible symptom.
+1. UX evidence は [UX_evidence_log.md](C:/Users/tetsuya/playground/Data_Correcting_System/iDevelop/docs/observability/UX_evidence_log.md) に記録する。
+2. failure が出た場合は rollback trigger と visible symptom を記録する。
 
-## Rollback Rule
+## ロールバック条件
 
-Rollback if any of the following occurs:
+次のどれかが起きたら rollback する。
 
-- local draft unlock edits the original source immediately
-- consultation guidance becomes misleading or missing
-- header expansion hides essential controls or does not collapse back
-- preview or table content overflows the right edge
-- `npm test` or `npm run build` fails
+- local draft unlock が original source を即時変更する
+- consultation guidance が欠落する、または誤解を招く
+- header expansion が重要な control を隠す、または collapse しない
+- preview または table が右端にはみ出す
+- `npm test` または `npm run build` が失敗する
 
-## Rollback Action
+## ロールバック手順
 
-1. Stop the dashboard.
-2. Restore the last known-good implementation.
-3. Re-run `npm test` and `npm run build`.
-4. Log the failure in [UX_evidence_log.md](C:\Users\tetsuya\playground\Data_Correcting_System\iDevelop\docs\observability\UX_evidence_log.md).
+1. dashboard を止める。
+2. 最後の known-good implementation へ戻す。
+3. `npm test` と `npm run build` を再実行する。
+4. failure を [UX_evidence_log.md](C:/Users/tetsuya/playground/Data_Correcting_System/iDevelop/docs/observability/UX_evidence_log.md) に記録する。
 
-## Exit Criteria
+## 終了条件
 
-- `npm test` passes
-- `npm run build` passes
-- header cards compact and expand as designed
-- document local draft unlock is understandable and usable
-- data local draft unlock is understandable and usable
-- consultation capability guidance is visible in document and data workspaces
-- preview and table layouts do not overflow right
-- code workspace remains phase-gated read-only
+- `npm test` が通る
+- `npm run build` が通る
+- header cards が意図どおり compact / expand する
+- document local draft unlock が理解しやすく使える
+- data local draft unlock が理解しやすく使える
+- consultation capability guidance が document/data workspace に表示される
+- preview と table layout が右にはみ出さない
+- code workspace が phase-gated read-only を維持する

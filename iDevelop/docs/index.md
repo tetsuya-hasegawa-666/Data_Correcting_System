@@ -1,5 +1,7 @@
 # Documentation Index
 
+> 共通文書ルール: `C:/Users/tetsuya/playground/Data_Correcting_System/DOCUMENTATION_RULE.md`
+
 この subproject では、`docs/` を source-of-truth とし、`develop/` を実装計画と履歴の管理場所とする。新しい ad hoc 文書は増やさず、必要な更新は既存レイヤへ集約し、変更後は履歴とスナップショットを対で残す。
 
 ## Governance Principle

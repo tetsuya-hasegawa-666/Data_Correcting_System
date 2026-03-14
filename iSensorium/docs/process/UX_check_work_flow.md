@@ -1,4 +1,6 @@
-# UX Check Work Flow
+# UX確認ワークフロー
+
+> 共通文書ルール参照: `C:/Users/tetsuya/playground/Data_Correcting_System/DOCUMENTATION_RULE.md`
 
 > [!IMPORTANT]
 > **Rollback Notice: 次の upstream trial で `iSensorium/` を編集する前に rollback anchor を固定済み**

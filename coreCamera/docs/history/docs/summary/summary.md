@@ -75,3 +75,9 @@
 - trigger: `iSensorium/` 変更許可の前提として guarded upstream trial 前の rollback 指示を source-of-truth に固定する必要が出た
 - resulting_direction: `coreCamera/docs/process/UX_check_work_flow.md` 先頭に理由付き rollback notice を追加し、`current_state` と handover に anchor tag と参照先を明記した
 - expected_benefit: 次セッションで `iSensorium/` を触る前に rollback 基準と指示方法を即座に参照できる
+## 2026-03-15-007 workspace-document-rule-centralization
+
+- scope: documentation system
+- trigger: workspace 全体で `.md` の日本語原則と文書ルール参照先を 1 か所へ集約する必要が出た
+- resulting_direction: root `DOCUMENTATION_RULE.md` を追加し、`coreCamera/docs/index.md` と `docs/process/*.md` からそこを参照する構成へ揃えた
+- expected_benefit: `coreCamera` 固有ルールと workspace 共通ルールの責務が分かれ、文書の言語方針がぶれにくくなる

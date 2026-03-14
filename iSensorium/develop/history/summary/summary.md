@@ -191,3 +191,11 @@
 - change_summary: `iSensorium/docs/process/UX_check_work_flow.md` と `iSensorium/docs/observability/current_state.md` に tag `rollback-isensorium-pre-upstream-trial-2026-03-15-001`、anchor commit、サイズ判断、rollback 手順参照先を反映した
 - affected_documents: `iSensorium/docs/process/UX_check_work_flow.md`, `iSensorium/docs/observability/current_state.md`, `iSensorium/docs/history/docs/summary/summary.md`, `iSensorium/develop/history/summary/summary.md`
 - expected_effect: upstream trial 前に rollback 起点が chat 依存にならず、branch を問わず同じ手順で復帰できる
+## 2026-03-15-003 workspace-document-rule-centralization
+
+- target_behavior: `iSensorium` 文書が workspace 共通の日本語ルールを必ず参照できる
+- intended_change: root `DOCUMENTATION_RULE.md` を基準にし、`docs/index.md` と `docs/process/*.md` へ参照導線を追加する
+- background_reason: project ごとに文書言語ルールを重複させると、同じ workspace 内で表記ゆれや参照漏れが起きやすい
+- change_summary: `iSensorium/docs/index.md`、`iSensorium/docs/process/change_protocol.md`、`iSensorium/docs/process/research_operation.md`、`iSensorium/docs/process/UX_check_work_flow.md` を root 文書ルール参照前提へ更新した
+- affected_documents: `DOCUMENTATION_RULE.md`, `AGENTS.md`, `iSensorium/docs/index.md`, `iSensorium/docs/process/change_protocol.md`, `iSensorium/docs/process/research_operation.md`, `iSensorium/docs/process/UX_check_work_flow.md`
+- expected_effect: 次回以降の `iSensorium` 文書更新で、workspace 共通ルールと project 固有ルールの責務を分離できる

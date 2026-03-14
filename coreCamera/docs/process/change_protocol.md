@@ -1,5 +1,7 @@
 # Change Protocol
 
+> 共通文書ルール参照: `C:/Users/tetsuya/playground/Data_Correcting_System/DOCUMENTATION_RULE.md`
+
 意味のある `coreCamera/` の変更があった場合は、必ず次を更新する:
 
 1. `docs/observability/current_state.md`

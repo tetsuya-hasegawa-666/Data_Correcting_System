@@ -1,5 +1,7 @@
 # Change Protocol
 
+> 共通文書ルール参照: `C:/Users/tetsuya/playground/Data_Correcting_System/DOCUMENTATION_RULE.md`
+
 ## Purpose
 
 ダッシュボードの変更時に、人と Codex が誤解なく判断し、変更影響を `iDevelop/` の中で閉じて扱えるようにする。

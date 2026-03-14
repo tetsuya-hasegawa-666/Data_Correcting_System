@@ -1,5 +1,7 @@
 # Research Operation
 
+> 共通文書ルール参照: `C:/Users/tetsuya/playground/Data_Correcting_System/DOCUMENTATION_RULE.md`
+
 ## Purpose
 
 この文書は、Codex が `iDevelop` を MVC、BDD、TDD ベースで継続開発するための運用ルールを定義する。

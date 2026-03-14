@@ -1,0 +1,45 @@
+# 文書ルール
+
+このファイルは `Data_Correcting_System` ワークスペース全体の文書ルールの唯一の基準です。各 project の `docs/` と `develop/` は、この文書を前提に各 project 固有の規約だけを追加します。
+
+## 基本方針
+
+- `.md` は原則として日本語で記述する
+- file path、識別子、API 名、class 名、package 名、command、環境変数などは原文のまま保持してよい
+- 英語を残すのは、固有名詞、外部仕様、識別子、短い引用、または日本語にすると意味が崩れる場合に限る
+- 新しい文書ルールは chat だけで閉じず、この文書または各 project の source-of-truth に反映する
+
+## 参照構造
+
+- workspace 全体の文書ルールはこの `DOCUMENTATION_RULE.md` を参照する
+- project ごとの source-of-truth は各 project の `docs/index.md`
+- project ごとの変更運用は各 project の `docs/process/change_protocol.md`
+- project ごとの実行運用は各 project の `docs/process/research_operation.md`
+- project ごとの UX 評価手順は各 project の `docs/process/UX_check_work_flow.md`
+
+## 記述ルール
+
+- 見出し、説明文、手順、判断基準、理由は日本語で書く
+- 箇条書きは意味単位で短く保つ
+- source-of-truth では原則や現行ルールを書く
+- history では変更理由と結果だけを書く
+- develop では plan、status、snapshot の対応関係を明確にする
+
+## 更新順序
+
+1. workspace 共通ルールの変更ならこの文書を更新する
+2. 次に影響を受ける各 project の `docs/index.md` を更新する
+3. 次に `docs/process/*.md` や `docs/observability/current_state.md` へ具体ルールを反映する
+4. 最後に `docs/history/` と `develop/history/` を更新する
+
+## project 境界
+
+- `iSensorium/` の文書は `iSensorium/` 配下で完結させる
+- `iDevelop/` の文書は `iDevelop/` 配下で完結させる
+- `coreCamera/` の文書は `coreCamera/` 配下で完結させる
+- workspace 共通ルールだけをこの root に置く
+
+## 参照義務
+
+- 各 project の文書ルール `.md` は、この `DOCUMENTATION_RULE.md` を参照する
+- root の `AGENTS.md` は workspace 共通文書ルールの入口としてこのファイルを明記する

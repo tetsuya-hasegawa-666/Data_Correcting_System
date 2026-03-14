@@ -21,3 +21,8 @@
 - broad search や再帰読込では、各 project の `docs/history/**/snapshot/**` を既定で除外する。
 - 15 分前後の manual check は evidence 採取の窓であり、会話停止や作業停止の既定条件ではない。
 - 実 blocker や外部依存がない限り、active release line に対する自律継続作業は最大 6 時間まで続けてよい。
+## Documentation Rule
+
+- workspace 共通の文書ルールは `C:/Users/tetsuya/playground/Data_Correcting_System/DOCUMENTATION_RULE.md` を唯一の基準とする
+- 各 project の `docs/index.md`、`docs/process/change_protocol.md`、`docs/process/research_operation.md`、`docs/process/UX_check_work_flow.md` はこの文書を参照し、project 固有ルールだけを追加する
+- `.md` は原則として日本語で記述する

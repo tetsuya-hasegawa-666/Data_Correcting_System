@@ -1,5 +1,7 @@
 # Research Operation
 
+> 共通文書ルール参照: `C:/Users/tetsuya/playground/Data_Correcting_System/DOCUMENTATION_RULE.md`
+
 ## Purpose
 
 人の短周期プロンプト待ちで止まらず、Codex が長時間継続して研究、設計、分解、実装計画を進めるための運用ルールを定義する。
