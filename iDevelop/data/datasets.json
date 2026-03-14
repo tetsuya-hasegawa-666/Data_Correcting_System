@@ -1,0 +1,26 @@
+[
+  {
+    "id": "dataset-1",
+    "name": "Doc Sync Coverage",
+    "category": "document",
+    "recordCount": 12,
+    "status": "ready",
+    "updatedAt": "2026-03-14T08:30:00Z"
+  },
+  {
+    "id": "dataset-2",
+    "name": "Correction Result Summary",
+    "category": "result",
+    "recordCount": 5,
+    "status": "draft",
+    "updatedAt": "2026-03-14T09:30:00Z"
+  },
+  {
+    "id": "dataset-3",
+    "name": "Research Backlog",
+    "category": "process",
+    "recordCount": 7,
+    "status": "ready",
+    "updatedAt": "2026-03-13T20:30:00Z"
+  }
+]

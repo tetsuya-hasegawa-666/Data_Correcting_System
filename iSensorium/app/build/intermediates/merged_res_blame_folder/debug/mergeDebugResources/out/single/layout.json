@@ -1,0 +1,10 @@
+[
+    {
+        "merged": "C:\\Users\\tetsuya\\.gradle\\daemon\\8.10.2\\com.isensorium.app-mergeDebugResources-42:\\layout\\activity_main.xml",
+        "source": "C:\\Users\\tetsuya\\.gradle\\daemon\\8.10.2\\com.isensorium.app-main-45:\\layout\\activity_main.xml"
+    },
+    {
+        "merged": "com.isensorium.app-mergeDebugResources-42:/layout/activity_main.xml",
+        "source": "com.isensorium.app-main-45:/layout/activity_main.xml"
+    }
+]

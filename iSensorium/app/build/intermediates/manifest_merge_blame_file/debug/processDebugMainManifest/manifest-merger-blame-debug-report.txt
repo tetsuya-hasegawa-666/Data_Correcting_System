@@ -1,0 +1,238 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.isensorium.app"
+4    android:versionCode="1"
+5    android:versionName="0.1.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="29"
+9        android:targetSdkVersion="35" />
+10
+11    <uses-permission android:name="android.permission.CAMERA" />
+11-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:4:5-65
+11-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:4:22-62
+12    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+12-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:5:5-71
+12-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:5:22-68
+13    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+13-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:6:5-79
+13-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:6:22-76
+14    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+14-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:7:5-81
+14-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:7:22-78
+15    <uses-permission
+15-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:8:5-95
+16        android:name="android.permission.BLUETOOTH"
+16-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:8:22-65
+17        android:maxSdkVersion="30" />
+17-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:8:66-92
+18    <uses-permission
+18-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:9:5-101
+19        android:name="android.permission.BLUETOOTH_ADMIN"
+19-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:9:22-71
+20        android:maxSdkVersion="30" />
+20-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:9:72-98
+21    <uses-permission
+21-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:10:5-11:58
+22        android:name="android.permission.BLUETOOTH_SCAN"
+22-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:10:22-70
+23        android:usesPermissionFlags="neverForLocation" />
+23-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:11:9-55
+24    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+24-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:12:5-76
+24-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:12:22-73
+25
+26    <uses-feature
+26-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:14:5-88
+27        android:name="android.hardware.camera.ar"
+27-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:14:19-60
+28        android:required="false" />
+28-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:14:61-85
+29
+30    <permission
+30-->[androidx.core:core:1.15.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\5edb83bd444517f53d6437ea2b049cbc\transformed\core-1.15.0\AndroidManifest.xml:22:5-24:47
+31        android:name="com.isensorium.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+31-->[androidx.core:core:1.15.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\5edb83bd444517f53d6437ea2b049cbc\transformed\core-1.15.0\AndroidManifest.xml:23:9-81
+32        android:protectionLevel="signature" />
+32-->[androidx.core:core:1.15.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\5edb83bd444517f53d6437ea2b049cbc\transformed\core-1.15.0\AndroidManifest.xml:24:9-44
+33
+34    <uses-permission android:name="com.isensorium.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+34-->[androidx.core:core:1.15.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\5edb83bd444517f53d6437ea2b049cbc\transformed\core-1.15.0\AndroidManifest.xml:26:5-97
+34-->[androidx.core:core:1.15.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\5edb83bd444517f53d6437ea2b049cbc\transformed\core-1.15.0\AndroidManifest.xml:26:22-94
+35
+36    <queries>
+36-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:20:5-27:15
+37        <package android:name="com.google.ar.core" />
+37-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:21:9-54
+37-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:21:18-51
+38        <package android:name="com.android.vending" />
+38-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:22:9-55
+38-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:22:18-52
+39
+40        <intent>
+40-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:24:9-26:18
+41            <action android:name="com.google.android.play.core.install.BIND_INSTALL_SERVICE" />
+41-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:25:13-96
+41-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:25:21-93
+42        </intent>
+43    </queries>
+44
+45    <application
+45-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:16:5-32:19
+46        android:allowBackup="true"
+46-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:17:9-35
+47        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+47-->[androidx.core:core:1.15.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\5edb83bd444517f53d6437ea2b049cbc\transformed\core-1.15.0\AndroidManifest.xml:28:18-86
+48        android:debuggable="true"
+49        android:extractNativeLibs="false"
+50        android:icon="@mipmap/ic_launcher"
+50-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:18:9-43
+51        android:label="@string/app_name"
+51-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:19:9-41
+52        android:roundIcon="@mipmap/ic_launcher_round"
+52-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:20:9-54
+53        android:supportsRtl="true"
+53-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:21:9-35
+54        android:theme="@style/Theme.ISensorium" >
+54-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:22:9-48
+55        <activity
+55-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:23:9-31:20
+56            android:name="com.isensorium.app.MainActivity"
+56-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:24:13-41
+57            android:exported="true" >
+57-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:25:13-36
+58            <intent-filter>
+58-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:26:13-30:29
+59                <action android:name="android.intent.action.MAIN" />
+59-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:27:17-69
+59-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:27:25-66
+60
+61                <category android:name="android.intent.category.LAUNCHER" />
+61-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:29:17-77
+61-->C:\Users\tetsuya\playground\Data_Correcting_System\iSensorium\app\src\main\AndroidManifest.xml:29:27-74
+62            </intent-filter>
+63        </activity>
+64        <!--
+65        Service for holding metadata. Cannot be instantiated.
+66        Metadata will be merged from other manifests.
+67        -->
+68        <service
+68-->[androidx.camera:camera-core:1.4.1] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\22b78f80244b7b144e88092fe395f57b\transformed\camera-core-1.4.1\AndroidManifest.xml:29:9-33:78
+69            android:name="androidx.camera.core.impl.MetadataHolderService"
+69-->[androidx.camera:camera-core:1.4.1] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\22b78f80244b7b144e88092fe395f57b\transformed\camera-core-1.4.1\AndroidManifest.xml:30:13-75
+70            android:enabled="false"
+70-->[androidx.camera:camera-core:1.4.1] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\22b78f80244b7b144e88092fe395f57b\transformed\camera-core-1.4.1\AndroidManifest.xml:31:13-36
+71            android:exported="false" >
+71-->[androidx.camera:camera-core:1.4.1] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\22b78f80244b7b144e88092fe395f57b\transformed\camera-core-1.4.1\AndroidManifest.xml:32:13-37
+72            <meta-data
+72-->[androidx.camera:camera-camera2:1.4.1] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\6f215d0ccbee1538dc580bf285db199f\transformed\camera-camera2-1.4.1\AndroidManifest.xml:30:13-32:89
+73                android:name="androidx.camera.core.impl.MetadataHolderService.DEFAULT_CONFIG_PROVIDER"
+73-->[androidx.camera:camera-camera2:1.4.1] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\6f215d0ccbee1538dc580bf285db199f\transformed\camera-camera2-1.4.1\AndroidManifest.xml:31:17-103
+74                android:value="androidx.camera.camera2.Camera2Config$DefaultProvider" />
+74-->[androidx.camera:camera-camera2:1.4.1] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\6f215d0ccbee1538dc580bf285db199f\transformed\camera-camera2-1.4.1\AndroidManifest.xml:32:17-86
+75        </service>
+76
+77        <provider
+77-->[androidx.emoji2:emoji2:1.3.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\991329f75888e991b956593cb71249e2\transformed\emoji2-1.3.0\AndroidManifest.xml:24:9-32:20
+78            android:name="androidx.startup.InitializationProvider"
+78-->[androidx.emoji2:emoji2:1.3.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\991329f75888e991b956593cb71249e2\transformed\emoji2-1.3.0\AndroidManifest.xml:25:13-67
+79            android:authorities="com.isensorium.app.androidx-startup"
+79-->[androidx.emoji2:emoji2:1.3.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\991329f75888e991b956593cb71249e2\transformed\emoji2-1.3.0\AndroidManifest.xml:26:13-68
+80            android:exported="false" >
+80-->[androidx.emoji2:emoji2:1.3.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\991329f75888e991b956593cb71249e2\transformed\emoji2-1.3.0\AndroidManifest.xml:27:13-37
+81            <meta-data
+81-->[androidx.emoji2:emoji2:1.3.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\991329f75888e991b956593cb71249e2\transformed\emoji2-1.3.0\AndroidManifest.xml:29:13-31:52
+82                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+82-->[androidx.emoji2:emoji2:1.3.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\991329f75888e991b956593cb71249e2\transformed\emoji2-1.3.0\AndroidManifest.xml:30:17-75
+83                android:value="androidx.startup" />
+83-->[androidx.emoji2:emoji2:1.3.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\991329f75888e991b956593cb71249e2\transformed\emoji2-1.3.0\AndroidManifest.xml:31:17-49
+84            <meta-data
+84-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\6be9abce8c89f4b37a257f508725b344\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:29:13-31:52
+85                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+85-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\6be9abce8c89f4b37a257f508725b344\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:30:17-78
+86                android:value="androidx.startup" />
+86-->[androidx.lifecycle:lifecycle-process:2.8.7] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\6be9abce8c89f4b37a257f508725b344\transformed\lifecycle-process-2.8.7\AndroidManifest.xml:31:17-49
+87            <meta-data
+87-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:29:13-31:52
+88                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+88-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:30:17-85
+89                android:value="androidx.startup" />
+89-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:31:17-49
+90        </provider>
+91
+92        <activity
+92-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\d9012c64c347548f7b72d96709404c1b\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:9-173
+93            android:name="com.google.android.gms.common.api.GoogleApiActivity"
+93-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\d9012c64c347548f7b72d96709404c1b\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:19-85
+94            android:exported="false"
+94-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\d9012c64c347548f7b72d96709404c1b\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:146-170
+95            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+95-->[com.google.android.gms:play-services-base:18.5.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\d9012c64c347548f7b72d96709404c1b\transformed\play-services-base-18.5.0\AndroidManifest.xml:5:86-145
+96
+97        <meta-data
+97-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\7d224add24718e6817de1aa135af1edb\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:9-122
+98            android:name="com.google.android.gms.version"
+98-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\7d224add24718e6817de1aa135af1edb\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:20-65
+99            android:value="@integer/google_play_services_version" />
+99-->[com.google.android.gms:play-services-basement:18.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\7d224add24718e6817de1aa135af1edb\transformed\play-services-basement-18.4.0\AndroidManifest.xml:6:66-119
+100
+101        <receiver
+101-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:34:9-52:20
+102            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+102-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:35:13-76
+103            android:directBootAware="false"
+103-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:36:13-44
+104            android:enabled="true"
+104-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:37:13-35
+105            android:exported="true"
+105-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:38:13-36
+106            android:permission="android.permission.DUMP" >
+106-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:39:13-57
+107            <intent-filter>
+107-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:40:13-42:29
+108                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+108-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:17-91
+108-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:41:25-88
+109            </intent-filter>
+110            <intent-filter>
+110-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:43:13-45:29
+111                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+111-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:17-85
+111-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:44:25-82
+112            </intent-filter>
+113            <intent-filter>
+113-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:46:13-48:29
+114                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+114-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:17-88
+114-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:47:25-85
+115            </intent-filter>
+116            <intent-filter>
+116-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:49:13-51:29
+117                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+117-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:17-95
+117-->[androidx.profileinstaller:profileinstaller:1.4.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\559ab2ac9ce835a60b6fcbefbcac4526\transformed\profileinstaller-1.4.0\AndroidManifest.xml:50:25-92
+118            </intent-filter>
+119        </receiver> <!-- The minimal version code of ARCore APK required for an app using this SDK. -->
+120        <meta-data
+120-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:32:9-34:41
+121            android:name="com.google.ar.core.min_apk_version"
+121-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:33:13-62
+122            android:value="252570000" /> <!-- This activity is critical for installing ARCore when it is not already present. -->
+122-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:34:13-38
+123        <activity
+123-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:36:9-42:80
+124            android:name="com.google.ar.core.InstallActivity"
+124-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:37:13-62
+125            android:configChanges="keyboardHidden|orientation|screenSize"
+125-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:38:13-74
+126            android:excludeFromRecents="true"
+126-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:39:13-46
+127            android:exported="false"
+127-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:40:13-37
+128            android:launchMode="singleTop"
+128-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:41:13-43
+129            android:theme="@android:style/Theme.Material.Light.Dialog.Alert" />
+129-->[com.google.ar:core:1.52.0] C:\Users\tetsuya\.gradle\caches\8.10.2\transforms\4144a558ff67057f8d5123f9ed31545e\transformed\core-1.52.0\AndroidManifest.xml:42:13-77
+130    </application>
+131
+132</manifest>

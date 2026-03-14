@@ -1,0 +1,20 @@
+[
+  {
+    "id": "document-controller",
+    "title": "Document Controller",
+    "path": "src/document-workspace/controller/DocumentWorkspaceController.ts",
+    "description": "Search, edit intent, and save flow for source-of-truth documents."
+  },
+  {
+    "id": "data-controller",
+    "title": "Data Controller",
+    "path": "src/data-workspace/controller/DataWorkspaceController.ts",
+    "description": "Dataset summary, updates, and recent result records."
+  },
+  {
+    "id": "dashboard-controller",
+    "title": "Dashboard Shell",
+    "path": "src/shared-core/controller/DashboardController.ts",
+    "description": "Workspace navigation and shared rendering contract."
+  }
+]

@@ -1,0 +1,23 @@
+[
+  {
+    "id": "north-star",
+    "title": "North Star",
+    "path": "docs/artifact/north_star.md",
+    "body": "Human goal, scope boundary, and non-negotiables for the iDevelop dashboard.",
+    "tags": ["artifact", "must-scope"]
+  },
+  {
+    "id": "system-blueprint",
+    "title": "System Blueprint",
+    "path": "docs/artifact/system_blueprint.md",
+    "body": "MVC boundaries, module split, document workspace, data workspace, and shared-core direction.",
+    "tags": ["artifact", "architecture"]
+  },
+  {
+    "id": "research-operation",
+    "title": "Research Operation",
+    "path": "docs/process/research_operation.md",
+    "body": "BDD and TDD operating rules for must scope and optional scope work.",
+    "tags": ["process", "bdd", "tdd"]
+  }
+]

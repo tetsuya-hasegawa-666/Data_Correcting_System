@@ -1,0 +1,68 @@
+{
+  "sessionId": "session-20260314-111930",
+  "status": "recording",
+  "deviceModel": "SO-53B",
+  "recordingRoot": "\/storage\/emulated\/0\/Android\/data\/com.isensorium.app\/files\/Documents\/sessions\/session-20260314-111930",
+  "timebase": {
+    "sessionStartWallTimeMs": 1773454770877,
+    "sessionStartElapsedRealtimeNanos": 511446558797964
+  },
+  "streams": [
+    {
+      "name": "video",
+      "file": "video.mp4",
+      "frameTimestampsFile": "video_frame_timestamps.csv"
+    },
+    {
+      "name": "imu",
+      "file": "imu.csv"
+    },
+    {
+      "name": "gnss",
+      "file": "gnss.csv"
+    },
+    {
+      "name": "ble",
+      "file": "ble_scan.jsonl"
+    },
+    {
+      "name": "arcore",
+      "file": "arcore_pose.jsonl"
+    }
+  ],
+  "collectorStatus": {
+    "gnss": "active",
+    "ble": "active",
+    "arcore": "active"
+  },
+  "imuSampleCount": 348,
+  "gnssSampleCount": 0,
+  "bleSampleCount": 20,
+  "arCoreSampleCount": 0,
+  "files": [
+    {
+      "name": "session_manifest.json",
+      "sizeBytes": 861
+    },
+    {
+      "name": "imu.csv",
+      "sizeBytes": 38531
+    },
+    {
+      "name": "gnss.csv",
+      "sizeBytes": 123
+    },
+    {
+      "name": "ble_scan.jsonl",
+      "sizeBytes": 3784
+    },
+    {
+      "name": "video_frame_timestamps.csv",
+      "sizeBytes": 1753
+    },
+    {
+      "name": "video_events.jsonl",
+      "sizeBytes": 134
+    }
+  ]
+}
