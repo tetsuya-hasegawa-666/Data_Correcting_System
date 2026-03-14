@@ -5,7 +5,7 @@
 意味のある `coreCamera/` の変更があった場合は、必ず次を更新する:
 
 1. `docs/observability/current_state.md`
-2. 実際の user-side blocker が発生または解消したときの `USER_PREPARATION.md`
+2. 実際の user-side blocker が発生または解消したときの `docs/process/UX_check_work_flow.md`
 2. `docs/history/docs/summary/summary.md`
 3. `develop/history/summary/summary.md`
 4. `docs/history/docs/snapshot/` と `develop/history/snapshot/` の対応する snapshot directory
@@ -15,7 +15,7 @@
 - すべての docs/develop 変更は、1 つの dated summary entry で説明できなければならない
 - snapshots は常に pair で作成する
 - implementation がまだ始まっていなくても、decision や planning の変更は意味のある変更として数える
-- 実際に user action が無いと block される場合を除き、推測の user task を `USER_PREPARATION.md` に書かない
+- 実際に user action が無いと block される場合を除き、推測の user task を `docs/process/UX_check_work_flow.md` に書かない
 
 ## Markdown Language Rule
 

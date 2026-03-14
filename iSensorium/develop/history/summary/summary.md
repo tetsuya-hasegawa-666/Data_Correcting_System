@@ -1,5 +1,14 @@
 # Develop History Summary
 
+## 2026-03-15-004 guarded-upstream-trial-seam-prep
+
+- target_behavior: start guarded upstream trial preparation in `iSensorium` without changing the outer session contract or losing rollback clarity
+- intended_change: add a local adapter seam, expose guarded route metadata in `session_manifest.json`, and activate a new `MRL-6` plan set for reversible upstream work
+- background_reason: `coreCamera` already proved `upstreamTrialPackage.status = READY`, but `iSensorium` still needs a small-diff seam before any real runtime swap can be attempted
+- change_summary: added `GuardedUpstreamTrial.kt`, routed `RecordingCoordinator` through a frozen-route adapter seam, exposed requested-vs-active route info in the UI/manifest, and created `develop/plans/2026-03-15-004/`
+- affected_documents: `app/build.gradle.kts`, `app/src/main/java/com/isensorium/app/GuardedUpstreamTrial.kt`, `app/src/main/java/com/isensorium/app/MainActivity.kt`, `app/src/main/java/com/isensorium/app/RecordingCoordinator.kt`, `app/src/test/java/com/isensorium/app/GuardedUpstreamTrialContractTest.kt`, `docs/artifact/system_blueprint.md`, `docs/artifact/story_release_map.md`, `docs/observability/current_state.md`, `docs/history/docs/summary/summary.md`, `develop/index.md`, `develop/history/summary/summary.md`, `develop/plans/2026-03-15-004/market_release_lines.md`, `develop/plans/2026-03-15-004/micro_release_lines.md`
+- expected_effect: the next replacement wiring step can happen behind a fixed seam and reversible toggle instead of another direct edit to the frozen camera path
+
 ## 2026-03-14-001 development-history-framework
 
 - target_behavior: develop 側 history 運用の基盤を作る
@@ -199,3 +208,11 @@
 - change_summary: `iSensorium/docs/index.md`、`iSensorium/docs/process/change_protocol.md`、`iSensorium/docs/process/research_operation.md`、`iSensorium/docs/process/UX_check_work_flow.md` を root 文書ルール参照前提へ更新した
 - affected_documents: `DOCUMENTATION_RULE.md`, `AGENTS.md`, `iSensorium/docs/index.md`, `iSensorium/docs/process/change_protocol.md`, `iSensorium/docs/process/research_operation.md`, `iSensorium/docs/process/UX_check_work_flow.md`
 - expected_effect: 次回以降の `iSensorium` 文書更新で、workspace 共通ルールと project 固有ルールの責務を分離できる
+## 2026-03-15-004 push-rule-and-user-preparation-centralization
+
+- target_behavior: `iSensorium` で生成物を commit / push せず、利用者準備を UX 文書だけで管理できる
+- intended_change: root 文書ルールに生成物非 push ルールと利用者準備ルールを追加し、live 文書の `USER_PREPARATION.md` 参照を UX 文書へ集約する
+- background_reason: guarded upstream trial 前後で build 生成物と user-side preparation の管理場所が分散すると、誤 stage と情報重複が起きやすい
+- change_summary: `iSensorium/docs/process/UX_check_work_flow.md` に利用者準備ノートを統合し、`iSensorium/USER_PREPARATION.md` を削除、関連参照を live 文書から除去した
+- affected_documents: `DOCUMENTATION_RULE.md`, `AGENTS.md`, `iSensorium/docs/process/UX_check_work_flow.md`, `iSensorium/docs/process/research_operation.md`, `iSensorium/USER_PREPARATION.md`
+- expected_effect: 次回以降の `iSensorium` 継続時は UX 文書だけを見れば user-side preparation と評価手順を同時に確認できる

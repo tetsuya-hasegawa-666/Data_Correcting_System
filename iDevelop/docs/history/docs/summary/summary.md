@@ -215,3 +215,9 @@
 - trigger: workspace 共通の日本語文書方針と文書ルール参照先を 1 か所へ集約し、`UX_check_work_flow.md` の英語残りを解消する必要が出た
 - resulting_direction: root `DOCUMENTATION_RULE.md` を追加し、`iDevelop/docs/index.md` と `docs/process/*.md` をその参照前提へ更新し、`UX_check_work_flow.md` を日本語へ統一した
 - expected_benefit: `iDevelop` 文書が workspace 共通ルールへ一貫して従い、UI 検証手順も日本語で読みやすくなる
+## 2026-03-15-029 push-rule-and-user-preparation-centralization
+
+- scope: dashboard documentation system
+- trigger: workspace 共通で生成物非 push ルールと利用者準備の UX 文書集約ルールを固定する必要が出た
+- resulting_direction: root `DOCUMENTATION_RULE.md` に共通ルールを追加し、`iDevelop/docs/process/UX_check_work_flow.md` も同じ利用者準備ノート構成へ揃えた
+- expected_benefit: project をまたいでも同じ文書構造で user-side preparation と push ルールを参照できる

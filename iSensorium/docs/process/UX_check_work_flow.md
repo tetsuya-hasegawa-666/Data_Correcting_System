@@ -2,6 +2,15 @@
 
 > 共通文書ルール参照: `C:/Users/tetsuya/playground/Data_Correcting_System/DOCUMENTATION_RULE.md`
 
+## 利用者準備ノート
+
+- この欄には、Codex だけでは代行できない user action や外部 device access だけを書く
+- 実際に blocker が発生していない限り、推測の user task は書かない
+- 現在の外部準備:
+  - なし
+- 解消済み事項:
+  - 2026-03-14 に Xperia 5 III (`QV788MFJA6`) の `adb` 認可は完了している
+
 > [!IMPORTANT]
 > **Rollback Notice: 次の upstream trial で `iSensorium/` を編集する前に rollback anchor を固定済み**
 > 理由: `coreCamera` 側で guarded upstream trial に必要な package まで揃い、次セッションでは `iSensorium/` 実装変更の可能性があるためです。現在の `iSensorium/` implementation-only snapshot は `rollback-isensorium-pre-upstream-trial-2026-03-15-001` に固定しました。実装相当は約 `4.54 MiB` で、`app/build/` や `.gradle/` を含めると約 `82.33 MiB` まで増えるため、rollback 基準は生成物ではなく tag を使います。

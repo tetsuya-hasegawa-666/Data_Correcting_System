@@ -9,7 +9,7 @@
 - rule: この thread では `iSensorium/` へ統合しない
 - supporting handover files:
   - `coreCamera/docs/observability/current_state.md`
-  - `coreCamera/USER_PREPARATION.md`
+  - `coreCamera/docs/process/UX_check_work_flow.md`
   - `coreCamera/SESSION_HANDOVER.md`
 
 ## Development Rule
@@ -24,7 +24,7 @@
 
 1. `coreCamera/docs/index.md`
 2. `coreCamera/docs/observability/current_state.md`
-3. `coreCamera/USER_PREPARATION.md`
+3. `coreCamera/docs/process/UX_check_work_flow.md`
 4. `coreCamera/SESSION_HANDOVER.md`
 5. `coreCamera/develop/index.md`
 6. `coreCamera/develop/plans/2026-03-14-001/`

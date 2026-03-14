@@ -232,3 +232,11 @@
 - change_summary: `DOCUMENTATION_RULE.md` と `AGENTS.md` を追加更新し、`iDevelop/docs/index.md`、`iDevelop/docs/process/change_protocol.md`、`iDevelop/docs/process/research_operation.md`、`iDevelop/docs/process/UX_check_work_flow.md` を root 文書ルール参照前提へ更新した
 - affected_documents: `DOCUMENTATION_RULE.md`, `AGENTS.md`, `iDevelop/docs/index.md`, `iDevelop/docs/process/change_protocol.md`, `iDevelop/docs/process/research_operation.md`, `iDevelop/docs/process/UX_check_work_flow.md`
 - expected_effect: 次回以降の `iDevelop` 文書更新で、workspace 共通ルールと dashboard 固有ルールを分離して維持できる
+## 2026-03-15-012 push-rule-and-user-preparation-centralization
+
+- target_behavior: `iDevelop` でも生成物を commit / push せず、利用者準備欄の構造を他 project と揃えられる
+- intended_change: root 文書ルールに生成物非 push ルールと利用者準備ルールを追加し、`iDevelop/docs/process/UX_check_work_flow.md` に利用者準備ノートを置く
+- background_reason: workspace 全体で文書と push 運用を揃えないと、project ごとに例外的な管理フローが増えてしまう
+- change_summary: `DOCUMENTATION_RULE.md`、`AGENTS.md`、`iDevelop/docs/process/UX_check_work_flow.md` を更新し、共通の user-side preparation と push ルールへ揃えた
+- affected_documents: `DOCUMENTATION_RULE.md`, `AGENTS.md`, `iDevelop/docs/process/UX_check_work_flow.md`
+- expected_effect: `iDevelop` も他 project と同じ運用で文書参照と commit / push 判断ができる

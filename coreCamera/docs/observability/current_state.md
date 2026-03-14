@@ -45,7 +45,7 @@
 ## Restart Checklist
 
 1. `coreCamera/docs/index.md` を読む
-2. `coreCamera/USER_PREPARATION.md` を読む
+2. `coreCamera/docs/process/UX_check_work_flow.md` を読む
 3. `coreCamera/SESSION_HANDOVER.md` を読む
 4. `coreCamera/develop/index.md` を読む
 5. `MRL-7` 状態から `iSensorium/` を触らず継続する

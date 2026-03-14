@@ -81,3 +81,9 @@
 - trigger: workspace 全体で `.md` の日本語原則と文書ルール参照先を 1 か所へ集約する必要が出た
 - resulting_direction: root `DOCUMENTATION_RULE.md` を追加し、`coreCamera/docs/index.md` と `docs/process/*.md` からそこを参照する構成へ揃えた
 - expected_benefit: `coreCamera` 固有ルールと workspace 共通ルールの責務が分かれ、文書の言語方針がぶれにくくなる
+## 2026-03-15-008 push-rule-and-user-preparation-centralization
+
+- scope: documentation system
+- trigger: 生成物を全 project で commit / push しない共通ルールと、利用者準備を UX 文書へ統合する共通運用を固定する必要が出た
+- resulting_direction: root `DOCUMENTATION_RULE.md` に push ルールと利用者準備ルールを追加し、`coreCamera` の live 文書は `USER_PREPARATION.md` 参照を `docs/process/UX_check_work_flow.md` へ置き換えた
+- expected_benefit: 文書と実ファイルの二重管理を避けつつ、生成物の誤 push を防ぎやすくなる

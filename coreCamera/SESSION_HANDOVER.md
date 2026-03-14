@@ -51,7 +51,7 @@
 
 1. `coreCamera/docs/index.md` を読む
 2. `coreCamera/docs/observability/current_state.md` を読む
-3. `coreCamera/USER_PREPARATION.md` を読む
+3. `coreCamera/docs/process/UX_check_work_flow.md` を読む
 4. `coreCamera/docs/artifact/project_contract.md` を読む
 5. `coreCamera/develop/index.md` を読む
 6. `coreCamera/develop/plans/2026-03-14-001/` を `MRL-7` 状態から継続する

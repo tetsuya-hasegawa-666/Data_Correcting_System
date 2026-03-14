@@ -105,3 +105,11 @@
 - change_summary: `coreCamera/docs/index.md`、`coreCamera/docs/process/change_protocol.md`、`coreCamera/docs/process/research_operation.md`、`coreCamera/docs/process/UX_check_work_flow.md` を root 文書ルール参照前提へ更新した
 - affected_documents: `DOCUMENTATION_RULE.md`, `AGENTS.md`, `coreCamera/docs/index.md`, `coreCamera/docs/process/change_protocol.md`, `coreCamera/docs/process/research_operation.md`, `coreCamera/docs/process/UX_check_work_flow.md`
 - expected_effect: 次回以降の `coreCamera` 文書更新で、workspace 共通ルールと project 固有ルールを混ぜずに運用できる
+## 2026-03-15-008 push-rule-and-user-preparation-centralization
+
+- target_behavior: `coreCamera` で生成物を commit / push せず、利用者準備を UX 文書だけで管理できる
+- intended_change: root 文書ルールに生成物非 push ルールと利用者準備ルールを追加し、live 文書の `USER_PREPARATION.md` 参照を UX 文書へ集約する
+- background_reason: `USER_PREPARATION.md` が live 文書と並走すると情報が重複しやすく、`app/build/` や `.gradle/` の誤 stage も再発しやすい
+- change_summary: `coreCamera/docs/process/UX_check_work_flow.md` に利用者準備ノートを統合し、`coreCamera/USER_PREPARATION.md` を削除、関連参照を live 文書から除去した
+- affected_documents: `DOCUMENTATION_RULE.md`, `AGENTS.md`, `coreCamera/docs/process/UX_check_work_flow.md`, `coreCamera/docs/index.md`, `coreCamera/develop/index.md`, `coreCamera/docs/observability/current_state.md`, `coreCamera/SESSION_HANDOVER.md`, `coreCamera/README.md`, `coreCamera/docs/process/change_protocol.md`, `coreCamera/docs/process/research_operation.md`
+- expected_effect: 次回以降の `coreCamera` 継続時は UX 文書だけを見れば user-side preparation と rollback / UX route をまとめて確認できる

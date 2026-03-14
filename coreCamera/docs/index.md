@@ -9,7 +9,7 @@
 - project status: full sensor integration と upstream trial package まで実装済み
 - next session の entry point: `coreCamera/develop/index.md`
 - integration target: 将来の `iSensorium` camera 実装の置換
-- current user preparation file: `coreCamera/USER_PREPARATION.md`
+- current user preparation location: `coreCamera/docs/process/UX_check_work_flow.md`
 
 ## Boundary Rule
 
@@ -42,6 +42,6 @@
 
 1. `coreCamera/docs/index.md`
 2. `coreCamera/docs/observability/current_state.md`
-3. `coreCamera/USER_PREPARATION.md`
+3. `coreCamera/docs/process/UX_check_work_flow.md`
 4. `coreCamera/SESSION_HANDOVER.md`
 5. `coreCamera/develop/index.md`

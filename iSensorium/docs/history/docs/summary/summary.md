@@ -1,5 +1,12 @@
 # Docs History Summary
 
+## 2026-03-15-004 guarded-upstream-trial-seam-prep
+
+- scope: documentation system
+- trigger: `coreCamera` 側で `upstreamTrialPackage.status = READY` が確認されたため、`iSensorium` 側でも rollback-safe な guarded seam を先に固定する必要が出た
+- resulting_direction: `system_blueprint` に `shared-camera-session-adapter` を唯一の cutover seam として明記し、`current_state` と `story_release_map` に `MRL-6 guarded upstream trial` の開始条件を追加した
+- expected_benefit: `iSensorium` は frozen route を維持したまま小差分で上流統合準備を進められ、次の wiring が additive metadata と reversible toggle の範囲に収まる
+
 ## 2026-03-14-001 agentized-doc-system
 
 - scope: documentation system
@@ -153,3 +160,9 @@
 - trigger: workspace 共通の日本語文書方針と文書ルール参照先を 1 か所へ集約する必要が出た
 - resulting_direction: root `DOCUMENTATION_RULE.md` を追加し、`iSensorium/docs/index.md` と `docs/process/*.md` からそこを参照する構成へ揃えた
 - expected_benefit: `iSensorium` の source-of-truth は project 固有ルールに集中し、workspace 共通ルールの重複記述を減らせる
+## 2026-03-15-004 push-rule-and-user-preparation-centralization
+
+- scope: documentation system
+- trigger: 生成物を全 project で commit / push しない共通ルールと、利用者準備を UX 文書へ統合する共通運用を固定する必要が出た
+- resulting_direction: root `DOCUMENTATION_RULE.md` に push ルールと利用者準備ルールを追加し、`iSensorium` の live 文書は `USER_PREPARATION.md` を廃止して `docs/process/UX_check_work_flow.md` へ集約した
+- expected_benefit: `iSensorium` の user-side preparation が live 文書内で一元管理され、生成物の誤 push も防ぎやすくなる

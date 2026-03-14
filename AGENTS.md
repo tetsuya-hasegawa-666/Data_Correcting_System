@@ -26,3 +26,5 @@
 - workspace 共通の文書ルールは `C:/Users/tetsuya/playground/Data_Correcting_System/DOCUMENTATION_RULE.md` を唯一の基準とする
 - 各 project の `docs/index.md`、`docs/process/change_protocol.md`、`docs/process/research_operation.md`、`docs/process/UX_check_work_flow.md` はこの文書を参照し、project 固有ルールだけを追加する
 - `.md` は原則として日本語で記述する
+- `app/build/`、`.gradle/`、`tmp/` などの生成物は全 project で commit / push しない
+- 利用者準備は `USER_PREPARATION.md` を増やさず、各 project の `docs/process/UX_check_work_flow.md` に集約する

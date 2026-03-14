@@ -58,7 +58,7 @@
 - 実行停止は次に限定する。
   - active Micro Release の成功条件または失敗条件が確定した。
   - 実際の blocker により、仮説前進や別 task への切替でも前進できない。
-  - 外部依存が未充足で、`USER_PREPARATION.md` へ必要項目を追記しないと次へ進めない。
+  - 外部依存が未充足で、`docs/process/UX_check_work_flow.md` へ必要項目を追記しないと次へ進めない。
   - active dated plan set を完了し、次の dated plan set が未定義である。
 - 歴史的な `reached`, `completed`, `freeze` 表記は、現在地確認なしに停止理由として使ってはならない。
 - active line が完了したら、次を選ぶ順序は `next micro release`、`next market release`、`new dated plan set`、`change request handling` の順とする。

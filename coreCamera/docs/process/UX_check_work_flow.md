@@ -2,6 +2,19 @@
 
 > 共通文書ルール参照: `C:/Users/tetsuya/playground/Data_Correcting_System/DOCUMENTATION_RULE.md`
 
+## 利用者準備ノート
+
+- この欄には、Codex だけでは代行できない user action や外部 device access だけを書く
+- 実際に blocker が発生していない限り、推測の user task は書かない
+- 現在の外部準備:
+  - なし
+- 開始前提:
+  - 実装対象は `coreCamera/` 配下だけとする
+  - isolated build phase の間は `iSensorium/app/` を編集しない
+  - `iSensorium` の session in/out contract を維持する
+  - guarded upstream trial に進むときだけ、必要な target-device 操作を明記する
+  - 長時間試験は後段へ回し、実上流 trial の証跡取得を優先する
+
 > [!IMPORTANT]
 > **Rollback Notice: upstream trial 前に `iSensorium/` を戻せる状態を先に固定済み**
 > 理由: `coreCamera` で `MRL-7` まで到達し、次段では `iSensorium/` への guarded upstream trial があり得るためです。`iSensorium/` の implementation-only snapshot は、生成物を除外した軽量 anchor として `rollback-isensorium-pre-upstream-trial-2026-03-15-001` に固定しました。実装相当は約 `4.54 MiB`、生成物込みだと約 `82.33 MiB` なので、rollback 基準は tag を source-of-truth とします。

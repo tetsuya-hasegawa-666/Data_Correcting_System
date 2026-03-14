@@ -8,6 +8,6 @@
 - 再開時の入口順:
   1. `coreCamera/docs/index.md`
   2. `coreCamera/docs/observability/current_state.md`
-  3. `coreCamera/USER_PREPARATION.md`
+  3. `coreCamera/docs/process/UX_check_work_flow.md`
   4. `coreCamera/SESSION_HANDOVER.md`
   5. `coreCamera/develop/index.md`

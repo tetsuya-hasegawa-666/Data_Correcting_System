@@ -2,6 +2,13 @@
 
 > 共通文書ルール参照: `C:/Users/tetsuya/playground/Data_Correcting_System/DOCUMENTATION_RULE.md`
 
+## 利用者準備ノート
+
+- この欄には、Codex だけでは代行できない user action や外部 device access だけを書く
+- 実際に blocker が発生していない限り、推測の user task は書かない
+- 現在の外部準備:
+  - なし
+
 ## 目的
 
 consultation workspace の完成済み baseline を、local draft unlock、consultation guidance、compact header cards、preview overflow 対応まで含めて確認する。

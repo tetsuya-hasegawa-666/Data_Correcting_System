@@ -9,6 +9,21 @@
 - 英語を残すのは、固有名詞、外部仕様、識別子、短い引用、または日本語にすると意味が崩れる場合に限る
 - 新しい文書ルールは chat だけで閉じず、この文書または各 project の source-of-truth に反映する
 
+## commit / push ルール
+
+- `app/build/`、`.gradle/`、`tmp/`、generated file、cache、device dump、screen capture などの生成物は commit / push しない
+- commit / push 対象は source file、設定、plan、docs、history、snapshot manifest などの管理対象に限る
+- 生成物を誤って stage しないよう、stage は明示 path で行う
+
+## 利用者準備ルール
+
+- user action や外部準備は、独立した `USER_PREPARATION.md` ではなく各 project の `docs/process/UX_check_work_flow.md` に集約して管理する
+- UX 文書では、共通文書ルール参照の直下に `利用者準備ノート` を置く
+- `利用者準備ノート` には次の Notes 方針を使う
+- この欄には、Codex だけでは代行できない user action や外部 device access だけを書く
+- 実際に blocker が発生していない限り、推測の user task は書かない
+- 外部準備がない場合は `なし` と明記する
+
 ## 参照構造
 
 - workspace 全体の文書ルールはこの `DOCUMENTATION_RULE.md` を参照する
