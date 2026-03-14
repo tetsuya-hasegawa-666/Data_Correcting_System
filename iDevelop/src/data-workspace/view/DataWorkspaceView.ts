@@ -5,7 +5,6 @@ export class DataWorkspaceView {
 
   public render(state: DataWorkspaceState): void {
     const maxRecordCount = Math.max(...state.summary.byStatus.map((item) => item.recordCount), 1);
-
     const rowsMarkup = state.datasets
       .map((dataset) =>
         this.renderDatasetRow(
@@ -15,7 +14,6 @@ export class DataWorkspaceView {
         )
       )
       .join("");
-
     const resultMarkup = state.results
       .map(
         (result) => `
@@ -25,10 +23,22 @@ export class DataWorkspaceView {
         `
       )
       .join("");
-
     const chartMarkup = state.summary.byStatus
       .map((item) => this.renderChartBar(item, maxRecordCount))
       .join("");
+    const sourceGuidance = state.isReadOnly
+      ? `
+        <div class="unlock-guidance" data-role="unlock-data-guidance">
+          <p><strong>解除条件:</strong> local draft を開始すると、現在の dataset 一覧をブラウザ内の編集用コピーとして複製します。</p>
+          <p><strong>何が起こるか:</strong> safe apply を進めるまで元データは変わらず、変更履歴は local draft 側だけに蓄積されます。</p>
+          <button class="document-item is-selected" data-role="unlock-data-editing" type="button">local draft を開始</button>
+        </div>
+      `
+      : `
+        <div class="unlock-guidance">
+          <p>現在は local draft で更新中です。変更は safe apply まで元データへ反映されません。</p>
+        </div>
+      `;
 
     this.rootElement.innerHTML = `
       <section class="data-workspace">
@@ -37,11 +47,8 @@ export class DataWorkspaceView {
           <h2>データの確認と集計</h2>
           <p>データ一覧、件数、更新結果の要約を確認します。</p>
           <p class="result-count">読み込みポリシー: ${this.escapeHtml(state.sourcePolicy)}</p>
-          ${
-            state.isReadOnly
-              ? '<p class="result-count">現在の接続先は読み取り専用です。更新操作はできません。</p>'
-              : ""
-          }
+          <p class="result-count" data-role="data-mode-note">${state.isReadOnly ? "Read-only / 読み取り専用" : "Editable / 編集可能"}</p>
+          ${sourceGuidance}
         </div>
         <div class="metric-grid">
           <article class="metric-card">
@@ -54,22 +61,25 @@ export class DataWorkspaceView {
           </article>
         </div>
         <div class="status-chart">${chartMarkup}</div>
-        <table class="dataset-table">
-          <thead>
-            <tr>
-              <th>名前</th>
-              <th>種別</th>
-              <th>状態</th>
-              <th>レコード数</th>
-              <th>更新日時</th>
-              <th>操作</th>
-            </tr>
-          </thead>
-          <tbody>${rowsMarkup}</tbody>
-        </table>
+        <div class="table-wrap">
+          <table class="dataset-table">
+            <thead>
+              <tr>
+                <th>名前</th>
+                <th>種別</th>
+                <th>状態</th>
+                <th>レコード数</th>
+                <th>更新日時</th>
+                <th>操作</th>
+                <th>相談</th>
+              </tr>
+            </thead>
+            <tbody>${rowsMarkup}</tbody>
+          </table>
+        </div>
         <section class="status-chart">
           <p class="eyebrow">更新結果</p>
-          <ul class="result-list">${resultMarkup || "<li>まだ更新結果はありません。</li>"}</ul>
+          <ul class="result-list">${resultMarkup || "<li>No result yet.</li>"}</ul>
         </section>
         <section class="status-chart">
           <p class="eyebrow">Data Consultation</p>
@@ -82,6 +92,14 @@ export class DataWorkspaceView {
               )
               .join("")}
           </ul>
+          <div class="capability-note" data-role="consultation-capabilities">
+            <p class="eyebrow">相談でできること</p>
+            <ul>
+              <li><strong>Summary</strong> bundle の要点整理</li>
+              <li><strong>Evidence</strong> status と件数の参照根拠を列挙</li>
+              <li><strong>Next Action</strong> anomaly や次の確認項目を示す</li>
+            </ul>
+          </div>
           <form data-role="data-consultation-form">
             <textarea
               class="document-editor"
@@ -135,7 +153,7 @@ export class DataWorkspaceView {
       : `<input data-role="dataset-record-count" data-dataset-id="${this.escapeHtml(dataset.id)}" type="number" min="0" value="${dataset.recordCount}" />`;
     const actionCell = isReadOnly
       ? '<span class="eyebrow">読み取り専用</span>'
-      : `<button class="document-item" data-role="save-dataset" data-dataset-id="${this.escapeHtml(dataset.id)}" type="button">更新</button>`;
+      : `<button class="document-item" data-role="save-dataset" data-dataset-id="${this.escapeHtml(dataset.id)}" type="button">保存</button>`;
 
     return `
       <tr data-role="dataset-row">

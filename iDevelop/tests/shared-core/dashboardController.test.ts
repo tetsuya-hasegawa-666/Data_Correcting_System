@@ -82,6 +82,25 @@ describe("DashboardController", () => {
     expect(container.textContent).toContain("phase-gated-read-only");
   });
 
+  it("renders compact header cards with expandable sections", () => {
+    const container = document.createElement("div");
+    const controller = createController(container);
+
+    controller.start();
+
+    expect(container.querySelector("[data-role='header-deck']")).not.toBeNull();
+    expect(container.querySelectorAll("[data-role='header-card']")).toHaveLength(3);
+    expect(container.querySelector("[data-role='header-card'][data-card='status']")?.textContent).toContain(
+      "Refresh"
+    );
+    expect(
+      container.querySelector("[data-role='header-card'][data-card='contract']")?.textContent
+    ).toContain("Consultation");
+    expect(container.querySelector("[data-role='header-card'][data-card='shell']")?.textContent).toContain(
+      "Shared"
+    );
+  });
+
   it("runs data consultation from the selected bundle", () => {
     const container = document.createElement("div");
     const controller = createController(container);
@@ -154,6 +173,64 @@ describe("DashboardController", () => {
     expect(container.querySelector("[data-role='document-body']")?.textContent).toContain(
       "[Applied Consultation]"
     );
+  });
+
+  it("unlocks local draft editing for read-only document and data sources", () => {
+    const container = document.createElement("div");
+    const controller = new DashboardController(
+      container,
+      new StaticDocumentRepository(
+        [
+          {
+            id: "doc-1",
+            title: "North Star",
+            path: "docs/artifact/north_star.md",
+            body: "Original body.",
+            tags: ["artifact"]
+          }
+        ],
+        { sourcePolicy: "filesystem recursive read-only", readOnly: true }
+      ),
+      new StaticDatasetRepository(
+        [
+          {
+            id: "dataset-1",
+            name: "Doc Sync Coverage",
+            category: "document",
+            recordCount: 12,
+            status: "ready",
+            updatedAt: "2026-03-14T08:30:00Z"
+          }
+        ],
+        { sourcePolicy: "filesystem recursive read-only", readOnly: true }
+      ),
+      new StaticCodeTargetRepository([
+        {
+          id: "document-controller",
+          title: "Document Controller",
+          path: "src/document-workspace/controller/DocumentWorkspaceController.ts",
+          description: "Search and save flow."
+        }
+      ]),
+      {
+        loadedAt: "2026-03-14T10:00:00Z",
+        sourceSignature: "live:1:1"
+      }
+    );
+
+    controller.start();
+
+    expect(container.querySelector("[data-role='unlock-document-editing']")).not.toBeNull();
+    expect(container.textContent).toContain("local draft");
+    (container.querySelector("[data-role='unlock-document-editing']") as HTMLButtonElement).click();
+    expect(container.querySelector("[data-role='edit-document']")).not.toBeNull();
+    expect(container.textContent).toContain("original source remains unchanged");
+
+    (container.querySelector("[data-workspace-id='data']") as HTMLButtonElement).click();
+    expect(container.querySelector("[data-role='unlock-data-editing']")).not.toBeNull();
+    (container.querySelector("[data-role='unlock-data-editing']") as HTMLButtonElement).click();
+    expect(container.querySelector("[data-role='dataset-status']")).not.toBeNull();
+    expect(container.textContent).toContain("safe apply");
   });
 
   it("keeps code consultation behind the phase gate and blocks apply", () => {

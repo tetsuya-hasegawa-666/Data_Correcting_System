@@ -60,7 +60,7 @@ const editableState: DocumentWorkspaceState = {
     isEditing: true,
     draftBody: "BDD and TDD operating rules.",
     lastSavedBody: "BDD and TDD operating rules.",
-    saveMessage: "保存しました。"
+    saveMessage: "Saved."
   },
   selectedBundle: [
     {
@@ -80,14 +80,14 @@ const editableState: DocumentWorkspaceState = {
   ],
   consultation: {
     selectedBundleIds: ["doc-1", "doc-2"],
-    focusPrompt: "BDD の根拠を確認したい",
+    focusPrompt: "Explain the BDD guidance.",
     lastResponse: {
-      summary: "2 件の文書を consultation bundle として固定しました。",
+      summary: "Two documents were consulted.",
       evidence: [
         "System Blueprint (docs/artifact/system_blueprint.md)",
         "Research Operation (docs/process/research_operation.md)"
       ],
-      nextAction: "focus: BDD の根拠を確認したい"
+      nextAction: "focus: Explain the BDD guidance."
     }
   }
 };
@@ -111,7 +111,7 @@ describe("DocumentWorkspaceView", () => {
     );
     expect(
       container.querySelector("[data-role='directory-group-status-label']")?.textContent
-    ).toContain("編集可能");
+    ).toContain("Editable");
     expect(container.querySelector("[data-role='document-title']")?.textContent).toContain(
       "Research Operation"
     );
@@ -119,23 +119,25 @@ describe("DocumentWorkspaceView", () => {
     expect(
       (container.querySelector("[data-role='document-editor']") as HTMLTextAreaElement | null)?.value
     ).toContain("BDD");
-    expect(container.querySelector("[data-role='save-message']")?.textContent).toContain(
-      "保存しました。"
-    );
-    expect(container.textContent).toContain("文書");
-    expect(container.textContent).toContain("キャンセル");
+    expect(container.querySelector("[data-role='save-message']")?.textContent).toContain("Saved.");
     expect(container.querySelector("[data-role='document-bundle-count']")?.textContent).toContain(
       "2"
     );
     expect(container.querySelector("[data-role='consultation-focus-input']")?.textContent).toContain(
-      "BDD"
+      "Explain"
     );
     expect(
       container.querySelector("[data-role='document-consultation-response']")?.textContent
     ).toContain("Summary");
+    expect(container.querySelector("[data-role='consultation-capabilities']")?.textContent).toContain(
+      "Summary"
+    );
+    expect(container.querySelector("[data-role='consultation-capabilities']")?.textContent).toContain(
+      "Next Action"
+    );
   });
 
-  it("shows read-only guidance and hides edit controls for live documents", () => {
+  it("shows read-only guidance and local draft unlock controls for live documents", () => {
     const container = document.createElement("section");
     const view = new DocumentWorkspaceView(container);
 
@@ -148,19 +150,17 @@ describe("DocumentWorkspaceView", () => {
         draftBody: editableState.selectedDocument?.body ?? "",
         lastSavedBody: null,
         saveMessage: null
-      },
-      selectedBundle: editableState.selectedBundle,
-      consultation: {
-        selectedBundleIds: editableState.consultation.selectedBundleIds,
-        focusPrompt: editableState.consultation.focusPrompt,
-        lastResponse: editableState.consultation.lastResponse
       }
     });
 
-    expect(container.textContent).toContain("読み取り専用");
+    expect(container.textContent).toContain("Read-only");
     expect(
       container.querySelector("[data-role='directory-group-status-label']")?.textContent
-    ).toContain("読み取り専用");
+    ).toContain("Read-only");
     expect(container.querySelector("[data-role='edit-document']")).toBeNull();
+    expect(container.querySelector("[data-role='unlock-document-editing']")).not.toBeNull();
+    expect(container.querySelector("[data-role='unlock-document-guidance']")?.textContent).toContain(
+      "local draft"
+    );
   });
 });

@@ -52,14 +52,14 @@ const state: DataWorkspaceState = {
   isReadOnly: false,
   consultation: {
     selectedDatasetIds: ["dataset-2", "dataset-1"],
-    focusPrompt: "anomaly を確認したい",
+    focusPrompt: "Review anomalies.",
     lastResponse: {
-      summary: "2 件の dataset を consultation bundle として固定しました。",
+      summary: "Two datasets were consulted.",
       evidence: [
         "Correction Result Summary (draft, 5 records)",
         "Doc Sync Coverage (ready, 12 records)"
       ],
-      nextAction: "focus: anomaly を確認したい"
+      nextAction: "focus: Review anomalies."
     }
   },
   summary: {
@@ -73,7 +73,7 @@ const state: DataWorkspaceState = {
 };
 
 describe("DataWorkspaceView", () => {
-  it("renders aggregate metrics, dataset rows, and status chart bars", () => {
+  it("renders aggregate metrics, dataset rows, and consultation guidance", () => {
     const container = document.createElement("section");
     const view = new DataWorkspaceView(container);
 
@@ -90,9 +90,12 @@ describe("DataWorkspaceView", () => {
     expect(
       container.querySelector("[data-role='data-consultation-response']")?.textContent
     ).toContain("Summary");
+    expect(container.querySelector("[data-role='consultation-capabilities']")?.textContent).toContain(
+      "Evidence"
+    );
   });
 
-  it("renders read-only rows without edit controls for live data", () => {
+  it("renders local draft unlock guidance for live data", () => {
     const container = document.createElement("section");
     const view = new DataWorkspaceView(container);
 
@@ -102,8 +105,12 @@ describe("DataWorkspaceView", () => {
       isReadOnly: true
     });
 
-    expect(container.textContent).toContain("読み取り専用");
+    expect(container.textContent).toContain("Read-only");
     expect(container.querySelector("[data-role='dataset-status']")).toBeNull();
     expect(container.querySelector("[data-role='save-dataset']")).toBeNull();
+    expect(container.querySelector("[data-role='unlock-data-editing']")).not.toBeNull();
+    expect(container.querySelector("[data-role='unlock-data-guidance']")?.textContent).toContain(
+      "local draft"
+    );
   });
 });

@@ -10,10 +10,25 @@ export class DocumentWorkspaceView {
   public render(state: DocumentWorkspaceState): void {
     const selectedDocumentMarkup = state.selectedDocument
       ? this.renderSelectedDocument(state.selectedDocument, state)
-      : "<p>表示できる文書がありません。</p>";
+      : "<p>No document is selected.</p>";
     const resultMarkup = state.directoryGroups
       .map((group) => this.renderDirectoryGroup(group, state))
       .join("");
+    const modeLabel = state.isReadOnly ? "Read-only / 読み取り専用" : "Editable / 編集可能";
+    const sourceGuidance = state.isReadOnly
+      ? `
+        <div class="unlock-guidance" data-role="unlock-document-guidance">
+          <p><strong>解除条件:</strong> local draft を開始すると、この一覧を現在の表示内容で複製し、以後の編集はブラウザ内の下書きにだけ反映します。</p>
+          <p><strong>何が起こるか:</strong> original source remains unchanged。safe apply を明示的に進めるまで元ソースは書き換えません。</p>
+          <button class="document-item is-selected" data-role="unlock-document-editing" type="button">local draft を開始</button>
+        </div>
+      `
+      : `
+        <div class="unlock-guidance">
+          <p>現在は local draft で編集中です。保存は下書きへ反映され、safe apply までは元ソースを書き換えません。</p>
+          <p>original source remains unchanged until safe apply.</p>
+        </div>
+      `;
 
     this.rootElement.innerHTML = `
       <div class="dashboard-shell document-dashboard-shell">
@@ -26,11 +41,8 @@ export class DocumentWorkspaceView {
           </div>
           <p>ディレクトリ単位で文書をまとめて表示します。検索はタイトル、パス、本文、タグを対象にします。</p>
           <p class="result-count">読み込みポリシー: ${this.escapeHtml(state.sourcePolicy)}</p>
-          ${
-            state.isReadOnly
-              ? '<p class="result-count">現在の接続は読み取り専用です。編集や保存はできません。</p>'
-              : '<p class="result-count">現在の接続は編集可能です。保存とキャンセルを使えます。</p>'
-          }
+          <p class="result-count" data-role="document-mode-note">${modeLabel}</p>
+          ${sourceGuidance}
           <input
             class="search-input"
             data-role="search-input"
@@ -64,7 +76,7 @@ export class DocumentWorkspaceView {
       )
       .join("");
     const modeClass = state.isReadOnly ? "mode-read-only" : "mode-editable";
-    const modeLabel = state.isReadOnly ? "読み取り専用" : "編集可能";
+    const modeLabel = state.isReadOnly ? "Read-only / 読み取り専用" : "Editable / 編集可能";
 
     return `
       <section class="directory-group" data-role="directory-group">
@@ -116,7 +128,7 @@ export class DocumentWorkspaceView {
       .join("");
 
     const editorMarkup = state.isReadOnly
-      ? '<p class="result-count">読み取り専用のため、この画面では編集できません。</p>'
+      ? '<p class="result-count">読み取り専用のため、この画面では編集できません。local draft を開始すると編集できます。</p>'
       : state.editor.isEditing
         ? `
           <form data-role="document-edit-form">
@@ -147,12 +159,20 @@ export class DocumentWorkspaceView {
             )
             .join("")}
         </ul>
+        <div class="capability-note" data-role="consultation-capabilities">
+          <p class="eyebrow">相談でできること</p>
+          <ul>
+            <li><strong>Summary</strong> bundle の要点整理</li>
+            <li><strong>Evidence</strong> 参照した文書の列挙</li>
+            <li><strong>Next Action</strong> 次に確認すべき行動の提案</li>
+          </ul>
+        </div>
         <form data-role="document-consultation-form">
           <textarea
             class="document-editor"
             data-role="consultation-focus-input"
             name="consultation-focus"
-            placeholder="相談したい焦点を入力"
+            placeholder="相談したい観点を入力"
           >${this.escapeHtml(state.consultation.focusPrompt)}</textarea>
           <button class="document-item is-selected" data-role="run-document-consultation" type="submit">相談する</button>
         </form>

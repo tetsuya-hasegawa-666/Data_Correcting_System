@@ -3,15 +3,17 @@ import type { CodeConsultationState } from "../../code-workspace/controller/Code
 import type { CodeTargetRepository } from "../../code-workspace/model/CodeTargetRepository";
 import { CodeWorkspaceView } from "../../code-workspace/view/CodeWorkspaceView";
 import { DataWorkspaceController } from "../../data-workspace/controller/DataWorkspaceController";
-import type { DatasetRepository } from "../../data-workspace/model/DatasetRepository";
-import { DataWorkspaceView } from "../../data-workspace/view/DataWorkspaceView";
 import type { DataConsultationState } from "../../data-workspace/controller/DataWorkspaceController";
+import type { DatasetRepository } from "../../data-workspace/model/DatasetRepository";
+import { UnlockableDatasetRepository } from "../../data-workspace/model/UnlockableDatasetRepository";
+import { DataWorkspaceView } from "../../data-workspace/view/DataWorkspaceView";
+import { DocumentWorkspaceController } from "../../document-workspace/controller/DocumentWorkspaceController";
 import type {
   DocumentConsultationState,
   DocumentEditorState
 } from "../../document-workspace/controller/DocumentWorkspaceController";
-import { DocumentWorkspaceController } from "../../document-workspace/controller/DocumentWorkspaceController";
 import type { DocumentRepository } from "../../document-workspace/model/DocumentRepository";
+import { UnlockableDocumentRepository } from "../../document-workspace/model/UnlockableDocumentRepository";
 import { DocumentWorkspaceView } from "../../document-workspace/view/DocumentWorkspaceView";
 import type { DashboardBootstrap } from "../bootstrap/loadDashboardBootstrap";
 import {
@@ -48,6 +50,8 @@ interface DashboardStatusState {
 const REFRESH_EVIDENCE_STORAGE_KEY = "idevelop.refreshEvidence";
 
 export class DashboardController {
+  private readonly documentRepository: UnlockableDocumentRepository;
+  private readonly datasetRepository: UnlockableDatasetRepository;
   private readonly documentController: DocumentWorkspaceController;
   private readonly dataController: DataWorkspaceController;
   private readonly codeController: CodeWorkspaceController;
@@ -70,8 +74,10 @@ export class DashboardController {
     bootstrap: Pick<DashboardBootstrap, "loadedAt" | "sourceSignature">,
     private readonly refreshDashboard?: () => Promise<DashboardBootstrap>
   ) {
-    this.documentController = new DocumentWorkspaceController(documentRepository);
-    this.dataController = new DataWorkspaceController(datasetRepository);
+    this.documentRepository = new UnlockableDocumentRepository(documentRepository);
+    this.datasetRepository = new UnlockableDatasetRepository(datasetRepository);
+    this.documentController = new DocumentWorkspaceController(this.documentRepository);
+    this.dataController = new DataWorkspaceController(this.datasetRepository);
     this.codeController = new CodeWorkspaceController(codeTargetRepository);
     this.statusState = {
       loadedAt: bootstrap.loadedAt,
@@ -143,8 +149,7 @@ export class DashboardController {
         return;
       }
 
-      const refreshButton = target.closest<HTMLElement>("[data-role='refresh-dashboard']");
-      if (refreshButton) {
+      if (target.closest("[data-role='refresh-dashboard']")) {
         void this.handleRefresh();
         return;
       }
@@ -152,6 +157,22 @@ export class DashboardController {
       const tab = target.closest<HTMLElement>("[data-role='workspace-tab']");
       if (tab?.dataset.workspaceId) {
         this.workspaceId = tab.dataset.workspaceId as WorkspaceId;
+        this.errorMessage = null;
+        this.render();
+        return;
+      }
+
+      if (target.closest("[data-role='unlock-document-editing']")) {
+        this.documentRepository.unlockLocalDraft();
+        this.workspaceId = "document";
+        this.errorMessage = null;
+        this.render();
+        return;
+      }
+
+      if (target.closest("[data-role='unlock-data-editing']")) {
+        this.datasetRepository.unlockLocalDraft();
+        this.workspaceId = "data";
         this.errorMessage = null;
         this.render();
         return;
@@ -206,7 +227,7 @@ export class DashboardController {
             this.render();
           }
         } catch (error) {
-          this.errorMessage = error instanceof Error ? error.message : "データ更新に失敗しました。";
+          this.errorMessage = error instanceof Error ? error.message : "Dataset update failed.";
           this.render();
         }
         return;
@@ -329,7 +350,6 @@ export class DashboardController {
 
       if (form.dataset.role === "document-consultation-form") {
         event.preventDefault();
-
         const state = this.documentController.consultDocuments(
           this.query,
           this.selectedDocumentId,
@@ -360,7 +380,6 @@ export class DashboardController {
 
       if (form.dataset.role === "data-consultation-form") {
         event.preventDefault();
-
         const state = this.dataController.consultDatasets(this.dataConsultationState);
         this.dataConsultationState = state.consultation;
         this.sharedConversationState = appendConversationEntry(this.sharedConversationState, {
@@ -380,7 +399,6 @@ export class DashboardController {
 
       if (form.dataset.role === "code-consultation-form") {
         event.preventDefault();
-
         const state = this.codeController.consultTargets(this.codeConsultationState);
         this.codeConsultationState = state.consultation;
         this.sharedConversationState = appendConversationEntry(this.sharedConversationState, {
@@ -406,7 +424,7 @@ export class DashboardController {
 
       try {
         if (!this.selectedDocumentId) {
-          throw new Error("選択中の文書が見つかりません。");
+          throw new Error("No document is selected.");
         }
 
         const draftBody =
@@ -422,7 +440,7 @@ export class DashboardController {
         this.documentConsultationState = state.consultation;
         this.errorMessage = null;
       } catch (error) {
-        this.errorMessage = error instanceof Error ? error.message : "保存に失敗しました。";
+        this.errorMessage = error instanceof Error ? error.message : "Save failed.";
       }
 
       this.render();
@@ -431,20 +449,19 @@ export class DashboardController {
 
   private async handleRefresh(): Promise<void> {
     if (!this.refreshDashboard) {
-      this.appendEvidence("unchanged", "再読み込みは seed mode のため省略しました。");
+      this.appendEvidence("unchanged", "Refresh is unavailable in seed mode.");
       this.render();
       return;
     }
 
     try {
       const nextBootstrap = await this.refreshDashboard();
-      const previousSignature = this.statusState.sourceSignature;
       const outcome: RefreshOutcome =
-        previousSignature === nextBootstrap.sourceSignature ? "unchanged" : "changed";
+        this.statusState.sourceSignature === nextBootstrap.sourceSignature ? "unchanged" : "changed";
       const message =
         outcome === "changed"
-          ? "再読み込みでソースの変化を反映しました。"
-          : "再読み込みしましたが差分はありませんでした。";
+          ? "Source signature changed and the dashboard was refreshed."
+          : "Refresh completed without source changes.";
 
       this.statusState.loadedAt = nextBootstrap.loadedAt;
       this.statusState.sourceSignature = nextBootstrap.sourceSignature;
@@ -453,8 +470,8 @@ export class DashboardController {
       this.errorMessage = null;
     } catch (error) {
       this.statusState.lastRefreshOutcome = "failed";
-      this.appendEvidence("failed", "再読み込みに失敗しました。");
-      this.errorMessage = error instanceof Error ? error.message : "再読み込みに失敗しました。";
+      this.appendEvidence("failed", "Refresh failed.");
+      this.errorMessage = error instanceof Error ? error.message : "Refresh failed.";
     }
 
     this.render();
@@ -463,6 +480,7 @@ export class DashboardController {
   private render(): void {
     const staleStatus = this.isStale() ? "stale" : "fresh";
     const refreshLabel = this.getRefreshLabel(staleStatus);
+    const consultationSession = this.createConsultationSession();
     const evidenceMarkup = this.statusState.evidence
       .slice(0, 3)
       .map(
@@ -470,7 +488,6 @@ export class DashboardController {
           `<li><strong>${this.escapeHtml(item.outcome)}</strong> ${this.escapeHtml(item.timestamp)} ${this.escapeHtml(item.message)}</li>`
       )
       .join("");
-    const consultationSession = this.createConsultationSession();
     const consultationBundleMarkup =
       consultationSession.bundle.length > 0
         ? consultationSession.bundle
@@ -479,11 +496,17 @@ export class DashboardController {
                 `<li><strong>${this.escapeHtml(item.kind)}</strong> ${this.escapeHtml(item.label)} <span>${this.escapeHtml(item.path)}</span></li>`
             )
             .join("")
-        : "<li>まだ bundle は選択されていません。</li>";
+        : "<li>No bundle selected.</li>";
     const responseFieldMarkup = consultationSession.responseFields
       .map(
         (field) =>
           `<li><strong>${this.escapeHtml(field.label)}</strong> ${this.escapeHtml(field.description)}</li>`
+      )
+      .join("");
+    const consultationCapabilitiesMarkup = consultationSession.responseFields
+      .map(
+        (field) =>
+          `<li><strong>${this.escapeHtml(field.label)}</strong><span>${this.escapeHtml(field.description)}</span></li>`
       )
       .join("");
     const sharedHistoryMarkup = this.sharedConversationState.history
@@ -504,91 +527,118 @@ export class DashboardController {
         ${this.renderTab("document", "文書")}
         ${this.renderTab("data", "データ")}
         ${this.renderTab("code", "コード")}
-        <button class="tab-button" data-role="refresh-dashboard" type="button">再読み込み</button>
+        <button class="tab-button" data-role="refresh-dashboard" type="button">更新を確認</button>
       </div>
-      <section class="status-strip">
-        <span class="status-badge status-${staleStatus}" data-role="stale-indicator">${refreshLabel}</span>
-        <span data-role="loaded-at">取得時刻: ${this.escapeHtml(this.statusState.loadedAt)}</span>
-        ${
-          this.statusState.lastRefreshOutcome
-            ? `<span data-role="refresh-outcome">直近結果: ${this.escapeHtml(this.statusState.lastRefreshOutcome)}</span>`
-            : ""
-        }
-      </section>
-      <section class="status-log">
-        <p class="eyebrow">Refresh Evidence</p>
-        <ul data-role="refresh-evidence">${evidenceMarkup || "<li>まだ evidence はありません。</li>"}</ul>
-      </section>
-      <section class="status-log consultation-contract" data-role="consultation-contract">
-        <p class="eyebrow">Consultation Contract</p>
-        <p><strong>${this.escapeHtml(consultationSession.storyId)}</strong> ${this.escapeHtml(consultationSession.storySummary)}</p>
-        <p data-role="consultation-approval-state">approval state: ${this.escapeHtml(consultationSession.approvalState)}</p>
-        <p>${this.escapeHtml(consultationSession.approvalGuidance)}</p>
-        <div class="consultation-grid">
-          <div>
-            <p class="eyebrow">Input Bundle</p>
-            <p>source policy: ${this.escapeHtml(consultationSession.bundleSourcePolicy)}</p>
-            <ul data-role="consultation-bundle">${consultationBundleMarkup}</ul>
+      <section class="header-deck" data-role="header-deck">
+        <section class="header-card" data-role="header-card" data-card="status" tabindex="0">
+          <div class="header-card-summary">
+            <p class="eyebrow">Refresh</p>
+            <h2>Status</h2>
+            <p>freshness, loaded time, and evidence</p>
           </div>
-          <div>
-            <p class="eyebrow">Response Contract</p>
-            <ul data-role="consultation-response-fields">${responseFieldMarkup}</ul>
+          <div class="header-card-detail">
+            <section class="status-strip">
+              <span class="status-badge status-${staleStatus}" data-role="stale-indicator">${refreshLabel}</span>
+              <span data-role="loaded-at">loaded: ${this.escapeHtml(this.statusState.loadedAt)}</span>
+              ${
+                this.statusState.lastRefreshOutcome
+                  ? `<span data-role="refresh-outcome">outcome: ${this.escapeHtml(this.statusState.lastRefreshOutcome)}</span>`
+                  : ""
+              }
+            </section>
+            <section class="status-log">
+              <p class="eyebrow">Refresh Evidence</p>
+              <ul data-role="refresh-evidence">${evidenceMarkup || "<li>No evidence yet.</li>"}</ul>
+            </section>
           </div>
-          <div>
-            <p class="eyebrow">Touchpoints</p>
-            <ul>${consultationSession.touchpoints
-              .map((touchpoint) => `<li>${this.escapeHtml(touchpoint)}</li>`)
-              .join("")}</ul>
+        </section>
+        <section class="header-card consultation-contract" data-role="header-card" data-card="contract" tabindex="0">
+          <div class="header-card-summary">
+            <p class="eyebrow">Consultation Contract</p>
+            <h2>Contract</h2>
+            <p>${this.escapeHtml(consultationSession.approvalState)} / ${this.escapeHtml(consultationSession.bundleSourcePolicy)}</p>
           </div>
-        </div>
-      </section>
-      <section class="status-log" data-role="shared-conversation-shell">
-        <p class="eyebrow">Shared Conversation Shell</p>
-        <p data-role="shared-current-prompt">prompt: ${this.escapeHtml(this.sharedConversationState.currentPrompt || "未入力")}</p>
-        <p data-role="shared-current-summary">summary: ${this.escapeHtml(this.sharedConversationState.currentSummary ?? "まだありません")}</p>
-        <p data-role="shared-current-approval">approval: ${this.escapeHtml(this.sharedConversationState.currentApprovalState ?? "none")}</p>
-        <ul data-role="shared-current-bundle">
-          ${
-            this.sharedConversationState.currentBundle.length > 0
-              ? this.sharedConversationState.currentBundle
-                  .map(
-                    (item) =>
-                      `<li>${this.escapeHtml(item.kind)} ${this.escapeHtml(item.label)} <span>${this.escapeHtml(item.path)}</span></li>`
-                  )
-                  .join("")
-              : "<li>まだ bundle はありません。</li>"
-          }
-        </ul>
-        ${
-          this.sharedConversationState.currentSummary
-            ? `
-              <div class="editor-actions">
-                <button class="document-item" data-role="proposal-action" data-action="keep" type="button">Keep</button>
-                <button class="document-item" data-role="proposal-action" data-action="discard" type="button">Discard</button>
-                <button class="document-item" data-role="proposal-action" data-action="task" type="button">Task化</button>
-                <button class="document-item is-selected" data-role="proposal-action" data-action="apply-request" type="button">Apply Request</button>
+          <div class="header-card-detail" data-role="consultation-contract">
+            <p><strong>${this.escapeHtml(consultationSession.storyId)}</strong> ${this.escapeHtml(consultationSession.storySummary)}</p>
+            <p data-role="consultation-approval-state">approval state: ${this.escapeHtml(consultationSession.approvalState)}</p>
+            <p>${this.escapeHtml(consultationSession.approvalGuidance)}</p>
+            <div class="consultation-grid">
+              <div>
+                <p class="eyebrow">Input Bundle</p>
+                <p>source policy: ${this.escapeHtml(consultationSession.bundleSourcePolicy)}</p>
+                <ul data-role="consultation-bundle">${consultationBundleMarkup}</ul>
               </div>
-            `
-            : ""
-        }
-        ${
-          this.sharedConversationState.applyState === "preview"
-            ? `
-              <div class="editor-actions" data-role="apply-preview">
-                <p>preview: ${this.escapeHtml(this.sharedConversationState.currentSummary ?? "")}</p>
-                <button class="document-item is-selected" data-role="apply-approve" type="button">Approve</button>
-                <button class="document-item" data-role="apply-cancel" type="button">Cancel</button>
+              <div>
+                <p class="eyebrow">Response Contract</p>
+                <ul data-role="consultation-response-fields">${responseFieldMarkup}</ul>
               </div>
-            `
-            : this.sharedConversationState.applyState === "approved"
-              ? `<p data-role="apply-approved">apply approved</p>`
-              : this.sharedConversationState.applyState === "cancelled"
-                ? `<p data-role="apply-cancelled">apply cancelled</p>`
+              <div>
+                <p class="eyebrow">Touchpoints</p>
+                <ul>${consultationSession.touchpoints
+                  .map((touchpoint) => `<li>${this.escapeHtml(touchpoint)}</li>`)
+                  .join("")}</ul>
+              </div>
+            </div>
+            <div class="capability-note">
+              <p class="eyebrow">What Consultation Can Do</p>
+              <ul>${consultationCapabilitiesMarkup}</ul>
+            </div>
+          </div>
+        </section>
+        <section class="header-card" data-role="header-card" data-card="shell" tabindex="0">
+          <div class="header-card-summary">
+            <p class="eyebrow">Shared</p>
+            <h2>Conversation</h2>
+            <p>${this.sharedConversationState.currentBundle.length} selected / ${this.sharedConversationState.history.length} history</p>
+          </div>
+          <div class="header-card-detail" data-role="shared-conversation-shell">
+            <p data-role="shared-current-prompt">prompt: ${this.escapeHtml(this.sharedConversationState.currentPrompt || "No prompt yet")}</p>
+            <p data-role="shared-current-summary">summary: ${this.escapeHtml(this.sharedConversationState.currentSummary ?? "No summary yet")}</p>
+            <p data-role="shared-current-approval">approval: ${this.escapeHtml(this.sharedConversationState.currentApprovalState ?? "none")}</p>
+            <ul data-role="shared-current-bundle">
+              ${
+                this.sharedConversationState.currentBundle.length > 0
+                  ? this.sharedConversationState.currentBundle
+                      .map(
+                        (item) =>
+                          `<li>${this.escapeHtml(item.kind)} ${this.escapeHtml(item.label)} <span>${this.escapeHtml(item.path)}</span></li>`
+                      )
+                      .join("")
+                  : "<li>No bundle yet.</li>"
+              }
+            </ul>
+            ${
+              this.sharedConversationState.currentSummary
+                ? `
+                  <div class="editor-actions">
+                    <button class="document-item" data-role="proposal-action" data-action="keep" type="button">Keep</button>
+                    <button class="document-item" data-role="proposal-action" data-action="discard" type="button">Discard</button>
+                    <button class="document-item" data-role="proposal-action" data-action="task" type="button">Task化</button>
+                    <button class="document-item is-selected" data-role="proposal-action" data-action="apply-request" type="button">Apply Request</button>
+                  </div>
+                `
                 : ""
-        }
-        <ul data-role="shared-history">${sharedHistoryMarkup || "<li>まだ history はありません。</li>"}</ul>
+            }
+            ${
+              this.sharedConversationState.applyState === "preview"
+                ? `
+                  <div class="editor-actions" data-role="apply-preview">
+                    <p>preview: ${this.escapeHtml(this.sharedConversationState.currentSummary ?? "")}</p>
+                    <button class="document-item is-selected" data-role="apply-approve" type="button">Approve</button>
+                    <button class="document-item" data-role="apply-cancel" type="button">Cancel</button>
+                  </div>
+                `
+                : this.sharedConversationState.applyState === "approved"
+                  ? `<p data-role="apply-approved">apply approved</p>`
+                  : this.sharedConversationState.applyState === "cancelled"
+                    ? `<p data-role="apply-cancelled">apply cancelled</p>`
+                    : ""
+            }
+            <ul data-role="shared-history">${sharedHistoryMarkup || "<li>No history yet.</li>"}</ul>
+          </div>
+        </section>
       </section>
-      ${this.errorMessage ? `<p class="error-banner" data-role="error-banner">${this.errorMessage}</p>` : ""}
+      ${this.errorMessage ? `<p class="error-banner" data-role="error-banner">${this.escapeHtml(this.errorMessage)}</p>` : ""}
       <div data-role="workspace-content"></div>
     `;
 
@@ -612,20 +662,18 @@ export class DashboardController {
         new DocumentWorkspaceView(content).render(state);
         break;
       }
-      case "data":
-        {
-          const state = this.dataController.createState(this.dataConsultationState);
-          this.dataConsultationState = state.consultation;
-          new DataWorkspaceView(content).render(state);
-        }
+      case "data": {
+        const state = this.dataController.createState(this.dataConsultationState);
+        this.dataConsultationState = state.consultation;
+        new DataWorkspaceView(content).render(state);
         break;
-      case "code":
-        {
-          const state = this.codeController.createState(this.codeConsultationState);
-          this.codeConsultationState = state.consultation;
-          new CodeWorkspaceView(content).render(state);
-        }
+      }
+      case "code": {
+        const state = this.codeController.createState(this.codeConsultationState);
+        this.codeConsultationState = state.consultation;
+        new CodeWorkspaceView(content).render(state);
         break;
+      }
     }
   }
 
@@ -711,7 +759,7 @@ export class DashboardController {
     }
 
     if (latest.workspaceId === "code") {
-      this.errorMessage = "code consultation は phase gate のため apply できません。";
+      this.errorMessage = "Code consultation remains phase-gated read-only.";
       this.sharedConversationState = updateApplyState(
         this.sharedConversationState,
         "cancelled",
@@ -731,7 +779,7 @@ export class DashboardController {
       );
 
       if (state.isReadOnly || !state.selectedDocument) {
-        this.errorMessage = "読み取り専用の document には apply できません。";
+        this.errorMessage = "Only unlocked local draft documents can be applied.";
         this.sharedConversationState = updateApplyState(
           this.sharedConversationState,
           "cancelled",
@@ -765,7 +813,7 @@ export class DashboardController {
       const primary = state.selectedDatasets[0];
 
       if (state.isReadOnly || !primary) {
-        this.errorMessage = "読み取り専用の data には apply できません。";
+        this.errorMessage = "Only unlocked local draft datasets can be applied.";
         this.sharedConversationState = updateApplyState(
           this.sharedConversationState,
           "cancelled",
@@ -837,7 +885,7 @@ export class DashboardController {
     try {
       globalThis.localStorage?.setItem(REFRESH_EVIDENCE_STORAGE_KEY, JSON.stringify(evidence));
     } catch {
-      // ignore storage failures and keep in-memory evidence only
+      // ignore storage failures
     }
   }
 
