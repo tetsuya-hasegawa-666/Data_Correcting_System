@@ -1,4 +1,5 @@
 import { CodeWorkspaceController } from "../../code-workspace/controller/CodeWorkspaceController";
+import type { CodeConsultationState } from "../../code-workspace/controller/CodeWorkspaceController";
 import type { CodeTargetRepository } from "../../code-workspace/model/CodeTargetRepository";
 import { CodeWorkspaceView } from "../../code-workspace/view/CodeWorkspaceView";
 import { DataWorkspaceController } from "../../data-workspace/controller/DataWorkspaceController";
@@ -18,6 +19,14 @@ import {
   type ConsultationBundleItem,
   type ConsultationSessionState
 } from "../model/ConsultationSession";
+import {
+  appendConversationEntry,
+  applyProposalAction,
+  createEmptyConversationState,
+  updateApplyState,
+  type ProposalAction,
+  type SharedConversationState
+} from "../model/SharedConversation";
 
 type WorkspaceId = "document" | "data" | "code";
 type RefreshOutcome = "changed" | "unchanged" | "failed";
@@ -48,6 +57,8 @@ export class DashboardController {
   private editorState?: Partial<DocumentEditorState>;
   private documentConsultationState?: Partial<DocumentConsultationState>;
   private dataConsultationState?: Partial<DataConsultationState>;
+  private codeConsultationState?: Partial<CodeConsultationState>;
+  private sharedConversationState: SharedConversationState = createEmptyConversationState();
   private errorMessage: string | null = null;
   private readonly statusState: DashboardStatusState;
 
@@ -113,6 +124,15 @@ export class DashboardController {
           this.dataConsultationState
         );
         this.dataConsultationState = state.consultation;
+        return;
+      }
+
+      if (target instanceof HTMLTextAreaElement && target.name === "code-consultation-focus") {
+        const state = this.codeController.updateConsultationFocus(
+          target.value,
+          this.codeConsultationState
+        );
+        this.codeConsultationState = state.consultation;
       }
     });
 
@@ -238,6 +258,46 @@ export class DashboardController {
         return;
       }
 
+      const toggleCodeButton = target.closest<HTMLElement>("[data-role='toggle-code-bundle']");
+      if (toggleCodeButton?.dataset.targetId) {
+        const state = this.codeController.toggleTargetSelection(
+          toggleCodeButton.dataset.targetId,
+          this.codeConsultationState
+        );
+        this.codeConsultationState = state.consultation;
+        this.workspaceId = "code";
+        this.errorMessage = null;
+        this.render();
+        return;
+      }
+
+      const actionButton = target.closest<HTMLElement>("[data-role='proposal-action']");
+      if (actionButton?.dataset.action) {
+        this.sharedConversationState = applyProposalAction(
+          this.sharedConversationState,
+          actionButton.dataset.action as ProposalAction
+        );
+        this.errorMessage = null;
+        this.render();
+        return;
+      }
+
+      if (target.closest("[data-role='apply-approve']")) {
+        this.handleApproveApply();
+        return;
+      }
+
+      if (target.closest("[data-role='apply-cancel']")) {
+        this.sharedConversationState = updateApplyState(
+          this.sharedConversationState,
+          "cancelled",
+          "cancelled"
+        );
+        this.errorMessage = null;
+        this.render();
+        return;
+      }
+
       if (
         this.workspaceId === "document" &&
         this.editorState?.isEditing &&
@@ -279,6 +339,20 @@ export class DashboardController {
         this.selectedDocumentId = state.selectedDocument?.id;
         this.editorState = state.editor;
         this.documentConsultationState = state.consultation;
+        this.sharedConversationState = appendConversationEntry(this.sharedConversationState, {
+          workspaceId: "document",
+          prompt: state.consultation.focusPrompt,
+          bundle: state.selectedBundle.map((document) => ({
+            id: document.id,
+            kind: "document",
+            label: document.title,
+            path: document.path
+          })),
+          summary: state.consultation.lastResponse?.summary ?? "",
+          evidence: state.consultation.lastResponse?.evidence ?? [],
+          nextAction: state.consultation.lastResponse?.nextAction ?? "",
+          approvalState: "consultation-only"
+        });
         this.errorMessage = null;
         this.render();
         return;
@@ -289,7 +363,36 @@ export class DashboardController {
 
         const state = this.dataController.consultDatasets(this.dataConsultationState);
         this.dataConsultationState = state.consultation;
+        this.sharedConversationState = appendConversationEntry(this.sharedConversationState, {
+          workspaceId: "data",
+          prompt: state.consultation.focusPrompt,
+          bundle: this.createDataBundle(state.selectedDatasets),
+          summary: state.consultation.lastResponse?.summary ?? "",
+          evidence: state.consultation.lastResponse?.evidence ?? [],
+          nextAction: state.consultation.lastResponse?.nextAction ?? "",
+          approvalState: "consultation-only"
+        });
         this.workspaceId = "data";
+        this.errorMessage = null;
+        this.render();
+        return;
+      }
+
+      if (form.dataset.role === "code-consultation-form") {
+        event.preventDefault();
+
+        const state = this.codeController.consultTargets(this.codeConsultationState);
+        this.codeConsultationState = state.consultation;
+        this.sharedConversationState = appendConversationEntry(this.sharedConversationState, {
+          workspaceId: "code",
+          prompt: state.consultation.focusPrompt,
+          bundle: this.createCodeBundle(state.selectedTargets),
+          summary: state.consultation.lastResponse?.summary ?? "",
+          evidence: state.consultation.lastResponse?.evidence ?? [],
+          nextAction: state.consultation.lastResponse?.nextAction ?? "",
+          approvalState: "phase-gated-read-only"
+        });
+        this.workspaceId = "code";
         this.errorMessage = null;
         this.render();
         return;
@@ -383,6 +486,18 @@ export class DashboardController {
           `<li><strong>${this.escapeHtml(field.label)}</strong> ${this.escapeHtml(field.description)}</li>`
       )
       .join("");
+    const sharedHistoryMarkup = this.sharedConversationState.history
+      .map(
+        (entry) => `
+          <li data-role="shared-history-item">
+            <strong>${this.escapeHtml(entry.workspaceId)}</strong>
+            <span>${this.escapeHtml(entry.summary)}</span>
+            <span>${this.escapeHtml(entry.approvalState)}</span>
+            ${entry.proposalAction ? `<span>${this.escapeHtml(entry.proposalAction)}</span>` : ""}
+          </li>
+        `
+      )
+      .join("");
 
     this.rootElement.innerHTML = `
       <div class="shell-nav">
@@ -427,6 +542,52 @@ export class DashboardController {
           </div>
         </div>
       </section>
+      <section class="status-log" data-role="shared-conversation-shell">
+        <p class="eyebrow">Shared Conversation Shell</p>
+        <p data-role="shared-current-prompt">prompt: ${this.escapeHtml(this.sharedConversationState.currentPrompt || "未入力")}</p>
+        <p data-role="shared-current-summary">summary: ${this.escapeHtml(this.sharedConversationState.currentSummary ?? "まだありません")}</p>
+        <p data-role="shared-current-approval">approval: ${this.escapeHtml(this.sharedConversationState.currentApprovalState ?? "none")}</p>
+        <ul data-role="shared-current-bundle">
+          ${
+            this.sharedConversationState.currentBundle.length > 0
+              ? this.sharedConversationState.currentBundle
+                  .map(
+                    (item) =>
+                      `<li>${this.escapeHtml(item.kind)} ${this.escapeHtml(item.label)} <span>${this.escapeHtml(item.path)}</span></li>`
+                  )
+                  .join("")
+              : "<li>まだ bundle はありません。</li>"
+          }
+        </ul>
+        ${
+          this.sharedConversationState.currentSummary
+            ? `
+              <div class="editor-actions">
+                <button class="document-item" data-role="proposal-action" data-action="keep" type="button">Keep</button>
+                <button class="document-item" data-role="proposal-action" data-action="discard" type="button">Discard</button>
+                <button class="document-item" data-role="proposal-action" data-action="task" type="button">Task化</button>
+                <button class="document-item is-selected" data-role="proposal-action" data-action="apply-request" type="button">Apply Request</button>
+              </div>
+            `
+            : ""
+        }
+        ${
+          this.sharedConversationState.applyState === "preview"
+            ? `
+              <div class="editor-actions" data-role="apply-preview">
+                <p>preview: ${this.escapeHtml(this.sharedConversationState.currentSummary ?? "")}</p>
+                <button class="document-item is-selected" data-role="apply-approve" type="button">Approve</button>
+                <button class="document-item" data-role="apply-cancel" type="button">Cancel</button>
+              </div>
+            `
+            : this.sharedConversationState.applyState === "approved"
+              ? `<p data-role="apply-approved">apply approved</p>`
+              : this.sharedConversationState.applyState === "cancelled"
+                ? `<p data-role="apply-cancelled">apply cancelled</p>`
+                : ""
+        }
+        <ul data-role="shared-history">${sharedHistoryMarkup || "<li>まだ history はありません。</li>"}</ul>
+      </section>
       ${this.errorMessage ? `<p class="error-banner" data-role="error-banner">${this.errorMessage}</p>` : ""}
       <div data-role="workspace-content"></div>
     `;
@@ -459,7 +620,11 @@ export class DashboardController {
         }
         break;
       case "code":
-        new CodeWorkspaceView(content).render(this.codeController.createState());
+        {
+          const state = this.codeController.createState(this.codeConsultationState);
+          this.codeConsultationState = state.consultation;
+          new CodeWorkspaceView(content).render(state);
+        }
         break;
     }
   }
@@ -498,7 +663,7 @@ export class DashboardController {
         });
       }
       case "data": {
-        const state = this.dataController.createState();
+        const state = this.dataController.createState(this.dataConsultationState);
         return createConsultationSession({
           workspaceId: "data",
           sourcePolicy: state.sourcePolicy,
@@ -506,11 +671,11 @@ export class DashboardController {
         });
       }
       case "code": {
-        const state = this.codeController.createState();
+        const state = this.codeController.createState(this.codeConsultationState);
         return createConsultationSession({
           workspaceId: "code",
           sourcePolicy: state.sourcePolicy,
-          bundle: this.createCodeBundle(state.targets)
+          bundle: this.createCodeBundle(state.selectedTargets)
         });
       }
     }
@@ -530,17 +695,105 @@ export class DashboardController {
   private createCodeBundle(
     targets: Array<{ id: string; title: string; path: string }>
   ): ConsultationBundleItem[] {
-    const primary = targets[0];
-    return primary
-      ? [
-          {
-            id: primary.id,
-            kind: "code",
-            label: primary.title,
-            path: primary.path
-          }
-        ]
-      : [];
+    return targets.map((target) => ({
+      id: target.id,
+      kind: "code",
+      label: target.title,
+      path: target.path
+    }));
+  }
+
+  private handleApproveApply(): void {
+    const latest = this.sharedConversationState.history[0];
+
+    if (!latest) {
+      return;
+    }
+
+    if (latest.workspaceId === "code") {
+      this.errorMessage = "code consultation は phase gate のため apply できません。";
+      this.sharedConversationState = updateApplyState(
+        this.sharedConversationState,
+        "cancelled",
+        "phase-gated-read-only"
+      );
+      this.render();
+      return;
+    }
+
+    if (latest.workspaceId === "document") {
+      const selectedDocumentId = latest.bundle[0]?.id;
+      const state = this.documentController.createState(
+        this.query,
+        selectedDocumentId,
+        this.editorState,
+        this.documentConsultationState
+      );
+
+      if (state.isReadOnly || !state.selectedDocument) {
+        this.errorMessage = "読み取り専用の document には apply できません。";
+        this.sharedConversationState = updateApplyState(
+          this.sharedConversationState,
+          "cancelled",
+          "consultation-only"
+        );
+        this.render();
+        return;
+      }
+
+      const applied = this.documentController.saveDocument(
+        this.query,
+        state.selectedDocument.id,
+        `${state.selectedDocument.body}\n\n[Applied Consultation]\n${latest.summary}`,
+        this.documentConsultationState
+      );
+      this.selectedDocumentId = applied.selectedDocument?.id;
+      this.editorState = applied.editor;
+      this.documentConsultationState = applied.consultation;
+      this.sharedConversationState = updateApplyState(
+        this.sharedConversationState,
+        "approved",
+        "approved"
+      );
+      this.errorMessage = null;
+      this.render();
+      return;
+    }
+
+    if (latest.workspaceId === "data") {
+      const state = this.dataController.createState(this.dataConsultationState);
+      const primary = state.selectedDatasets[0];
+
+      if (state.isReadOnly || !primary) {
+        this.errorMessage = "読み取り専用の data には apply できません。";
+        this.sharedConversationState = updateApplyState(
+          this.sharedConversationState,
+          "cancelled",
+          "consultation-only"
+        );
+        this.render();
+        return;
+      }
+
+      const applied = this.dataController.updateDataset(primary.id, "review", primary.recordCount);
+      this.dataConsultationState = applied.consultation;
+      this.sharedConversationState = updateApplyState(
+        this.sharedConversationState,
+        "approved",
+        "approved"
+      );
+      this.errorMessage = null;
+      this.render();
+      return;
+    }
+
+    this.sharedConversationState = updateApplyState(
+      this.sharedConversationState,
+      "approved",
+      "approved"
+    );
+    this.errorMessage = null;
+    this.render();
   }
 
   private isStale(): boolean {

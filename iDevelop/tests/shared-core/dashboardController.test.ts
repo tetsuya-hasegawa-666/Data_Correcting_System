@@ -103,6 +103,81 @@ describe("DashboardController", () => {
     );
   });
 
+  it("stores shared conversation history across document and data consultations", () => {
+    const container = document.createElement("div");
+    const controller = createController(container);
+
+    controller.start();
+
+    const documentFocus = container.querySelector(
+      "[data-role='consultation-focus-input']"
+    ) as HTMLTextAreaElement;
+    documentFocus.value = "document focus";
+    documentFocus.dispatchEvent(new Event("input", { bubbles: true }));
+    (
+      container.querySelector("[data-role='document-consultation-form']") as HTMLFormElement
+    ).dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+    (container.querySelector("[data-workspace-id='data']") as HTMLButtonElement).click();
+    const dataFocus = container.querySelector(
+      "[data-role='data-consultation-focus-input']"
+    ) as HTMLTextAreaElement;
+    dataFocus.value = "data focus";
+    dataFocus.dispatchEvent(new Event("input", { bubbles: true }));
+    (
+      container.querySelector("[data-role='data-consultation-form']") as HTMLFormElement
+    ).dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+    expect(container.querySelectorAll("[data-role='shared-history-item']")).toHaveLength(2);
+    expect(container.querySelector("[data-role='shared-current-prompt']")?.textContent).toContain(
+      "data focus"
+    );
+  });
+
+  it("approves document apply after preview", () => {
+    const container = document.createElement("div");
+    const controller = createController(container);
+
+    controller.start();
+    const focus = container.querySelector("[data-role='consultation-focus-input']") as HTMLTextAreaElement;
+    focus.value = "apply summary";
+    focus.dispatchEvent(new Event("input", { bubbles: true }));
+    (
+      container.querySelector("[data-role='document-consultation-form']") as HTMLFormElement
+    ).dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    (container.querySelector("[data-role='proposal-action'][data-action='apply-request']") as HTMLButtonElement).click();
+    (container.querySelector("[data-role='apply-approve']") as HTMLButtonElement).click();
+
+    expect(container.querySelector("[data-role='apply-approved']")?.textContent).toContain(
+      "approved"
+    );
+    expect(container.querySelector("[data-role='document-body']")?.textContent).toContain(
+      "[Applied Consultation]"
+    );
+  });
+
+  it("keeps code consultation behind the phase gate and blocks apply", () => {
+    const container = document.createElement("div");
+    const controller = createController(container);
+
+    controller.start();
+    (container.querySelector("[data-workspace-id='code']") as HTMLButtonElement).click();
+    const codeFocus = container.querySelector(
+      "[data-role='code-consultation-focus-input']"
+    ) as HTMLTextAreaElement;
+    codeFocus.value = "read-only risk";
+    codeFocus.dispatchEvent(new Event("input", { bubbles: true }));
+    (
+      container.querySelector("[data-role='code-consultation-form']") as HTMLFormElement
+    ).dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    (container.querySelector("[data-role='proposal-action'][data-action='apply-request']") as HTMLButtonElement).click();
+
+    expect(container.querySelector("[data-role='shared-current-approval']")?.textContent).toContain(
+      "phase-gated-read-only"
+    );
+    expect(container.querySelector("[data-role='apply-preview']")).toBeNull();
+  });
+
   it("runs document consultation from the selected bundle", () => {
     const container = document.createElement("div");
     const controller = createController(container);
