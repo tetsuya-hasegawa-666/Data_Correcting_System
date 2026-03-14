@@ -1,7 +1,7 @@
 [
   {
     "id": "dataset-1",
-    "name": "Doc Sync Coverage",
+    "name": "文書同期カバレッジ",
     "category": "document",
     "recordCount": 12,
     "status": "ready",
@@ -9,7 +9,7 @@
   },
   {
     "id": "dataset-2",
-    "name": "Correction Result Summary",
+    "name": "補正結果サマリー",
     "category": "result",
     "recordCount": 5,
     "status": "draft",
@@ -17,7 +17,7 @@
   },
   {
     "id": "dataset-3",
-    "name": "Research Backlog",
+    "name": "調査バックログ",
     "category": "process",
     "recordCount": 7,
     "status": "ready",

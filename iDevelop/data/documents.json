@@ -1,23 +1,23 @@
 [
   {
     "id": "north-star",
-    "title": "North Star",
+    "title": "ノーススター",
     "path": "docs/artifact/north_star.md",
-    "body": "Human goal, scope boundary, and non-negotiables for the iDevelop dashboard.",
+    "body": "iDevelop ダッシュボードの人間目線の目的、対象範囲、譲れない条件をまとめたダミー文書です。",
     "tags": ["artifact", "must-scope"]
   },
   {
     "id": "system-blueprint",
-    "title": "System Blueprint",
+    "title": "システム設計図",
     "path": "docs/artifact/system_blueprint.md",
-    "body": "MVC boundaries, module split, document workspace, data workspace, and shared-core direction.",
+    "body": "MVC の境界、モジュール分割、document/data/code workspace の方向性をまとめたダミー文書です。",
     "tags": ["artifact", "architecture"]
   },
   {
     "id": "research-operation",
-    "title": "Research Operation",
+    "title": "調査運用ルール",
     "path": "docs/process/research_operation.md",
-    "body": "BDD and TDD operating rules for must scope and optional scope work.",
+    "body": "must scope と optional scope を進めるための BDD / TDD 運用ルールをまとめたダミー文書です。",
     "tags": ["process", "bdd", "tdd"]
   }
 ]

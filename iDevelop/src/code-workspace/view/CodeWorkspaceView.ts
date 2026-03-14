@@ -19,8 +19,8 @@ export class CodeWorkspaceView {
     this.rootElement.innerHTML = `
       <section class="data-workspace">
         <div class="section-heading">
-          <p class="eyebrow">Code Workspace</p>
-          <h2>Read-only entry</h2>
+          <p class="eyebrow">コード</p>
+          <h2>参照専用の確認画面</h2>
           <p data-role="code-policy">${this.escapeHtml(state.policyNote)}</p>
         </div>
         <div class="document-list">${listMarkup}</div>

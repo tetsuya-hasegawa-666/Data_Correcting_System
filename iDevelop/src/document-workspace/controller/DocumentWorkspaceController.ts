@@ -70,7 +70,22 @@ export class DocumentWorkspaceController {
       isEditing: false,
       draftBody: savedDocument.body,
       lastSavedBody: savedDocument.body,
-      saveMessage: "Saved"
+      saveMessage: "保存しました"
+    });
+  }
+
+  public cancelEditing(query: string, documentId: string): DocumentWorkspaceState {
+    const state = this.createState(query, documentId);
+
+    if (!state.selectedDocument) {
+      return state;
+    }
+
+    return this.createState(query, documentId, {
+      isEditing: false,
+      draftBody: state.selectedDocument.body,
+      lastSavedBody: state.selectedDocument.body,
+      saveMessage: null
     });
   }
 

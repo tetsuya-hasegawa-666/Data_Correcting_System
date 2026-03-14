@@ -19,6 +19,6 @@ describe("CodeWorkspaceController", () => {
     const state = controller.createState();
 
     expect(state.targets).toHaveLength(1);
-    expect(state.policyNote).toContain("Read-only");
+    expect(state.policyNote).toContain("参照専用");
   });
 });

@@ -1,5 +1,5 @@
-import type { DocumentRecord } from "../model/DocumentRecord";
 import type { DocumentWorkspaceState } from "../controller/DocumentWorkspaceController";
+import type { DocumentRecord } from "../model/DocumentRecord";
 
 export class DocumentWorkspaceView {
   public constructor(private readonly rootElement: HTMLElement) {}
@@ -7,7 +7,7 @@ export class DocumentWorkspaceView {
   public render(state: DocumentWorkspaceState): void {
     const selectedDocumentMarkup = state.selectedDocument
       ? this.renderSelectedDocument(state.selectedDocument, state)
-      : "<p>No matching document.</p>";
+      : "<p>一致するドキュメントがありません。</p>";
 
     const resultMarkup = state.documents
       .map((document) => this.renderDocumentItem(document, document.id === state.selectedDocument?.id))
@@ -16,19 +16,19 @@ export class DocumentWorkspaceView {
     this.rootElement.innerHTML = `
       <div class="dashboard-shell">
         <section class="workspace-panel">
-          <p class="eyebrow">Document Workspace</p>
-          <h1>Search project truth</h1>
-          <p>Must scope kickoff slice: list, search, and preview docs without breaking MVC.</p>
-          <p class="result-count">Source policy: ${this.escapeHtml(state.sourcePolicy)}</p>
+          <p class="eyebrow">ドキュメント</p>
+          <h1>文書の一覧と確認</h1>
+          <p>MVC を崩さず、文書の一覧、検索、プレビュー、編集体験を確認します。</p>
+          <p class="result-count">読込ポリシー: ${this.escapeHtml(state.sourcePolicy)}</p>
           <input
             class="search-input"
             data-role="search-input"
             type="search"
             name="document-query"
             value="${this.escapeAttribute(state.query)}"
-            placeholder="Search title, path, body, or tag"
+            placeholder="タイトル、パス、本文、タグで検索"
           />
-          <p class="result-count" data-role="result-count">${state.documents.length} result(s)</p>
+          <p class="result-count" data-role="result-count">${state.documents.length} 件</p>
           <div class="document-list">${resultMarkup}</div>
         </section>
         <section class="preview-panel">${selectedDocumentMarkup}</section>
@@ -61,16 +61,17 @@ export class DocumentWorkspaceView {
         <form data-role="document-edit-form">
           <textarea class="document-editor" data-role="document-editor" name="document-body">${this.escapeHtml(state.editor.draftBody)}</textarea>
           <div class="editor-actions">
-            <button class="document-item is-selected" data-role="save-document" data-document-id="${this.escapeAttribute(document.id)}" type="submit">Save</button>
+            <button class="document-item is-selected" data-role="save-document" data-document-id="${this.escapeAttribute(document.id)}" type="submit">保存</button>
+            <button class="document-item" data-role="cancel-document" data-document-id="${this.escapeAttribute(document.id)}" type="button">キャンセル</button>
           </div>
         </form>
       `
       : `
-        <button class="document-item" data-role="edit-document" data-document-id="${this.escapeAttribute(document.id)}" type="button">Edit</button>
+        <button class="document-item" data-role="edit-document" data-document-id="${this.escapeAttribute(document.id)}" type="button">編集</button>
       `;
 
     return `
-      <p class="eyebrow">Preview</p>
+      <p class="eyebrow">プレビュー</p>
       <h2 data-role="document-title">${this.escapeHtml(document.title)}</h2>
       <p class="document-path">${this.escapeHtml(document.path)}</p>
       <div class="tag-row">${tagMarkup}</div>

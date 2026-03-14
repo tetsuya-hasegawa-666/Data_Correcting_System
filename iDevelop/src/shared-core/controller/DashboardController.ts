@@ -4,8 +4,8 @@ import { CodeWorkspaceView } from "../../code-workspace/view/CodeWorkspaceView";
 import { DataWorkspaceController } from "../../data-workspace/controller/DataWorkspaceController";
 import type { DatasetRepository } from "../../data-workspace/model/DatasetRepository";
 import { DataWorkspaceView } from "../../data-workspace/view/DataWorkspaceView";
-import { DocumentWorkspaceController } from "../../document-workspace/controller/DocumentWorkspaceController";
 import type { DocumentEditorState } from "../../document-workspace/controller/DocumentWorkspaceController";
+import { DocumentWorkspaceController } from "../../document-workspace/controller/DocumentWorkspaceController";
 import type { DocumentRepository } from "../../document-workspace/model/DocumentRepository";
 import { DocumentWorkspaceView } from "../../document-workspace/view/DocumentWorkspaceView";
 
@@ -76,6 +76,17 @@ export class DashboardController {
         const state = this.documentController.startEditing(this.query, editButton.dataset.documentId);
         this.selectedDocumentId = state.selectedDocument?.id;
         this.editorState = state.editor;
+        this.errorMessage = null;
+        this.render();
+        return;
+      }
+
+      const cancelButton = target.closest<HTMLElement>("[data-role='cancel-document']");
+      if (cancelButton?.dataset.documentId) {
+        const state = this.documentController.cancelEditing(this.query, cancelButton.dataset.documentId);
+        this.selectedDocumentId = state.selectedDocument?.id;
+        this.editorState = state.editor;
+        this.errorMessage = null;
         this.render();
         return;
       }
@@ -97,6 +108,37 @@ export class DashboardController {
           this.errorMessage = null;
           this.render();
         }
+        return;
+      }
+
+      const documentItem = target.closest<HTMLElement>("[data-role='document-item']");
+      if (documentItem?.dataset.documentId) {
+        const state = this.documentController.createState(
+          this.query,
+          documentItem.dataset.documentId,
+          this.editorState
+        );
+        this.selectedDocumentId = state.selectedDocument?.id;
+        this.editorState = state.editor;
+        this.errorMessage = null;
+        this.render();
+        return;
+      }
+
+      if (
+        this.workspaceId === "document" &&
+        this.editorState?.isEditing &&
+        !target.closest("[data-role='document-edit-form']")
+      ) {
+        const documentId = this.selectedDocumentId;
+
+        if (documentId) {
+          const state = this.documentController.cancelEditing(this.query, documentId);
+          this.selectedDocumentId = state.selectedDocument?.id;
+          this.editorState = state.editor;
+          this.errorMessage = null;
+          this.render();
+        }
       }
     });
 
@@ -111,7 +153,7 @@ export class DashboardController {
 
       try {
         if (!this.selectedDocumentId) {
-          throw new Error("Selected document was not found.");
+          throw new Error("選択中のドキュメントが見つかりません。");
         }
 
         const draftBody =
@@ -125,7 +167,7 @@ export class DashboardController {
         this.editorState = state.editor;
         this.errorMessage = null;
       } catch (error) {
-        this.errorMessage = error instanceof Error ? error.message : "Save failed.";
+        this.errorMessage = error instanceof Error ? error.message : "保存に失敗しました。";
       }
 
       this.render();
@@ -135,9 +177,9 @@ export class DashboardController {
   private render(): void {
     this.rootElement.innerHTML = `
       <div class="shell-nav">
-        ${this.renderTab("document", "Document")}
-        ${this.renderTab("data", "Data")}
-        ${this.renderTab("code", "Code")}
+        ${this.renderTab("document", "ドキュメント")}
+        ${this.renderTab("data", "データ")}
+        ${this.renderTab("code", "コード")}
       </div>
       ${this.errorMessage ? `<p class="error-banner" data-role="error-banner">${this.errorMessage}</p>` : ""}
       <div data-role="workspace-content"></div>

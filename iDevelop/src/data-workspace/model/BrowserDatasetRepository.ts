@@ -16,7 +16,7 @@ export class BrowserDatasetRepository implements DatasetRepository {
     const index = datasets.findIndex((dataset) => dataset.id === datasetId);
 
     if (index < 0) {
-      throw new Error(`Dataset '${datasetId}' was not found.`);
+      throw new Error(`データセット '${datasetId}' が見つかりません。`);
     }
 
     const updatedAt = new Date().toISOString();
@@ -28,7 +28,7 @@ export class BrowserDatasetRepository implements DatasetRepository {
     results.unshift({
       id: `result-${results.length + 1}`,
       datasetId,
-      summary: `${updated.name} updated to ${status} (${recordCount} records)`,
+      summary: `${updated.name} を ${this.getStatusLabel(status)}に更新し、${recordCount} 件を保存しました。`,
       createdAt: updatedAt
     });
     this.writeResults(results);
@@ -61,5 +61,18 @@ export class BrowserDatasetRepository implements DatasetRepository {
 
   private writeResults(results: DatasetResultRecord[]): void {
     globalThis.localStorage?.setItem(RESULT_STORAGE_KEY, JSON.stringify(results));
+  }
+
+  private getStatusLabel(status: string): string {
+    switch (status) {
+      case "draft":
+        return "下書き";
+      case "ready":
+        return "準備完了";
+      case "review":
+        return "レビュー中";
+      default:
+        return status;
+    }
   }
 }

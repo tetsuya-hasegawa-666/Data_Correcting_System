@@ -16,7 +16,7 @@ export class CodeWorkspaceController {
   public createState(): CodeWorkspaceState {
     return {
       targets: this.repository.listTargets(),
-      policyNote: "Read-only browse only. No process attach, execution, or edit."
+      policyNote: "参照専用です。プロセス接続、実行、編集はできません。"
     };
   }
 }

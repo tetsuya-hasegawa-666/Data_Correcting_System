@@ -104,6 +104,26 @@ describe("DocumentWorkspaceController", () => {
     expect(editing.editor.isEditing).toBe(true);
     expect(editing.editor.draftBody).toBe("Original body.");
     expect(saved.selectedDocument?.body).toBe("Updated body.");
-    expect(saved.editor.saveMessage).toBe("Saved");
+    expect(saved.editor.saveMessage).toBe("保存しました");
+  });
+
+  it("cancels editing and restores the saved body", () => {
+    const controller = new DocumentWorkspaceController(
+      new StubDocumentRepository([
+        {
+          id: "doc-1",
+          title: "North Star",
+          path: "docs/artifact/north_star.md",
+          body: "Original body.",
+          tags: ["artifact"]
+        }
+      ])
+    );
+
+    const state = controller.cancelEditing("", "doc-1");
+
+    expect(state.editor.isEditing).toBe(false);
+    expect(state.editor.draftBody).toBe("Original body.");
+    expect(state.editor.saveMessage).toBeNull();
   });
 });

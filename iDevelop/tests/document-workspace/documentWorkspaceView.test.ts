@@ -26,7 +26,7 @@ const state: DocumentWorkspaceState = {
     isEditing: true,
     draftBody: "BDD and TDD operating rules.",
     lastSavedBody: "BDD and TDD operating rules.",
-    saveMessage: "Saved"
+    saveMessage: "保存しました"
   }
 };
 
@@ -48,6 +48,10 @@ describe("DocumentWorkspaceView", () => {
     expect(
       (container.querySelector("[data-role='document-editor']") as HTMLTextAreaElement | null)?.value
     ).toContain("BDD");
-    expect(container.querySelector("[data-role='save-message']")?.textContent).toContain("Saved");
+    expect(container.querySelector("[data-role='save-message']")?.textContent).toContain(
+      "保存しました"
+    );
+    expect(container.textContent).toContain("ドキュメント");
+    expect(container.textContent).toContain("キャンセル");
   });
 });
