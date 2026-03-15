@@ -338,10 +338,10 @@ class TrialCpuImageVideoRecorder(
         val uvSize = width * height / 2
         val nv21 = ByteArray(ySize + uvSize)
 
-        var pos = 0
+        val yBuffer = yPlane.buffer
         val yRowStride = yPlane.rowStride
         val yPixelStride = yPlane.pixelStride
-        val yBuffer = yPlane.buffer
+        var pos = 0
         if (yPixelStride == 1 && yRowStride == width) {
             yBuffer.get(nv21, 0, ySize)
             pos = ySize
@@ -358,14 +358,29 @@ class TrialCpuImageVideoRecorder(
             }
         }
 
-        val uvRowStride = uPlane.rowStride
-        val uvPixelStride = uPlane.pixelStride
-        val uBuffer = uPlane.buffer
-        val vBuffer = vPlane.buffer
-        val uRow = ByteArray(uvRowStride)
-        val vRow = ByteArray(uvRowStride)
         val chromaHeight = height / 2
         val chromaWidth = width / 2
+        val uBuffer = uPlane.buffer
+        val vBuffer = vPlane.buffer
+        val uvRowStride = uPlane.rowStride
+        val uvPixelStride = uPlane.pixelStride
+
+        if (uvPixelStride == 2 && uPlane.rowStride == vPlane.rowStride) {
+            for (row in 0 until chromaHeight) {
+                val rowOffset = row * uvRowStride
+                var col = 0
+                while (col < chromaWidth) {
+                    val uvOffset = rowOffset + col * uvPixelStride
+                    nv21[pos++] = vBuffer.get(uvOffset)
+                    nv21[pos++] = uBuffer.get(uvOffset)
+                    col++
+                }
+            }
+            return nv21
+        }
+
+        val uRow = ByteArray(uvRowStride)
+        val vRow = ByteArray(uvRowStride)
         for (rowIndex in 0 until chromaHeight) {
             uBuffer.position(rowIndex * uvRowStride)
             vBuffer.position(rowIndex * uvRowStride)
