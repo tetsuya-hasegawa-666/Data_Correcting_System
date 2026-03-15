@@ -30,6 +30,7 @@ import android.opengl.GLSurfaceView
 import android.util.Size
 import android.view.Surface
 import android.view.View
+import android.view.WindowManager
 import android.widget.ImageView
 import android.graphics.Bitmap
 import android.util.Log
@@ -425,6 +426,7 @@ class RecordingCoordinator(
         @Volatile
         private var active = false
         private var firstFrame = true
+        private var rotationDegrees: Int = 0
         private val logTag = "isensorium-preview"
 
         fun start() {
@@ -432,6 +434,7 @@ class RecordingCoordinator(
             firstFrame = true
             imageView.post {
                 imageView.visibility = View.VISIBLE
+                imageView.rotation = rotationDegrees.toFloat()
             }
             Log.d(logTag, "preview renderer started")
         }
@@ -443,6 +446,13 @@ class RecordingCoordinator(
                 imageView.visibility = View.GONE
             }
             Log.d(logTag, "preview renderer stopped")
+        }
+
+        fun setRotationDegrees(degrees: Int) {
+            rotationDegrees = degrees
+            imageView.post {
+                imageView.rotation = rotationDegrees.toFloat()
+            }
         }
 
         fun onFrame(bitmap: Bitmap, timestampNs: Long) {
@@ -510,6 +520,7 @@ class RecordingCoordinator(
         private var sharedCameraHostResumed = false
         private var sharedCameraResumed = false
         private var closingRuntime = false
+        private var previewRotationDegrees = 0
         private var collectorStatus: MutableMap<String, String> = mutableMapOf(
             "camera2" to "idle",
             "sharedCamera" to "idle",
@@ -638,6 +649,8 @@ class RecordingCoordinator(
                 collectorStatus["sharedCamera"] = "ar_session_created"
                 sessionManager.appendCollectorStatus(session, "sharedCamera", "ar_session_created")
                 val cameraId = resolveBackCameraId(arSession)
+                updatePreviewRotation(cameraId)
+                replacementPreviewRenderer.setRotationDegrees(previewRotationDegrees)
                 prepareOutputRuntime(session)
                 openSharedCamera(arSession, session, cameraId)
             } catch (error: Exception) {
@@ -654,6 +667,21 @@ class RecordingCoordinator(
                 cameraManager.getCameraCharacteristics(id)
                     .get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK
             } ?: cameraManager.cameraIdList.first()
+        }
+
+        private fun updatePreviewRotation(cameraId: String) {
+            val characteristics = cameraManager.getCameraCharacteristics(cameraId)
+            val sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
+            val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+            val displayRotation = windowManager.defaultDisplay.rotation
+            val displayDegrees = when (displayRotation) {
+                Surface.ROTATION_0 -> 0
+                Surface.ROTATION_90 -> 90
+                Surface.ROTATION_180 -> 180
+                Surface.ROTATION_270 -> 270
+                else -> 0
+            }
+            previewRotationDegrees = (sensorOrientation - displayDegrees + 360) % 360
         }
 
         private fun prepareOutputRuntime(session: RecordingSession) {
