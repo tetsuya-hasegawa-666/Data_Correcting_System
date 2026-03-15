@@ -37,23 +37,43 @@ body {
 }
 
 .header-card {
-  padding: 12px 14px;
+  padding: 10px 12px;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.84);
   border: 1px solid rgba(19, 34, 56, 0.1);
   box-shadow: 0 8px 24px rgba(19, 34, 56, 0.06);
-  min-height: 15vh;
+  min-height: 10vh;
   transition:
     grid-column 180ms ease,
     box-shadow 180ms ease,
     transform 180ms ease;
 }
 
-.header-card:hover,
-.header-card:focus-within {
+.header-card[data-expanded="true"] {
   grid-column: 1 / -1;
   box-shadow: 0 18px 40px rgba(19, 34, 56, 0.12);
   transform: translateY(-2px);
+}
+
+.header-card-toggle {
+  display: grid;
+  width: 100%;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+
+.header-card-title {
+  font-size: 1.9rem;
+  font-weight: 700;
+}
+
+.header-card-copy {
+  color: #4d627c;
 }
 
 .header-card-summary h2,
@@ -68,14 +88,9 @@ body {
 }
 
 .header-card-detail {
-  display: none;
+  display: grid;
   gap: 12px;
   margin-top: 12px;
-}
-
-.header-card:hover .header-card-detail,
-.header-card:focus-within .header-card-detail {
-  display: grid;
 }
 
 .status-strip,
@@ -196,10 +211,8 @@ body {
 }
 
 .document-preview-panel {
-  position: sticky;
-  top: 0;
   max-height: calc(100vh - 24px);
-  overflow: auto;
+  overflow: hidden;
 }
 
 .workspace-header {
@@ -271,9 +284,39 @@ body {
   overflow: hidden;
 }
 
+.workspace-panel-frame,
+.preview-frame,
+.preview-column {
+  display: grid;
+  min-height: 0;
+}
+
+.workspace-panel-frame,
+.preview-frame {
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+}
+
+.workspace-panel-header,
+.preview-header,
+.preview-column-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background:
+    linear-gradient(180deg, rgba(247, 250, 252, 0.98) 0%, rgba(247, 250, 252, 0.92) 100%);
+}
+
+.workspace-panel-body,
+.preview-body,
+.preview-column-body {
+  min-height: 0;
+}
+
 .document-tree-scroll {
   overflow-x: auto;
   overflow-y: auto;
+  max-height: calc(100vh - 360px);
   padding-bottom: 8px;
 }
 
@@ -366,12 +409,22 @@ body {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
+  min-height: 0;
 }
 
 .preview-column {
-  display: grid;
-  align-content: start;
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 12px;
+  max-height: calc(100vh - 280px);
+}
+
+.preview-column-body {
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.action-panel-cta {
+  margin-top: 12px;
 }
 
 .directory-group + .directory-group {

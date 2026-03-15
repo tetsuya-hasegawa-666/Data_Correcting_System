@@ -18,6 +18,7 @@ export interface DocumentConsultationState {
   selectedBundleIds: string[];
   focusPrompt: string;
   lastResponse: DocumentConsultationResponse | null;
+  isComposerOpen: boolean;
 }
 
 export interface DocumentDirectoryGroup {
@@ -58,7 +59,6 @@ export class DocumentWorkspaceController {
       consultationState?.selectedBundleIds?.filter((documentId) =>
         documents.some((document) => document.id === documentId)
       ) ?? (selectedDocument ? [selectedDocument.id] : []);
-    const defaultDraftBody = selectedDocument?.body ?? "";
 
     return {
       query,
@@ -70,14 +70,15 @@ export class DocumentWorkspaceController {
       isReadOnly: this.repository.isReadOnly(),
       editor: {
         isEditing: editorState?.isEditing ?? false,
-        draftBody: editorState?.draftBody ?? defaultDraftBody,
+        draftBody: editorState?.draftBody ?? selectedDocument?.body ?? "",
         lastSavedBody: editorState?.lastSavedBody ?? null,
         saveMessage: editorState?.saveMessage ?? null
       },
       consultation: {
         selectedBundleIds,
         focusPrompt: consultationState?.focusPrompt ?? "",
-        lastResponse: consultationState?.lastResponse ?? null
+        lastResponse: consultationState?.lastResponse ?? null,
+        isComposerOpen: consultationState?.isComposerOpen ?? false
       }
     };
   }
@@ -88,11 +89,9 @@ export class DocumentWorkspaceController {
     consultationState?: Partial<DocumentConsultationState>
   ): DocumentWorkspaceState {
     const state = this.createState(query, documentId, undefined, consultationState);
-
     if (!state.selectedDocument || state.isReadOnly) {
       return state;
     }
-
     return this.createState(
       query,
       documentId,
@@ -113,7 +112,6 @@ export class DocumentWorkspaceController {
     consultationState?: Partial<DocumentConsultationState>
   ): DocumentWorkspaceState {
     const savedDocument = this.repository.saveDocument(documentId, draftBody);
-
     return this.createState(
       query,
       savedDocument.id,
@@ -133,11 +131,9 @@ export class DocumentWorkspaceController {
     consultationState?: Partial<DocumentConsultationState>
   ): DocumentWorkspaceState {
     const state = this.createState(query, documentId, undefined, consultationState);
-
     if (!state.selectedDocument) {
       return state;
     }
-
     return this.createState(
       query,
       documentId,
@@ -181,7 +177,34 @@ export class DocumentWorkspaceController {
     return this.createState(query, selectedDocumentId, editorState, {
       ...state.consultation,
       focusPrompt,
-      lastResponse: state.consultation.lastResponse
+      isComposerOpen: true
+    });
+  }
+
+  public openConsultationComposer(
+    query: string,
+    selectedDocumentId?: string,
+    editorState?: Partial<DocumentEditorState>,
+    consultationState?: Partial<DocumentConsultationState>
+  ): DocumentWorkspaceState {
+    const state = this.createState(query, selectedDocumentId, editorState, consultationState);
+    return this.createState(query, selectedDocumentId, editorState, {
+      ...state.consultation,
+      isComposerOpen: true
+    });
+  }
+
+  public closeConsultationComposer(
+    query: string,
+    selectedDocumentId?: string,
+    editorState?: Partial<DocumentEditorState>,
+    consultationState?: Partial<DocumentConsultationState>
+  ): DocumentWorkspaceState {
+    const state = this.createState(query, selectedDocumentId, editorState, consultationState);
+    return this.createState(query, selectedDocumentId, editorState, {
+      ...state.consultation,
+      isComposerOpen: false,
+      focusPrompt: ""
     });
   }
 
@@ -197,18 +220,19 @@ export class DocumentWorkspaceController {
 
     const summary =
       bundle.length === 0
-        ? "相談対象の文書を 1 件以上選択してください。"
-        : `${bundle.length} 件の文書を consultation bundle として固定しました。`;
+        ? "相談対象の文書が選択されていません。"
+        : `${bundle.length} 件の文書を consultation bundle として参照しました。`;
     const evidence = bundle.map((document) => `${document.title} (${document.path})`);
     const nextAction =
       bundle.length === 0
-        ? "bundle を選択してから再度 consultation を実行する"
+        ? "consultation bundle に文書を追加してください。"
         : focusPrompt.length > 0
           ? `focus: ${focusPrompt}`
-          : "focus を補足して response の精度を上げる";
+          : "Set a focus prompt before the next consultation.";
 
     return this.createState(query, selectedDocumentId, editorState, {
       ...state.consultation,
+      isComposerOpen: false,
       lastResponse: {
         summary,
         evidence,
@@ -221,21 +245,18 @@ export class DocumentWorkspaceController {
     if (query.length === 0) {
       return true;
     }
-
     const haystacks = [document.title, document.path, document.body, document.tags.join(" ")];
     return haystacks.some((haystack) => haystack.toLowerCase().includes(query));
   }
 
   private groupByDirectory(documents: DocumentRecord[]): DocumentDirectoryGroup[] {
     const groups = new Map<string, DocumentRecord[]>();
-
     for (const document of documents) {
       const directoryPath = this.resolveDirectoryPath(document.path);
       const current = groups.get(directoryPath) ?? [];
       current.push(document);
       groups.set(directoryPath, current);
     }
-
     return [...groups.entries()].map(([directoryPath, groupedDocuments]) => ({
       directoryPath,
       documents: groupedDocuments

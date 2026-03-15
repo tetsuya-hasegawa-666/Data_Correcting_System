@@ -72,17 +72,15 @@ describe("DashboardController", () => {
     expect(container.textContent).toContain("consultation-only");
 
     (container.querySelector("[data-workspace-id='data']") as HTMLButtonElement).click();
-    expect(container.textContent).toContain("データ");
-    expect(container.textContent).toContain("更新結果");
-    expect(container.textContent).toContain("dataset-1");
+    expect(container.textContent).toContain("Doc Sync Coverage");
+    expect(container.textContent).toContain("Summary");
 
     (container.querySelector("[data-workspace-id='code']") as HTMLButtonElement).click();
-    expect(container.textContent).toContain("コード");
-    expect(container.textContent).toContain("読み取り専用の確認対象");
+    expect(container.textContent).toContain("Document Controller");
     expect(container.textContent).toContain("phase-gated-read-only");
   });
 
-  it("renders compact header cards with expandable sections", () => {
+  it("renders click-controlled header cards with expandable sections", () => {
     const container = document.createElement("div");
     const controller = createController(container);
 
@@ -90,14 +88,21 @@ describe("DashboardController", () => {
 
     expect(container.querySelector("[data-role='header-deck']")).not.toBeNull();
     expect(container.querySelectorAll("[data-role='header-card']")).toHaveLength(3);
-    expect(container.querySelector("[data-role='header-card'][data-card='status']")?.textContent).toContain(
-      "Refresh"
+    expect(container.querySelector("[data-role='header-card'][data-card='status']")?.getAttribute("data-expanded")).toBe(
+      "false"
     );
-    expect(
-      container.querySelector("[data-role='header-card'][data-card='contract']")?.textContent
-    ).toContain("Consultation");
-    expect(container.querySelector("[data-role='header-card'][data-card='shell']")?.textContent).toContain(
-      "Shared"
+
+    (container.querySelector("[data-role='header-card-toggle'][data-card='status']") as HTMLButtonElement).click();
+    expect(container.querySelector("[data-role='header-card'][data-card='status']")?.getAttribute("data-expanded")).toBe(
+      "true"
+    );
+
+    container
+      .querySelector("[data-role='header-card'][data-card='status']")
+      ?.dispatchEvent(new MouseEvent("mouseout", { bubbles: true, relatedTarget: container }));
+
+    expect(container.querySelector("[data-role='header-card'][data-card='status']")?.getAttribute("data-expanded")).toBe(
+      "false"
     );
   });
 
@@ -110,7 +115,7 @@ describe("DashboardController", () => {
     const focusInput = container.querySelector(
       "[data-role='data-consultation-focus-input']"
     ) as HTMLTextAreaElement;
-    focusInput.value = "anomaly を確認したい";
+    focusInput.value = "anomaly check";
     focusInput.dispatchEvent(new Event("input", { bubbles: true }));
     (
       container.querySelector("[data-role='data-consultation-form']") as HTMLFormElement
@@ -127,15 +132,13 @@ describe("DashboardController", () => {
     const controller = createController(container);
 
     controller.start();
-
+    (container.querySelector("[data-role='open-consultation-composer']") as HTMLButtonElement).click();
     const documentFocus = container.querySelector(
       "[data-role='consultation-focus-input']"
     ) as HTMLTextAreaElement;
     documentFocus.value = "document focus";
     documentFocus.dispatchEvent(new Event("input", { bubbles: true }));
-    (
-      container.querySelector("[data-role='document-consultation-form']") as HTMLFormElement
-    ).dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    (container.querySelector("[data-role='consultation-save']") as HTMLButtonElement).click();
 
     (container.querySelector("[data-workspace-id='data']") as HTMLButtonElement).click();
     const dataFocus = container.querySelector(
@@ -158,12 +161,11 @@ describe("DashboardController", () => {
     const controller = createController(container);
 
     controller.start();
+    (container.querySelector("[data-role='open-consultation-composer']") as HTMLButtonElement).click();
     const focus = container.querySelector("[data-role='consultation-focus-input']") as HTMLTextAreaElement;
     focus.value = "apply summary";
     focus.dispatchEvent(new Event("input", { bubbles: true }));
-    (
-      container.querySelector("[data-role='document-consultation-form']") as HTMLFormElement
-    ).dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    (container.querySelector("[data-role='consultation-save']") as HTMLButtonElement).click();
     (container.querySelector("[data-role='proposal-action'][data-action='apply-request']") as HTMLButtonElement).click();
     (container.querySelector("[data-role='apply-approve']") as HTMLButtonElement).click();
 
@@ -262,22 +264,35 @@ describe("DashboardController", () => {
     controller.start();
 
     (container.querySelector("[data-role='toggle-document-bundle'][data-document-id='doc-2']") as HTMLButtonElement).click();
-    const focusInput = container.querySelector(
-      "[data-role='consultation-focus-input']"
-    ) as HTMLTextAreaElement;
-    focusInput.value = "BDD の根拠を確認したい";
+    (container.querySelector("[data-role='open-consultation-composer']") as HTMLButtonElement).click();
+    const focusInput = container.querySelector("[data-role='consultation-focus-input']") as HTMLTextAreaElement;
+    focusInput.value = "Explain the bundle";
     focusInput.dispatchEvent(new Event("input", { bubbles: true }));
-    (
-      container.querySelector("[data-role='document-consultation-form']") as HTMLFormElement
-    ).dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    (container.querySelector("[data-role='consultation-save']") as HTMLButtonElement).click();
 
     expect(container.querySelector("[data-role='document-bundle-count']")?.textContent).toContain(
       "2"
     );
     expect(
       container.querySelector("[data-role='document-consultation-response']")?.textContent
-    ).toContain("2 件の文書");
-    expect(container.textContent).toContain("BDD の根拠を確認したい");
+    ).toContain("Summary");
+    expect(container.textContent).toContain("Explain the bundle");
+  });
+
+  it("opens and cancels the document consultation composer from the consultation action box", () => {
+    const container = document.createElement("div");
+    const controller = createController(container);
+
+    controller.start();
+    (container.querySelector("[data-role='open-consultation-composer']") as HTMLButtonElement).click();
+
+    const focusInput = container.querySelector("[data-role='consultation-focus-input']") as HTMLTextAreaElement;
+    focusInput.value = "temporary draft";
+    focusInput.dispatchEvent(new Event("input", { bubbles: true }));
+
+    (container.querySelector("[data-role='consultation-cancel']") as HTMLButtonElement).click();
+    expect(container.querySelector("[data-role='document-consultation-form']")).toBeNull();
+    expect(container.querySelector("[data-role='open-consultation-composer']")).not.toBeNull();
   });
 
   it("cancels editing when cancel is clicked", () => {

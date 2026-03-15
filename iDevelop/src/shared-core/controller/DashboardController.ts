@@ -32,6 +32,7 @@ import {
 
 type WorkspaceId = "document" | "data" | "code";
 type RefreshOutcome = "changed" | "unchanged" | "failed";
+type HeaderCardId = "status" | "contract" | "shell" | null;
 
 interface RefreshEvidence {
   timestamp: string;
@@ -63,6 +64,7 @@ export class DashboardController {
   private dataConsultationState?: Partial<DataConsultationState>;
   private codeConsultationState?: Partial<CodeConsultationState>;
   private sharedConversationState: SharedConversationState = createEmptyConversationState();
+  private expandedHeaderCard: HeaderCardId = null;
   private errorMessage: string | null = null;
   private readonly statusState: DashboardStatusState;
 
@@ -90,361 +92,363 @@ export class DashboardController {
 
   public start(): void {
     this.render();
+    this.rootElement.addEventListener("input", (event) => this.handleInput(event));
+    this.rootElement.addEventListener("click", (event) => this.handleClick(event));
+    this.rootElement.addEventListener("mouseout", (event) => this.handleHeaderMouseOut(event));
+    this.rootElement.addEventListener("submit", (event) => this.handleSubmit(event));
+  }
 
-    this.rootElement.addEventListener("input", (event) => {
-      const target = event.target;
-
-      if (target instanceof HTMLInputElement && target.name === "document-query") {
-        this.query = target.value;
-        this.render();
-        return;
-      }
-
-      if (target instanceof HTMLTextAreaElement && target.name === "document-body") {
-        this.editorState = {
-          ...(this.editorState ?? {
-            isEditing: true,
-            lastSavedBody: null,
-            saveMessage: null
-          }),
-          draftBody: target.value
-        };
-        return;
-      }
-
-      if (target instanceof HTMLTextAreaElement && target.name === "consultation-focus") {
-        const state = this.documentController.updateConsultationFocus(
-          this.query,
-          target.value,
-          this.selectedDocumentId,
-          this.editorState,
-          this.documentConsultationState
-        );
-        this.documentConsultationState = state.consultation;
-        return;
-      }
-
-      if (target instanceof HTMLTextAreaElement && target.name === "data-consultation-focus") {
-        const state = this.dataController.updateConsultationFocus(
-          target.value,
-          this.dataConsultationState
-        );
-        this.dataConsultationState = state.consultation;
-        return;
-      }
-
-      if (target instanceof HTMLTextAreaElement && target.name === "code-consultation-focus") {
-        const state = this.codeController.updateConsultationFocus(
-          target.value,
-          this.codeConsultationState
-        );
-        this.codeConsultationState = state.consultation;
-      }
-    });
-
-    this.rootElement.addEventListener("click", (event) => {
-      const target = event.target;
-
-      if (!(target instanceof HTMLElement)) {
-        return;
-      }
-
-      if (target.closest("[data-role='refresh-dashboard']")) {
-        void this.handleRefresh();
-        return;
-      }
-
-      const tab = target.closest<HTMLElement>("[data-role='workspace-tab']");
-      if (tab?.dataset.workspaceId) {
-        this.workspaceId = tab.dataset.workspaceId as WorkspaceId;
-        this.errorMessage = null;
-        this.render();
-        return;
-      }
-
-      if (target.closest("[data-role='unlock-document-editing']")) {
-        this.documentRepository.unlockLocalDraft();
-        this.workspaceId = "document";
-        this.errorMessage = null;
-        this.render();
-        return;
-      }
-
-      if (target.closest("[data-role='unlock-data-editing']")) {
-        this.datasetRepository.unlockLocalDraft();
-        this.workspaceId = "data";
-        this.errorMessage = null;
-        this.render();
-        return;
-      }
-
-      const editButton = target.closest<HTMLElement>("[data-role='edit-document']");
-      if (editButton?.dataset.documentId) {
-        const state = this.documentController.startEditing(
-          this.query,
-          editButton.dataset.documentId,
-          this.documentConsultationState
-        );
-        this.selectedDocumentId = state.selectedDocument?.id;
-        this.editorState = state.editor;
-        this.documentConsultationState = state.consultation;
-        this.errorMessage = null;
-        this.render();
-        return;
-      }
-
-      const cancelButton = target.closest<HTMLElement>("[data-role='cancel-document']");
-      if (cancelButton?.dataset.documentId) {
-        const state = this.documentController.cancelEditing(
-          this.query,
-          cancelButton.dataset.documentId,
-          this.documentConsultationState
-        );
-        this.selectedDocumentId = state.selectedDocument?.id;
-        this.editorState = state.editor;
-        this.documentConsultationState = state.consultation;
-        this.errorMessage = null;
-        this.render();
-        return;
-      }
-
-      const datasetButton = target.closest<HTMLElement>("[data-role='save-dataset']");
-      if (datasetButton?.dataset.datasetId) {
-        try {
-          const datasetId = datasetButton.dataset.datasetId;
-          const row = datasetButton.closest("tr");
-          const statusInput = row?.querySelector<HTMLSelectElement>(
-            `[data-role='dataset-status'][data-dataset-id='${datasetId}']`
-          );
-          const countInput = row?.querySelector<HTMLInputElement>(
-            `[data-role='dataset-record-count'][data-dataset-id='${datasetId}']`
-          );
-
-          if (statusInput && countInput) {
-            this.dataController.updateDataset(datasetId, statusInput.value, Number(countInput.value));
-            this.workspaceId = "data";
-            this.errorMessage = null;
-            this.render();
-          }
-        } catch (error) {
-          this.errorMessage = error instanceof Error ? error.message : "Dataset update failed.";
-          this.render();
-        }
-        return;
-      }
-
-      const documentItem = target.closest<HTMLElement>("[data-role='document-item']");
-      if (documentItem?.dataset.documentId) {
-        const state = this.documentController.createState(
-          this.query,
-          documentItem.dataset.documentId,
-          this.editorState,
-          this.documentConsultationState
-        );
-        this.selectedDocumentId = state.selectedDocument?.id;
-        this.editorState = state.editor;
-        this.documentConsultationState = state.consultation;
-        this.errorMessage = null;
-        this.render();
-        return;
-      }
-
-      const toggleBundleButton = target.closest<HTMLElement>("[data-role='toggle-document-bundle']");
-      if (toggleBundleButton?.dataset.documentId) {
-        const state = this.documentController.toggleBundleSelection(
-          this.query,
-          toggleBundleButton.dataset.documentId,
-          this.selectedDocumentId,
-          this.editorState,
-          this.documentConsultationState
-        );
-        this.selectedDocumentId = state.selectedDocument?.id;
-        this.editorState = state.editor;
-        this.documentConsultationState = state.consultation;
-        this.errorMessage = null;
-        this.render();
-        return;
-      }
-
-      const toggleDatasetButton = target.closest<HTMLElement>("[data-role='toggle-dataset-bundle']");
-      if (toggleDatasetButton?.dataset.datasetId) {
-        const state = this.dataController.toggleDatasetSelection(
-          toggleDatasetButton.dataset.datasetId,
-          this.dataConsultationState
-        );
-        this.dataConsultationState = state.consultation;
-        this.workspaceId = "data";
-        this.errorMessage = null;
-        this.render();
-        return;
-      }
-
-      const toggleCodeButton = target.closest<HTMLElement>("[data-role='toggle-code-bundle']");
-      if (toggleCodeButton?.dataset.targetId) {
-        const state = this.codeController.toggleTargetSelection(
-          toggleCodeButton.dataset.targetId,
-          this.codeConsultationState
-        );
-        this.codeConsultationState = state.consultation;
-        this.workspaceId = "code";
-        this.errorMessage = null;
-        this.render();
-        return;
-      }
-
-      const actionButton = target.closest<HTMLElement>("[data-role='proposal-action']");
-      if (actionButton?.dataset.action) {
-        this.sharedConversationState = applyProposalAction(
-          this.sharedConversationState,
-          actionButton.dataset.action as ProposalAction
-        );
-        this.errorMessage = null;
-        this.render();
-        return;
-      }
-
-      if (target.closest("[data-role='apply-approve']")) {
-        this.handleApproveApply();
-        return;
-      }
-
-      if (target.closest("[data-role='apply-cancel']")) {
-        this.sharedConversationState = updateApplyState(
-          this.sharedConversationState,
-          "cancelled",
-          "cancelled"
-        );
-        this.errorMessage = null;
-        this.render();
-        return;
-      }
-
-      if (
-        this.workspaceId === "document" &&
-        this.editorState?.isEditing &&
-        !target.closest("[data-role='document-edit-form']")
-      ) {
-        const documentId = this.selectedDocumentId;
-
-        if (documentId) {
-          const state = this.documentController.cancelEditing(
-            this.query,
-            documentId,
-            this.documentConsultationState
-          );
-          this.selectedDocumentId = state.selectedDocument?.id;
-          this.editorState = state.editor;
-          this.documentConsultationState = state.consultation;
-          this.errorMessage = null;
-          this.render();
-        }
-      }
-    });
-
-    this.rootElement.addEventListener("submit", (event) => {
-      const form = event.target;
-
-      if (!(form instanceof HTMLFormElement)) {
-        return;
-      }
-
-      if (form.dataset.role === "document-consultation-form") {
-        event.preventDefault();
-        const state = this.documentController.consultDocuments(
-          this.query,
-          this.selectedDocumentId,
-          this.editorState,
-          this.documentConsultationState
-        );
-        this.selectedDocumentId = state.selectedDocument?.id;
-        this.editorState = state.editor;
-        this.documentConsultationState = state.consultation;
-        this.sharedConversationState = appendConversationEntry(this.sharedConversationState, {
-          workspaceId: "document",
-          prompt: state.consultation.focusPrompt,
-          bundle: state.selectedBundle.map((document) => ({
-            id: document.id,
-            kind: "document",
-            label: document.title,
-            path: document.path
-          })),
-          summary: state.consultation.lastResponse?.summary ?? "",
-          evidence: state.consultation.lastResponse?.evidence ?? [],
-          nextAction: state.consultation.lastResponse?.nextAction ?? "",
-          approvalState: "consultation-only"
-        });
-        this.errorMessage = null;
-        this.render();
-        return;
-      }
-
-      if (form.dataset.role === "data-consultation-form") {
-        event.preventDefault();
-        const state = this.dataController.consultDatasets(this.dataConsultationState);
-        this.dataConsultationState = state.consultation;
-        this.sharedConversationState = appendConversationEntry(this.sharedConversationState, {
-          workspaceId: "data",
-          prompt: state.consultation.focusPrompt,
-          bundle: this.createDataBundle(state.selectedDatasets),
-          summary: state.consultation.lastResponse?.summary ?? "",
-          evidence: state.consultation.lastResponse?.evidence ?? [],
-          nextAction: state.consultation.lastResponse?.nextAction ?? "",
-          approvalState: "consultation-only"
-        });
-        this.workspaceId = "data";
-        this.errorMessage = null;
-        this.render();
-        return;
-      }
-
-      if (form.dataset.role === "code-consultation-form") {
-        event.preventDefault();
-        const state = this.codeController.consultTargets(this.codeConsultationState);
-        this.codeConsultationState = state.consultation;
-        this.sharedConversationState = appendConversationEntry(this.sharedConversationState, {
-          workspaceId: "code",
-          prompt: state.consultation.focusPrompt,
-          bundle: this.createCodeBundle(state.selectedTargets),
-          summary: state.consultation.lastResponse?.summary ?? "",
-          evidence: state.consultation.lastResponse?.evidence ?? [],
-          nextAction: state.consultation.lastResponse?.nextAction ?? "",
-          approvalState: "phase-gated-read-only"
-        });
-        this.workspaceId = "code";
-        this.errorMessage = null;
-        this.render();
-        return;
-      }
-
-      if (form.dataset.role !== "document-edit-form") {
-        return;
-      }
-
-      event.preventDefault();
-
-      try {
-        if (!this.selectedDocumentId) {
-          throw new Error("No document is selected.");
-        }
-
-        const draftBody =
-          form.querySelector<HTMLTextAreaElement>("[data-role='document-editor']")?.value ?? "";
-        const state = this.documentController.saveDocument(
-          this.query,
-          this.selectedDocumentId,
-          draftBody,
-          this.documentConsultationState
-        );
-        this.selectedDocumentId = state.selectedDocument?.id;
-        this.editorState = state.editor;
-        this.documentConsultationState = state.consultation;
-        this.errorMessage = null;
-      } catch (error) {
-        this.errorMessage = error instanceof Error ? error.message : "Save failed.";
-      }
-
+  private handleInput(event: Event): void {
+    const target = event.target;
+    if (target instanceof HTMLInputElement && target.name === "document-query") {
+      this.query = target.value;
       this.render();
-    });
+      return;
+    }
+    if (target instanceof HTMLTextAreaElement && target.name === "document-body") {
+      this.editorState = {
+        ...(this.editorState ?? { isEditing: true, lastSavedBody: null, saveMessage: null }),
+        draftBody: target.value
+      };
+      return;
+    }
+    if (target instanceof HTMLTextAreaElement && target.name === "consultation-focus") {
+      this.documentConsultationState = this.documentController.updateConsultationFocus(
+        this.query,
+        target.value,
+        this.selectedDocumentId,
+        this.editorState,
+        this.documentConsultationState
+      ).consultation;
+      return;
+    }
+    if (target instanceof HTMLTextAreaElement && target.name === "data-consultation-focus") {
+      this.dataConsultationState = this.dataController.updateConsultationFocus(
+        target.value,
+        this.dataConsultationState
+      ).consultation;
+      return;
+    }
+    if (target instanceof HTMLTextAreaElement && target.name === "code-consultation-focus") {
+      this.codeConsultationState = this.codeController.updateConsultationFocus(
+        target.value,
+        this.codeConsultationState
+      ).consultation;
+    }
+  }
+
+  private handleClick(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    if (target.closest("[data-role='refresh-dashboard']")) {
+      void this.handleRefresh();
+      return;
+    }
+    const headerToggle = target.closest<HTMLElement>("[data-role='header-card-toggle']");
+    if (headerToggle?.dataset.card) {
+      const cardId = headerToggle.dataset.card as Exclude<HeaderCardId, null>;
+      this.expandedHeaderCard = this.expandedHeaderCard === cardId ? null : cardId;
+      this.render();
+      return;
+    }
+    const tab = target.closest<HTMLElement>("[data-role='workspace-tab']");
+    if (tab?.dataset.workspaceId) {
+      this.workspaceId = tab.dataset.workspaceId as WorkspaceId;
+      this.render();
+      return;
+    }
+    if (target.closest("[data-role='unlock-document-editing']")) {
+      this.documentRepository.unlockLocalDraft();
+      this.workspaceId = "document";
+      this.render();
+      return;
+    }
+    if (target.closest("[data-role='unlock-data-editing']")) {
+      this.datasetRepository.unlockLocalDraft();
+      this.workspaceId = "data";
+      this.render();
+      return;
+    }
+    if (target.closest("[data-role='open-consultation-composer']")) {
+      const state = this.documentController.openConsultationComposer(
+        this.query,
+        this.selectedDocumentId,
+        this.editorState,
+        this.documentConsultationState
+      );
+      this.selectedDocumentId = state.selectedDocument?.id;
+      this.documentConsultationState = state.consultation;
+      this.render();
+      return;
+    }
+    if (target.closest("[data-role='consultation-save']")) {
+      const state = this.documentController.consultDocuments(
+        this.query,
+        this.selectedDocumentId,
+        this.editorState,
+        this.documentConsultationState
+      );
+      this.selectedDocumentId = state.selectedDocument?.id;
+      this.editorState = state.editor;
+      this.documentConsultationState = state.consultation;
+      this.sharedConversationState = appendConversationEntry(this.sharedConversationState, {
+        workspaceId: "document",
+        prompt: state.consultation.focusPrompt,
+        bundle: state.selectedBundle.map((document) => ({
+          id: document.id,
+          kind: "document",
+          label: document.title,
+          path: document.path
+        })),
+        summary: state.consultation.lastResponse?.summary ?? "",
+        evidence: state.consultation.lastResponse?.evidence ?? [],
+        nextAction: state.consultation.lastResponse?.nextAction ?? "",
+        approvalState: "consultation-only"
+      });
+      this.render();
+      return;
+    }
+    if (target.closest("[data-role='consultation-cancel']")) {
+      const state = this.documentController.closeConsultationComposer(
+        this.query,
+        this.selectedDocumentId,
+        this.editorState,
+        this.documentConsultationState
+      );
+      this.selectedDocumentId = state.selectedDocument?.id;
+      this.documentConsultationState = state.consultation;
+      this.render();
+      return;
+    }
+    const editButton = target.closest<HTMLElement>("[data-role='edit-document']");
+    if (editButton?.dataset.documentId) {
+      const state = this.documentController.startEditing(
+        this.query,
+        editButton.dataset.documentId,
+        this.documentConsultationState
+      );
+      this.selectedDocumentId = state.selectedDocument?.id;
+      this.editorState = state.editor;
+      this.documentConsultationState = state.consultation;
+      this.render();
+      return;
+    }
+    const cancelButton = target.closest<HTMLElement>("[data-role='cancel-document']");
+    if (cancelButton?.dataset.documentId) {
+      const state = this.documentController.cancelEditing(
+        this.query,
+        cancelButton.dataset.documentId,
+        this.documentConsultationState
+      );
+      this.selectedDocumentId = state.selectedDocument?.id;
+      this.editorState = state.editor;
+      this.documentConsultationState = state.consultation;
+      this.render();
+      return;
+    }
+    const documentItem = target.closest<HTMLElement>("[data-role='document-item']");
+    if (documentItem?.dataset.documentId) {
+      const state = this.documentController.createState(
+        this.query,
+        documentItem.dataset.documentId,
+        this.editorState,
+        this.documentConsultationState
+      );
+      this.selectedDocumentId = state.selectedDocument?.id;
+      this.editorState = state.editor;
+      this.documentConsultationState = state.consultation;
+      this.render();
+      return;
+    }
+    const toggleBundleButton = target.closest<HTMLElement>("[data-role='toggle-document-bundle']");
+    if (toggleBundleButton?.dataset.documentId) {
+      const state = this.documentController.toggleBundleSelection(
+        this.query,
+        toggleBundleButton.dataset.documentId,
+        this.selectedDocumentId,
+        this.editorState,
+        this.documentConsultationState
+      );
+      this.selectedDocumentId = state.selectedDocument?.id;
+      this.editorState = state.editor;
+      this.documentConsultationState = state.consultation;
+      this.render();
+      return;
+    }
+    const toggleDatasetButton = target.closest<HTMLElement>("[data-role='toggle-dataset-bundle']");
+    if (toggleDatasetButton?.dataset.datasetId) {
+      this.dataConsultationState = this.dataController.toggleDatasetSelection(
+        toggleDatasetButton.dataset.datasetId,
+        this.dataConsultationState
+      ).consultation;
+      this.workspaceId = "data";
+      this.render();
+      return;
+    }
+    const toggleCodeButton = target.closest<HTMLElement>("[data-role='toggle-code-bundle']");
+    if (toggleCodeButton?.dataset.targetId) {
+      this.codeConsultationState = this.codeController.toggleTargetSelection(
+        toggleCodeButton.dataset.targetId,
+        this.codeConsultationState
+      ).consultation;
+      this.workspaceId = "code";
+      this.render();
+      return;
+    }
+    const datasetButton = target.closest<HTMLElement>("[data-role='save-dataset']");
+    if (datasetButton?.dataset.datasetId) {
+      const row = datasetButton.closest("tr");
+      const statusInput = row?.querySelector<HTMLSelectElement>(
+        `[data-role='dataset-status'][data-dataset-id='${datasetButton.dataset.datasetId}']`
+      );
+      const countInput = row?.querySelector<HTMLInputElement>(
+        `[data-role='dataset-record-count'][data-dataset-id='${datasetButton.dataset.datasetId}']`
+      );
+      if (statusInput && countInput) {
+        this.dataController.updateDataset(
+          datasetButton.dataset.datasetId,
+          statusInput.value,
+          Number(countInput.value)
+        );
+        this.workspaceId = "data";
+        this.render();
+      }
+      return;
+    }
+    const actionButton = target.closest<HTMLElement>("[data-role='proposal-action']");
+    if (actionButton?.dataset.action) {
+      this.sharedConversationState = applyProposalAction(
+        this.sharedConversationState,
+        actionButton.dataset.action as ProposalAction
+      );
+      this.render();
+      return;
+    }
+    if (target.closest("[data-role='apply-approve']")) {
+      this.handleApproveApply();
+      return;
+    }
+    if (target.closest("[data-role='apply-cancel']")) {
+      this.sharedConversationState = updateApplyState(this.sharedConversationState, "cancelled", "cancelled");
+      this.render();
+      return;
+    }
+    if (this.workspaceId === "document" && this.editorState?.isEditing && !target.closest("[data-role='draft-action-box']")) {
+      const state = this.documentController.cancelEditing(
+        this.query,
+        this.selectedDocumentId ?? "",
+        this.documentConsultationState
+      );
+      this.selectedDocumentId = state.selectedDocument?.id;
+      this.editorState = state.editor;
+      this.documentConsultationState = state.consultation;
+      this.render();
+    }
+  }
+
+  private handleHeaderMouseOut(event: Event): void {
+    const mouseEvent = event as MouseEvent;
+    const target = mouseEvent.target;
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+    const card = target.closest<HTMLElement>("[data-role='header-card']");
+    if (!card?.dataset.card) {
+      return;
+    }
+    if (mouseEvent.relatedTarget instanceof Node && card.contains(mouseEvent.relatedTarget)) {
+      return;
+    }
+    if (this.expandedHeaderCard === card.dataset.card) {
+      this.expandedHeaderCard = null;
+      this.render();
+    }
+  }
+
+  private handleSubmit(event: Event): void {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement)) {
+      return;
+    }
+    if (form.dataset.role === "document-consultation-form") {
+      event.preventDefault();
+      const state = this.documentController.consultDocuments(
+        this.query,
+        this.selectedDocumentId,
+        this.editorState,
+        this.documentConsultationState
+      );
+      this.selectedDocumentId = state.selectedDocument?.id;
+      this.editorState = state.editor;
+      this.documentConsultationState = state.consultation;
+      this.sharedConversationState = appendConversationEntry(this.sharedConversationState, {
+        workspaceId: "document",
+        prompt: state.consultation.focusPrompt,
+        bundle: state.selectedBundle.map((document) => ({
+          id: document.id,
+          kind: "document",
+          label: document.title,
+          path: document.path
+        })),
+        summary: state.consultation.lastResponse?.summary ?? "",
+        evidence: state.consultation.lastResponse?.evidence ?? [],
+        nextAction: state.consultation.lastResponse?.nextAction ?? "",
+        approvalState: "consultation-only"
+      });
+      this.render();
+      return;
+    }
+    if (form.dataset.role === "data-consultation-form") {
+      event.preventDefault();
+      const state = this.dataController.consultDatasets(this.dataConsultationState);
+      this.dataConsultationState = state.consultation;
+      this.sharedConversationState = appendConversationEntry(this.sharedConversationState, {
+        workspaceId: "data",
+        prompt: state.consultation.focusPrompt,
+        bundle: this.createDataBundle(state.selectedDatasets),
+        summary: state.consultation.lastResponse?.summary ?? "",
+        evidence: state.consultation.lastResponse?.evidence ?? [],
+        nextAction: state.consultation.lastResponse?.nextAction ?? "",
+        approvalState: "consultation-only"
+      });
+      this.workspaceId = "data";
+      this.render();
+      return;
+    }
+    if (form.dataset.role === "code-consultation-form") {
+      event.preventDefault();
+      const state = this.codeController.consultTargets(this.codeConsultationState);
+      this.codeConsultationState = state.consultation;
+      this.sharedConversationState = appendConversationEntry(this.sharedConversationState, {
+        workspaceId: "code",
+        prompt: state.consultation.focusPrompt,
+        bundle: this.createCodeBundle(state.selectedTargets),
+        summary: state.consultation.lastResponse?.summary ?? "",
+        evidence: state.consultation.lastResponse?.evidence ?? [],
+        nextAction: state.consultation.lastResponse?.nextAction ?? "",
+        approvalState: "phase-gated-read-only"
+      });
+      this.workspaceId = "code";
+      this.render();
+      return;
+    }
+    if (!form.classList.contains("document-edit-form") || !this.selectedDocumentId) {
+      return;
+    }
+    event.preventDefault();
+    const draftBody = form.querySelector<HTMLTextAreaElement>("[data-role='document-editor']")?.value ?? "";
+    const state = this.documentController.saveDocument(
+      this.query,
+      this.selectedDocumentId,
+      draftBody,
+      this.documentConsultationState
+    );
+    this.selectedDocumentId = state.selectedDocument?.id;
+    this.editorState = state.editor;
+    this.documentConsultationState = state.consultation;
+    this.render();
   }
 
   private async handleRefresh(): Promise<void> {
@@ -453,73 +457,33 @@ export class DashboardController {
       this.render();
       return;
     }
-
     try {
       const nextBootstrap = await this.refreshDashboard();
       const outcome: RefreshOutcome =
         this.statusState.sourceSignature === nextBootstrap.sourceSignature ? "unchanged" : "changed";
-      const message =
-        outcome === "changed"
-          ? "Source signature changed and the dashboard was refreshed."
-          : "Refresh completed without source changes.";
-
       this.statusState.loadedAt = nextBootstrap.loadedAt;
       this.statusState.sourceSignature = nextBootstrap.sourceSignature;
       this.statusState.lastRefreshOutcome = outcome;
-      this.appendEvidence(outcome, message);
-      this.errorMessage = null;
+      this.appendEvidence(
+        outcome,
+        outcome === "changed"
+          ? "Source signature changed and the dashboard was refreshed."
+          : "Refresh completed without source changes."
+      );
     } catch (error) {
       this.statusState.lastRefreshOutcome = "failed";
-      this.appendEvidence("failed", "Refresh failed.");
-      this.errorMessage = error instanceof Error ? error.message : "Refresh failed.";
+      this.appendEvidence("failed", error instanceof Error ? error.message : "Refresh failed.");
     }
-
     this.render();
   }
 
   private render(): void {
+    const session = this.createConsultationSession();
     const staleStatus = this.isStale() ? "stale" : "fresh";
     const refreshLabel = this.getRefreshLabel(staleStatus);
-    const consultationSession = this.createConsultationSession();
     const evidenceMarkup = this.statusState.evidence
       .slice(0, 3)
-      .map(
-        (item) =>
-          `<li><strong>${this.escapeHtml(item.outcome)}</strong> ${this.escapeHtml(item.timestamp)} ${this.escapeHtml(item.message)}</li>`
-      )
-      .join("");
-    const consultationBundleMarkup =
-      consultationSession.bundle.length > 0
-        ? consultationSession.bundle
-            .map(
-              (item) =>
-                `<li><strong>${this.escapeHtml(item.kind)}</strong> ${this.escapeHtml(item.label)} <span>${this.escapeHtml(item.path)}</span></li>`
-            )
-            .join("")
-        : "<li>No bundle selected.</li>";
-    const responseFieldMarkup = consultationSession.responseFields
-      .map(
-        (field) =>
-          `<li><strong>${this.escapeHtml(field.label)}</strong> ${this.escapeHtml(field.description)}</li>`
-      )
-      .join("");
-    const consultationCapabilitiesMarkup = consultationSession.responseFields
-      .map(
-        (field) =>
-          `<li><strong>${this.escapeHtml(field.label)}</strong><span>${this.escapeHtml(field.description)}</span></li>`
-      )
-      .join("");
-    const sharedHistoryMarkup = this.sharedConversationState.history
-      .map(
-        (entry) => `
-          <li data-role="shared-history-item">
-            <strong>${this.escapeHtml(entry.workspaceId)}</strong>
-            <span>${this.escapeHtml(entry.summary)}</span>
-            <span>${this.escapeHtml(entry.approvalState)}</span>
-            ${entry.proposalAction ? `<span>${this.escapeHtml(entry.proposalAction)}</span>` : ""}
-          </li>
-        `
-      )
+      .map((item) => `<li><strong>${item.outcome}</strong> ${item.timestamp} ${item.message}</li>`)
       .join("");
 
     this.rootElement.innerHTML = `
@@ -530,203 +494,135 @@ export class DashboardController {
         <button class="tab-button" data-role="refresh-dashboard" type="button">更新を確認</button>
       </div>
       <section class="header-deck" data-role="header-deck">
-        <section class="header-card" data-role="header-card" data-card="status" tabindex="0">
-          <div class="header-card-summary">
-            <p class="eyebrow">Refresh</p>
-            <h2>Status</h2>
-            <p>freshness, loaded time, and evidence</p>
+        ${this.renderHeaderCard("status", "Refresh", "Status", "freshness, loaded time, and evidence", `
+          <section class="status-strip">
+            <span class="status-badge status-${staleStatus}" data-role="stale-indicator">${refreshLabel}</span>
+            <span data-role="loaded-at">loaded: ${this.escapeHtml(this.statusState.loadedAt)}</span>
+          </section>
+          <section class="status-log">
+            <p class="eyebrow">Refresh Evidence</p>
+            <ul data-role="refresh-evidence">${evidenceMarkup || "<li>No evidence yet.</li>"}</ul>
+          </section>
+        `)}
+        ${this.renderHeaderCard("contract", "Consultation Contract", "Contract", `${this.escapeHtml(session.approvalState)} / ${this.escapeHtml(session.bundleSourcePolicy)}`, `
+          <div data-role="consultation-contract">
+            <p data-role="consultation-approval-state">approval state: ${this.escapeHtml(session.approvalState)}</p>
+            <ul data-role="consultation-response-fields">${session.responseFields.map((field) => `<li><strong>${field.label}</strong> ${field.description}</li>`).join("")}</ul>
           </div>
-          <div class="header-card-detail">
-            <section class="status-strip">
-              <span class="status-badge status-${staleStatus}" data-role="stale-indicator">${refreshLabel}</span>
-              <span data-role="loaded-at">loaded: ${this.escapeHtml(this.statusState.loadedAt)}</span>
-              ${
-                this.statusState.lastRefreshOutcome
-                  ? `<span data-role="refresh-outcome">outcome: ${this.escapeHtml(this.statusState.lastRefreshOutcome)}</span>`
-                  : ""
-              }
-            </section>
-            <section class="status-log">
-              <p class="eyebrow">Refresh Evidence</p>
-              <ul data-role="refresh-evidence">${evidenceMarkup || "<li>No evidence yet.</li>"}</ul>
-            </section>
-          </div>
-        </section>
-        <section class="header-card consultation-contract" data-role="header-card" data-card="contract" tabindex="0">
-          <div class="header-card-summary">
-            <p class="eyebrow">Consultation Contract</p>
-            <h2>Contract</h2>
-            <p>${this.escapeHtml(consultationSession.approvalState)} / ${this.escapeHtml(consultationSession.bundleSourcePolicy)}</p>
-          </div>
-          <div class="header-card-detail" data-role="consultation-contract">
-            <p><strong>${this.escapeHtml(consultationSession.storyId)}</strong> ${this.escapeHtml(consultationSession.storySummary)}</p>
-            <p data-role="consultation-approval-state">approval state: ${this.escapeHtml(consultationSession.approvalState)}</p>
-            <p>${this.escapeHtml(consultationSession.approvalGuidance)}</p>
-            <div class="consultation-grid">
-              <div>
-                <p class="eyebrow">Input Bundle</p>
-                <p>source policy: ${this.escapeHtml(consultationSession.bundleSourcePolicy)}</p>
-                <ul data-role="consultation-bundle">${consultationBundleMarkup}</ul>
-              </div>
-              <div>
-                <p class="eyebrow">Response Contract</p>
-                <ul data-role="consultation-response-fields">${responseFieldMarkup}</ul>
-              </div>
-              <div>
-                <p class="eyebrow">Touchpoints</p>
-                <ul>${consultationSession.touchpoints
-                  .map((touchpoint) => `<li>${this.escapeHtml(touchpoint)}</li>`)
-                  .join("")}</ul>
-              </div>
-            </div>
-            <div class="capability-note">
-              <p class="eyebrow">What Consultation Can Do</p>
-              <ul>${consultationCapabilitiesMarkup}</ul>
-            </div>
-          </div>
-        </section>
-        <section class="header-card" data-role="header-card" data-card="shell" tabindex="0">
-          <div class="header-card-summary">
-            <p class="eyebrow">Shared</p>
-            <h2>Conversation</h2>
-            <p>${this.sharedConversationState.currentBundle.length} selected / ${this.sharedConversationState.history.length} history</p>
-          </div>
-          <div class="header-card-detail" data-role="shared-conversation-shell">
+        `)}
+        ${this.renderHeaderCard("shell", "Shared", "Conversation", `${this.sharedConversationState.currentBundle.length} selected / ${this.sharedConversationState.history.length} history`, `
+          <div data-role="shared-conversation-shell">
             <p data-role="shared-current-prompt">prompt: ${this.escapeHtml(this.sharedConversationState.currentPrompt || "No prompt yet")}</p>
             <p data-role="shared-current-summary">summary: ${this.escapeHtml(this.sharedConversationState.currentSummary ?? "No summary yet")}</p>
             <p data-role="shared-current-approval">approval: ${this.escapeHtml(this.sharedConversationState.currentApprovalState ?? "none")}</p>
-            <ul data-role="shared-current-bundle">
-              ${
-                this.sharedConversationState.currentBundle.length > 0
-                  ? this.sharedConversationState.currentBundle
-                      .map(
-                        (item) =>
-                          `<li>${this.escapeHtml(item.kind)} ${this.escapeHtml(item.label)} <span>${this.escapeHtml(item.path)}</span></li>`
-                      )
-                      .join("")
-                  : "<li>No bundle yet.</li>"
-              }
-            </ul>
-            ${
-              this.sharedConversationState.currentSummary
-                ? `
-                  <div class="editor-actions">
-                    <button class="document-item" data-role="proposal-action" data-action="keep" type="button">Keep</button>
-                    <button class="document-item" data-role="proposal-action" data-action="discard" type="button">Discard</button>
-                    <button class="document-item" data-role="proposal-action" data-action="task" type="button">Task化</button>
-                    <button class="document-item is-selected" data-role="proposal-action" data-action="apply-request" type="button">Apply Request</button>
-                  </div>
-                `
-                : ""
-            }
-            ${
-              this.sharedConversationState.applyState === "preview"
-                ? `
-                  <div class="editor-actions" data-role="apply-preview">
-                    <p>preview: ${this.escapeHtml(this.sharedConversationState.currentSummary ?? "")}</p>
-                    <button class="document-item is-selected" data-role="apply-approve" type="button">Approve</button>
-                    <button class="document-item" data-role="apply-cancel" type="button">Cancel</button>
-                  </div>
-                `
-                : this.sharedConversationState.applyState === "approved"
-                  ? `<p data-role="apply-approved">apply approved</p>`
-                  : this.sharedConversationState.applyState === "cancelled"
-                    ? `<p data-role="apply-cancelled">apply cancelled</p>`
-                    : ""
-            }
-            <ul data-role="shared-history">${sharedHistoryMarkup || "<li>No history yet.</li>"}</ul>
+            <ul data-role="shared-history">${this.sharedConversationState.history.map((entry) => `<li data-role="shared-history-item"><strong>${entry.workspaceId}</strong><span>${entry.summary}</span><span>${entry.approvalState}</span></li>`).join("") || "<li>No history yet.</li>"}</ul>
+            ${this.sharedConversationState.currentSummary ? `
+              <div class="editor-actions">
+                <button class="document-item" data-role="proposal-action" data-action="keep" type="button">Keep</button>
+                <button class="document-item" data-role="proposal-action" data-action="discard" type="button">Discard</button>
+                <button class="document-item" data-role="proposal-action" data-action="task" type="button">Task化</button>
+                <button class="document-item is-selected" data-role="proposal-action" data-action="apply-request" type="button">Apply Request</button>
+              </div>` : ""}
+            ${this.sharedConversationState.applyState === "preview" ? `
+              <div class="editor-actions" data-role="apply-preview">
+                <p>preview: ${this.escapeHtml(this.sharedConversationState.currentSummary ?? "")}</p>
+                <button class="document-item is-selected" data-role="apply-approve" type="button">Approve</button>
+                <button class="document-item" data-role="apply-cancel" type="button">Cancel</button>
+              </div>` : ""}
+            ${this.sharedConversationState.applyState === "approved" ? `<p data-role="apply-approved">apply approved</p>` : ""}
+            ${this.sharedConversationState.applyState === "cancelled" ? `<p data-role="apply-cancelled">apply cancelled</p>` : ""}
           </div>
-        </section>
+        `)}
       </section>
       ${this.errorMessage ? `<p class="error-banner" data-role="error-banner">${this.escapeHtml(this.errorMessage)}</p>` : ""}
       <div data-role="workspace-content"></div>
     `;
 
     const content = this.rootElement.querySelector<HTMLElement>("[data-role='workspace-content']");
-
     if (!content) {
       throw new Error("Workspace content host was not found.");
     }
-
-    switch (this.workspaceId) {
-      case "document": {
-        const state = this.documentController.createState(
-          this.query,
-          this.selectedDocumentId,
-          this.editorState,
-          this.documentConsultationState
-        );
-        this.selectedDocumentId = state.selectedDocument?.id;
-        this.editorState = state.editor;
-        this.documentConsultationState = state.consultation;
-        new DocumentWorkspaceView(content).render(state);
-        break;
-      }
-      case "data": {
-        const state = this.dataController.createState(this.dataConsultationState);
-        this.dataConsultationState = state.consultation;
-        new DataWorkspaceView(content).render(state);
-        break;
-      }
-      case "code": {
-        const state = this.codeController.createState(this.codeConsultationState);
-        this.codeConsultationState = state.consultation;
-        new CodeWorkspaceView(content).render(state);
-        break;
-      }
+    if (this.workspaceId === "document") {
+      const state = this.documentController.createState(
+        this.query,
+        this.selectedDocumentId,
+        this.editorState,
+        this.documentConsultationState
+      );
+      this.selectedDocumentId = state.selectedDocument?.id;
+      this.editorState = state.editor;
+      this.documentConsultationState = state.consultation;
+      new DocumentWorkspaceView(content).render(state);
+      return;
     }
+    if (this.workspaceId === "data") {
+      const state = this.dataController.createState(this.dataConsultationState);
+      this.dataConsultationState = state.consultation;
+      new DataWorkspaceView(content).render(state);
+      return;
+    }
+    const state = this.codeController.createState(this.codeConsultationState);
+    this.codeConsultationState = state.consultation;
+    new CodeWorkspaceView(content).render(state);
   }
 
   private renderTab(workspaceId: WorkspaceId, label: string): string {
+    return `<button class="tab-button ${this.workspaceId === workspaceId ? "is-selected" : ""}" data-role="workspace-tab" data-workspace-id="${workspaceId}" type="button">${label}</button>`;
+  }
+
+  private renderHeaderCard(
+    cardId: Exclude<HeaderCardId, null>,
+    eyebrow: string,
+    title: string,
+    summary: string,
+    detailMarkup: string
+  ): string {
+    const expanded = this.expandedHeaderCard === cardId;
     return `
-      <button
-        class="tab-button ${this.workspaceId === workspaceId ? "is-selected" : ""}"
-        data-role="workspace-tab"
-        data-workspace-id="${workspaceId}"
-        type="button"
-      >
-        ${label}
-      </button>
+      <section class="header-card" data-role="header-card" data-card="${cardId}" data-expanded="${expanded ? "true" : "false"}">
+        <button class="header-card-toggle" data-role="header-card-toggle" data-card="${cardId}" type="button" aria-expanded="${expanded ? "true" : "false"}">
+          <span class="eyebrow">${this.escapeHtml(eyebrow)}</span>
+          <span class="header-card-title">${this.escapeHtml(title)}</span>
+          <span class="header-card-copy">${summary}</span>
+        </button>
+        <div class="header-card-detail">${detailMarkup}</div>
+      </section>
     `;
   }
 
   private createConsultationSession(): ConsultationSessionState {
-    switch (this.workspaceId) {
-      case "document": {
-        const state = this.documentController.createState(
-          this.query,
-          this.selectedDocumentId,
-          this.editorState,
-          this.documentConsultationState
-        );
-        return createConsultationSession({
-          workspaceId: "document",
-          sourcePolicy: state.sourcePolicy,
-          bundle: state.selectedBundle.map((document) => ({
-            id: document.id,
-            kind: "document",
-            label: document.title,
-            path: document.path
-          }))
-        });
-      }
-      case "data": {
-        const state = this.dataController.createState(this.dataConsultationState);
-        return createConsultationSession({
-          workspaceId: "data",
-          sourcePolicy: state.sourcePolicy,
-          bundle: this.createDataBundle(state.selectedDatasets)
-        });
-      }
-      case "code": {
-        const state = this.codeController.createState(this.codeConsultationState);
-        return createConsultationSession({
-          workspaceId: "code",
-          sourcePolicy: state.sourcePolicy,
-          bundle: this.createCodeBundle(state.selectedTargets)
-        });
-      }
+    if (this.workspaceId === "document") {
+      const state = this.documentController.createState(
+        this.query,
+        this.selectedDocumentId,
+        this.editorState,
+        this.documentConsultationState
+      );
+      return createConsultationSession({
+        workspaceId: "document",
+        sourcePolicy: state.sourcePolicy,
+        bundle: state.selectedBundle.map((document) => ({
+          id: document.id,
+          kind: "document",
+          label: document.title,
+          path: document.path
+        }))
+      });
     }
+    if (this.workspaceId === "data") {
+      const state = this.dataController.createState(this.dataConsultationState);
+      return createConsultationSession({
+        workspaceId: "data",
+        sourcePolicy: state.sourcePolicy,
+        bundle: this.createDataBundle(state.selectedDatasets)
+      });
+    }
+    const state = this.codeController.createState(this.codeConsultationState);
+    return createConsultationSession({
+      workspaceId: "code",
+      sourcePolicy: state.sourcePolicy,
+      bundle: this.createCodeBundle(state.selectedTargets)
+    });
   }
 
   private createDataBundle(
@@ -753,42 +649,28 @@ export class DashboardController {
 
   private handleApproveApply(): void {
     const latest = this.sharedConversationState.history[0];
-
     if (!latest) {
       return;
     }
-
     if (latest.workspaceId === "code") {
+      this.sharedConversationState = updateApplyState(this.sharedConversationState, "cancelled", "phase-gated-read-only");
       this.errorMessage = "Code consultation remains phase-gated read-only.";
-      this.sharedConversationState = updateApplyState(
-        this.sharedConversationState,
-        "cancelled",
-        "phase-gated-read-only"
-      );
       this.render();
       return;
     }
-
     if (latest.workspaceId === "document") {
-      const selectedDocumentId = latest.bundle[0]?.id;
       const state = this.documentController.createState(
         this.query,
-        selectedDocumentId,
+        latest.bundle[0]?.id,
         this.editorState,
         this.documentConsultationState
       );
-
       if (state.isReadOnly || !state.selectedDocument) {
+        this.sharedConversationState = updateApplyState(this.sharedConversationState, "cancelled", "consultation-only");
         this.errorMessage = "Only unlocked local draft documents can be applied.";
-        this.sharedConversationState = updateApplyState(
-          this.sharedConversationState,
-          "cancelled",
-          "consultation-only"
-        );
         this.render();
         return;
       }
-
       const applied = this.documentController.saveDocument(
         this.query,
         state.selectedDocument.id,
@@ -798,49 +680,20 @@ export class DashboardController {
       this.selectedDocumentId = applied.selectedDocument?.id;
       this.editorState = applied.editor;
       this.documentConsultationState = applied.consultation;
-      this.sharedConversationState = updateApplyState(
-        this.sharedConversationState,
-        "approved",
-        "approved"
-      );
-      this.errorMessage = null;
+      this.sharedConversationState = updateApplyState(this.sharedConversationState, "approved", "approved");
       this.render();
       return;
     }
-
-    if (latest.workspaceId === "data") {
-      const state = this.dataController.createState(this.dataConsultationState);
-      const primary = state.selectedDatasets[0];
-
-      if (state.isReadOnly || !primary) {
-        this.errorMessage = "Only unlocked local draft datasets can be applied.";
-        this.sharedConversationState = updateApplyState(
-          this.sharedConversationState,
-          "cancelled",
-          "consultation-only"
-        );
-        this.render();
-        return;
-      }
-
-      const applied = this.dataController.updateDataset(primary.id, "review", primary.recordCount);
-      this.dataConsultationState = applied.consultation;
-      this.sharedConversationState = updateApplyState(
-        this.sharedConversationState,
-        "approved",
-        "approved"
-      );
-      this.errorMessage = null;
+    const state = this.dataController.createState(this.dataConsultationState);
+    const primary = state.selectedDatasets[0];
+    if (state.isReadOnly || !primary) {
+      this.sharedConversationState = updateApplyState(this.sharedConversationState, "cancelled", "consultation-only");
+      this.errorMessage = "Only unlocked local draft datasets can be applied.";
       this.render();
       return;
     }
-
-    this.sharedConversationState = updateApplyState(
-      this.sharedConversationState,
-      "approved",
-      "approved"
-    );
-    this.errorMessage = null;
+    this.dataConsultationState = this.dataController.updateDataset(primary.id, "review", primary.recordCount).consultation;
+    this.sharedConversationState = updateApplyState(this.sharedConversationState, "approved", "approved");
     this.render();
   }
 
@@ -853,22 +706,14 @@ export class DashboardController {
     if (staleStatus === "stale") {
       return "stale";
     }
-
-    if (this.statusState.lastRefreshOutcome === "changed") {
-      return "refreshed";
-    }
-
-    return "fresh";
+    return this.statusState.lastRefreshOutcome === "changed" ? "refreshed" : "fresh";
   }
 
   private appendEvidence(outcome: RefreshOutcome, message: string): void {
-    const evidence: RefreshEvidence = {
-      timestamp: new Date().toISOString(),
-      outcome,
-      message
-    };
-
-    this.statusState.evidence = [evidence, ...this.statusState.evidence].slice(0, 5);
+    this.statusState.evidence = [
+      { timestamp: new Date().toISOString(), outcome, message },
+      ...this.statusState.evidence
+    ].slice(0, 5);
     this.writeEvidence(this.statusState.evidence);
   }
 
