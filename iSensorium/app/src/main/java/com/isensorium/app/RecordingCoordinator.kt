@@ -91,7 +91,8 @@ class RecordingCoordinator(
     private val imuLogger = ImuLogger()
     private val gnssLogger = GnssLogger()
     private val bleLogger = BleLogger()
-    private val arCoreLogger = ArCoreLogger()
+    private val arCoreLogger =
+        (arCoreGlSurfaceView.getTag(arCoreGlSurfaceView.id) as? ArCoreLogger) ?: ArCoreLogger()
 
     private var cameraProvider: ProcessCameraProvider? = null
     private var videoCapture: VideoCapture<Recorder>? = null
@@ -111,10 +112,7 @@ class RecordingCoordinator(
 
     init {
         lifecycleOwner.lifecycle.addObserver(this)
-        arCoreGlSurfaceView.setEGLContextClientVersion(2)
-        arCoreGlSurfaceView.preserveEGLContextOnPause = true
-        arCoreGlSurfaceView.setRenderer(arCoreLogger)
-        arCoreGlSurfaceView.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
+        initializeArCoreGlSurfaceView()
     }
 
     override fun onStop(owner: LifecycleOwner) {
@@ -404,6 +402,17 @@ class RecordingCoordinator(
         statusListener(SessionUiState(false, currentSession, "Camera ready. Extended sensors can start."))
     }
 
+    private fun initializeArCoreGlSurfaceView() {
+        val currentRenderer = arCoreGlSurfaceView.getTag(arCoreGlSurfaceView.id)
+        if (currentRenderer !is ArCoreLogger) {
+            arCoreGlSurfaceView.setEGLContextClientVersion(2)
+            arCoreGlSurfaceView.preserveEGLContextOnPause = true
+            arCoreGlSurfaceView.setRenderer(arCoreLogger)
+            arCoreGlSurfaceView.renderMode = GLSurfaceView.RENDERMODE_WHEN_DIRTY
+            arCoreGlSurfaceView.setTag(arCoreGlSurfaceView.id, arCoreLogger)
+        }
+    }
+
     private interface SessionRouteAdapter {
         fun startPreview(cameraSelector: CameraSelector)
         fun startSession()
@@ -525,14 +534,15 @@ class RecordingCoordinator(
                 return
             }
             lifecycleMachine.beginStop()
+            session.acceptFrameTimestamps = false
             val runtimeMetadata = closeRuntime(session)
             lifecycleMachine.markStopped()
             trialRecordingActive = false
+            sessionManager.closeSessionOutputs(session)
             sessionManager.finalizeManifest(
                 session,
                 if (runtimeMetadata["runtimeStatus"] == "error") "finalized_with_error" else "finalized",
             )
-            sessionManager.closeSessionOutputs(session)
             restoreFrozenPreview(
                 session = session,
                 statusText = if (runtimeMetadata["runtimeStatus"] == "error") {
@@ -777,6 +787,8 @@ class RecordingCoordinator(
             var runtimeStatus = "stopped"
             stopCollectors()
             pauseSharedArSession()
+            sessionManager.appendCollectorStatus(session, "pose", "stopped")
+            sessionManager.appendCollectorStatus(session, "arcore", "stopped")
             runCatching { captureSession?.stopRepeating() }
             val videoBytes =
                 runCatching { videoRecorder?.stopAndRelease() ?: session.videoFile.length() }
@@ -817,16 +829,18 @@ class RecordingCoordinator(
                     cause = if (runtimeStatus == "error") "runtime_close_error" else null,
                 ),
             )
+            sessionManager.flushSessionOutputs(session)
             return mapOf("runtimeStatus" to runtimeStatus)
         }
 
         private fun failSharedCameraSession(session: RecordingSession, message: String) {
             lifecycleMachine.fail()
             trialRecordingActive = false
+            session.acceptFrameTimestamps = false
             sessionManager.appendCollectorStatus(session, "sharedCamera", "error")
             closeRuntime(session)
-            sessionManager.finalizeManifest(session, "finalized_with_error")
             sessionManager.closeSessionOutputs(session)
+            sessionManager.finalizeManifest(session, "finalized_with_error")
             restoreFrozenPreview(
                 session = session,
                 statusText = "$message Frozen preview restored.",
@@ -1267,6 +1281,7 @@ data class RecordingSession(
     val videoEventsFile: File,
     val timebase: SessionTimebase,
     val adapterMetadata: SessionAdapterMetadata,
+    @Volatile var acceptFrameTimestamps: Boolean = true,
     var sensorSampleCount: Long = 0L,
     var gnssSampleCount: Long = 0L,
     var bleSampleCount: Long = 0L,
@@ -1416,15 +1431,7 @@ class SessionManager(
         manifest.put("bleSampleCount", session.bleSampleCount)
         manifest.put("arCoreSampleCount", session.arCoreSampleCount)
         manifest.put("recordingConfig", recordingConfigJson(session.recordingConfig))
-        manifest.put(
-            "files",
-            JSONArray().apply {
-                session.listOutputFiles().forEach { file ->
-                    put(JSONObject().put("name", file.name).put("sizeBytes", file.length()))
-                }
-            },
-        )
-        session.manifestFile.writeText(manifest.toString(2))
+        writeManifestWithResolvedFileSizes(session, manifest)
     }
 
     fun flushSessionOutputs(session: RecordingSession) {
@@ -1444,6 +1451,9 @@ class SessionManager(
     }
 
     fun appendFrameTimestamp(session: RecordingSession, frameTimestamp: FrameTimestamp) {
+        if (!session.acceptFrameTimestamps) {
+            return
+        }
         val writers = sessionWriters.getOrPut(session.sessionId) { SessionWriters.openFor(session) }
         val sessionElapsed = frameTimestamp.elapsedRealtimeNanos - session.timebase.sessionStartElapsedRealtimeNanos
         synchronized(writers.frameTimestampsWriter) {
@@ -1451,6 +1461,30 @@ class SessionManager(
                 "${frameTimestamp.sensorTimestampNs},${frameTimestamp.elapsedRealtimeNanos},${frameTimestamp.wallTimeMillis},${frameTimestamp.rotationDegrees},$sessionElapsed\n",
             )
         }
+    }
+
+    private fun writeManifestWithResolvedFileSizes(session: RecordingSession, manifest: JSONObject) {
+        val firstPassFiles =
+            JSONArray().apply {
+                session.listOutputFiles().forEach { file ->
+                    put(JSONObject().put("name", file.name).put("sizeBytes", file.length()))
+                }
+            }
+        manifest.put("files", firstPassFiles)
+        session.manifestFile.writeText(manifest.toString(2))
+
+        val secondPassFiles =
+            JSONArray().apply {
+                session.listOutputFiles().forEach { file ->
+                    put(
+                        JSONObject()
+                            .put("name", file.name)
+                            .put("sizeBytes", if (file == session.manifestFile) session.manifestFile.length() else file.length()),
+                    )
+                }
+            }
+        manifest.put("files", secondPassFiles)
+        session.manifestFile.writeText(manifest.toString(2))
     }
 
     fun appendVideoEvent(session: RecordingSession, event: VideoEvent) {

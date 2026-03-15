@@ -20,6 +20,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var recordingCoordinator: RecordingCoordinator
     private val preferences by lazy { getSharedPreferences("guarded_upstream_trial", Context.MODE_PRIVATE) }
     private var currentSession: RecordingSession? = null
+    private var routeTransitionInProgress: Boolean = false
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
@@ -57,11 +58,17 @@ class MainActivity : AppCompatActivity() {
         binding.guardedRouteSwitch.isChecked = prefersGuardedReplacementRoute()
         binding.guardedRouteSwitch.isEnabled = BuildConfig.CORECAMERA_RUNTIME_ENABLED
         binding.guardedRouteSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (routeTransitionInProgress) {
+                binding.guardedRouteSwitch.isChecked = !isChecked
+                return@setOnCheckedChangeListener
+            }
             if (recordingCoordinator.isRecording()) {
                 binding.guardedRouteSwitch.isChecked = !isChecked
                 Toast.makeText(this, "Stop the current session before changing camera route", Toast.LENGTH_SHORT).show()
                 return@setOnCheckedChangeListener
             }
+            routeTransitionInProgress = true
+            binding.guardedRouteSwitch.isEnabled = false
             preferences.edit().putBoolean(PREF_GUARDED_ROUTE, isChecked).apply()
             recordingCoordinator.shutdown()
             recordingCoordinator = buildRecordingCoordinator()
@@ -69,6 +76,10 @@ class MainActivity : AppCompatActivity() {
             currentSession = null
             refreshSessionDetails(null)
             ensurePermissionsAndStartPreview()
+            binding.guardedRouteSwitch.postDelayed({
+                routeTransitionInProgress = false
+                binding.guardedRouteSwitch.isEnabled = BuildConfig.CORECAMERA_RUNTIME_ENABLED
+            }, ROUTE_SWITCH_GUARD_MS)
             Toast.makeText(
                 this,
                 if (isChecked) "Guarded replacement route selected" else "Frozen route selected",
@@ -268,6 +279,7 @@ class MainActivity : AppCompatActivity() {
 
     companion object {
         private const val PREF_GUARDED_ROUTE = "pref_guarded_route"
+        private const val ROUTE_SWITCH_GUARD_MS = 800L
 
         private val requiredPermissions = arrayOf(
             Manifest.permission.CAMERA,
