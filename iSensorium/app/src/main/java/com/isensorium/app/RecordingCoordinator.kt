@@ -29,6 +29,9 @@ import android.opengl.GLES20
 import android.opengl.GLSurfaceView
 import android.util.Size
 import android.view.Surface
+import android.view.View
+import android.widget.ImageView
+import android.graphics.Bitmap
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -73,6 +76,7 @@ class RecordingCoordinator(
     private val context: Context,
     private val lifecycleOwner: LifecycleOwner,
     private val previewView: PreviewView,
+    private val replacementPreviewImageView: ImageView,
     private val arCoreGlSurfaceView: GLSurfaceView,
     private val statusListener: (SessionUiState) -> Unit,
     requestedRouteValue: String = BuildConfig.CAMERA_STACK_ROUTE,
@@ -93,6 +97,7 @@ class RecordingCoordinator(
     private val bleLogger = BleLogger()
     private val arCoreLogger =
         (arCoreGlSurfaceView.getTag(arCoreGlSurfaceView.id) as? ArCoreLogger) ?: ArCoreLogger()
+    private val replacementPreviewRenderer = ReplacementPreviewRenderer(replacementPreviewImageView)
 
     private var cameraProvider: ProcessCameraProvider? = null
     private var videoCapture: VideoCapture<Recorder>? = null
@@ -413,6 +418,36 @@ class RecordingCoordinator(
         }
     }
 
+    private class ReplacementPreviewRenderer(
+        private val imageView: ImageView,
+    ) {
+        @Volatile
+        private var active = false
+
+        fun start() {
+            active = true
+            imageView.post {
+                imageView.visibility = View.VISIBLE
+            }
+        }
+
+        fun stop() {
+            active = false
+            imageView.post {
+                imageView.setImageDrawable(null)
+                imageView.visibility = View.GONE
+            }
+        }
+
+        fun onFrame(bitmap: Bitmap, timestampNs: Long) {
+            if (!active) return
+            imageView.post {
+                if (!active) return@post
+                imageView.setImageBitmap(bitmap)
+            }
+        }
+    }
+
     private interface SessionRouteAdapter {
         fun startPreview(cameraSelector: CameraSelector)
         fun startSession()
@@ -491,6 +526,7 @@ class RecordingCoordinator(
             lifecycleMachine.beginStart()
             cameraProvider?.unbindAll()
             analysis?.clearAnalyzer()
+            replacementPreviewRenderer.start()
 
             val session = sessionManager.createSession()
             currentSession = session
@@ -543,6 +579,7 @@ class RecordingCoordinator(
                 session,
                 if (runtimeMetadata["runtimeStatus"] == "error") "finalized_with_error" else "finalized",
             )
+            replacementPreviewRenderer.stop()
             restoreFrozenPreview(
                 session = session,
                 statusText = if (runtimeMetadata["runtimeStatus"] == "error") {
@@ -562,6 +599,7 @@ class RecordingCoordinator(
             }
             cameraProvider?.unbindAll()
             analysis?.clearAnalyzer()
+            replacementPreviewRenderer.stop()
             cameraExecutor.shutdown()
             runCatching { cameraThread.quitSafely() }
         }
@@ -616,6 +654,7 @@ class RecordingCoordinator(
                     recordingSize = Size(640, 480),
                     callbackHandler = cameraHandler,
                 ).also { it.prepare() }
+            videoRecorder?.setPreviewListener(replacementPreviewRenderer::onFrame, previewFps = 5)
             sessionManager.appendCollectorStatus(session, "video", "prepared")
         }
 
@@ -841,6 +880,7 @@ class RecordingCoordinator(
             closeRuntime(session)
             sessionManager.closeSessionOutputs(session)
             sessionManager.finalizeManifest(session, "finalized_with_error")
+            replacementPreviewRenderer.stop()
             restoreFrozenPreview(
                 session = session,
                 statusText = "$message Frozen preview restored.",
@@ -853,6 +893,7 @@ class RecordingCoordinator(
             statusText: String,
             toastMessage: String?,
         ) {
+            replacementPreviewRenderer.stop()
             startFrozenPreview(lastPreviewCameraSelector)
             statusListener(
                 SessionUiState(

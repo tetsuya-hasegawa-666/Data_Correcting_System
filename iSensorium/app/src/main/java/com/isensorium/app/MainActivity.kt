@@ -134,6 +134,7 @@ class MainActivity : AppCompatActivity() {
             context = applicationContext,
             lifecycleOwner = this,
             previewView = binding.previewView,
+            replacementPreviewImageView = binding.replacementPreviewImage,
             arCoreGlSurfaceView = binding.arCoreGlSurfaceView,
             statusListener = ::onSessionStateChanged,
             requestedRouteValue = selectedRoute().routeId,

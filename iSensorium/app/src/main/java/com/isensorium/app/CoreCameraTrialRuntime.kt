@@ -1,6 +1,10 @@
 package com.isensorium.app
 
 import android.graphics.ImageFormat
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.Rect
+import android.graphics.YuvImage
 import android.media.Image
 import android.media.ImageReader
 import android.media.MediaCodec
@@ -19,6 +23,7 @@ import android.util.Size
 import android.view.Surface
 import com.google.ar.core.Session
 import java.io.File
+import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 
 enum class TrialSharedCameraLifecycleState {
@@ -87,6 +92,9 @@ class TrialCpuImageVideoRecorder(
     private val minFrameIntervalNs = 1_000_000_000L / targetFrameRate
     private val frames = mutableListOf<VideoFrame>()
     private val frameLock = Any()
+    private var previewListener: ((Bitmap, Long) -> Unit)? = null
+    private var previewFrameIntervalNs: Long = 200_000_000L
+    private var lastPreviewTimestampNs = Long.MIN_VALUE
 
     private var imageReader: ImageReader? = null
     private var recording = false
@@ -118,11 +126,19 @@ class TrialCpuImageVideoRecorder(
         }
         startSensorTimestampNs = null
         lastAcceptedTimestampNs = Long.MIN_VALUE
+        lastPreviewTimestampNs = Long.MIN_VALUE
         recording = false
     }
 
     fun start() {
         recording = true
+    }
+
+    fun setPreviewListener(listener: ((Bitmap, Long) -> Unit)?, previewFps: Int = 5) {
+        previewListener = listener
+        val fps = previewFps.coerceAtLeast(1)
+        previewFrameIntervalNs = 1_000_000_000L / fps
+        lastPreviewTimestampNs = Long.MIN_VALUE
     }
 
     fun stopAndRelease(): Long {
@@ -173,7 +189,20 @@ class TrialCpuImageVideoRecorder(
                 )
             }
             lastAcceptedTimestampNs = timestampNs
+            maybeEmitPreview(current, timestampNs)
         }
+    }
+
+    private fun maybeEmitPreview(image: Image, timestampNs: Long) {
+        val listener = previewListener ?: return
+        if (lastPreviewTimestampNs != Long.MIN_VALUE &&
+            timestampNs - lastPreviewTimestampNs < previewFrameIntervalNs
+        ) {
+            return
+        }
+        val bitmap = runCatching { yuv420888ToBitmap(image) }.getOrNull() ?: return
+        lastPreviewTimestampNs = timestampNs
+        listener.invoke(bitmap, timestampNs)
     }
 
     private fun encodeFrames(capturedFrames: List<VideoFrame>) {
@@ -283,6 +312,74 @@ class TrialCpuImageVideoRecorder(
         copyPlane(image.planes[1], width / 2, height / 2, output, ySize)
         copyPlane(image.planes[2], width / 2, height / 2, output, ySize + uvSize)
         return output
+    }
+
+    private fun yuv420888ToBitmap(image: Image): Bitmap? {
+        val width = image.width
+        val height = image.height
+        val nv21 = yuv420888ToNv21(image) ?: return null
+        val yuvImage = YuvImage(nv21, ImageFormat.NV21, width, height, null)
+        val out = ByteArrayOutputStream()
+        if (!yuvImage.compressToJpeg(Rect(0, 0, width, height), 60, out)) {
+            return null
+        }
+        val bytes = out.toByteArray()
+        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
+    }
+
+    private fun yuv420888ToNv21(image: Image): ByteArray? {
+        val width = image.width
+        val height = image.height
+        val yPlane = image.planes.getOrNull(0) ?: return null
+        val uPlane = image.planes.getOrNull(1) ?: return null
+        val vPlane = image.planes.getOrNull(2) ?: return null
+
+        val ySize = width * height
+        val uvSize = width * height / 2
+        val nv21 = ByteArray(ySize + uvSize)
+
+        var pos = 0
+        val yRowStride = yPlane.rowStride
+        val yPixelStride = yPlane.pixelStride
+        val yBuffer = yPlane.buffer
+        if (yPixelStride == 1 && yRowStride == width) {
+            yBuffer.get(nv21, 0, ySize)
+            pos = ySize
+        } else {
+            val row = ByteArray(yRowStride)
+            for (rowIndex in 0 until height) {
+                yBuffer.position(rowIndex * yRowStride)
+                yBuffer.get(row, 0, yRowStride)
+                var col = 0
+                while (col < width) {
+                    nv21[pos++] = row[col * yPixelStride]
+                    col++
+                }
+            }
+        }
+
+        val uvRowStride = uPlane.rowStride
+        val uvPixelStride = uPlane.pixelStride
+        val uBuffer = uPlane.buffer
+        val vBuffer = vPlane.buffer
+        val uRow = ByteArray(uvRowStride)
+        val vRow = ByteArray(uvRowStride)
+        val chromaHeight = height / 2
+        val chromaWidth = width / 2
+        for (rowIndex in 0 until chromaHeight) {
+            uBuffer.position(rowIndex * uvRowStride)
+            vBuffer.position(rowIndex * uvRowStride)
+            uBuffer.get(uRow, 0, uvRowStride)
+            vBuffer.get(vRow, 0, uvRowStride)
+            var col = 0
+            while (col < chromaWidth) {
+                val uvIndex = col * uvPixelStride
+                nv21[pos++] = vRow[uvIndex]
+                nv21[pos++] = uRow[uvIndex]
+                col++
+            }
+        }
+        return nv21
     }
 
     private fun copyPlane(

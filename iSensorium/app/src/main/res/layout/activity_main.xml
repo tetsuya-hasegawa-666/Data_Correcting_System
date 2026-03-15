@@ -15,6 +15,17 @@
         app:layout_constraintTop_toTopOf="parent"
         app:scaleType="fillCenter" />
 
+    <ImageView
+        android:id="@+id/replacementPreviewImage"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:scaleType="fitCenter"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
     <android.opengl.GLSurfaceView
         android:id="@+id/arCoreGlSurfaceView"
         android:layout_width="1dp"
