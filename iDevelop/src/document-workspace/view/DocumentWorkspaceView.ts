@@ -26,7 +26,7 @@ export class DocumentWorkspaceView {
         <section class="workspace-panel document-explorer-panel" data-role="explorer-panel">
           <div class="workspace-header">
             <div>
-              <p class="eyebrow">文書</p>
+              <p class="eyebrow">Document</p>
               <h1>検索と Explorer</h1>
             </div>
           </div>
@@ -74,7 +74,8 @@ export class DocumentWorkspaceView {
       ? `
         <div class="unlock-guidance" data-role="unlock-document-guidance">
           <p><strong>解除条件:</strong> Draft を開始すると、現在の read-only 文書を local draft に複製して編集可能にします。</p>
-          <p><strong>何が起こるか:</strong> original source remains unchanged until safe apply.</p>
+          <p><strong>反映範囲:</strong> Draft 中の変更は local draft にだけ保存されます。</p>
+          <p><strong>元ソース:</strong> original source remains unchanged until safe apply.</p>
           <button class="document-item is-selected" data-role="unlock-document-editing" type="button">Draft を開始</button>
         </div>
       `
@@ -95,15 +96,18 @@ export class DocumentWorkspaceView {
         `;
 
     return `
-      <p class="eyebrow">プレビュー</p>
+      <p class="eyebrow">Preview</p>
       <h2 data-role="document-title">${this.escapeHtml(document.title)}</h2>
       <p class="document-path">${this.escapeHtml(document.path)}</p>
       <div class="tag-row">${tagMarkup}</div>
       <div class="preview-columns" data-role="preview-columns">
         <section class="directory-group preview-column" data-role="consultation-column">
-          <div class="preview-action-guide">
+          <div class="action-panel" data-role="consultation-panel">
             <p class="eyebrow">相談</p>
-            <p><strong>相談:</strong> selected bundle を読み、Summary / Evidence / Next Action を返します。内容は変えません。</p>
+            <h3>内容を整理して次の行動を決める</h3>
+            <p><strong>目的:</strong> 選択中の bundle を読んで、判断材料を整理します。</p>
+            <p><strong>返る内容:</strong> Summary / Evidence / Next Action</p>
+            <p><strong>変更範囲:</strong> 文書本文は変更しません。</p>
           </div>
           <p class="eyebrow">Consultation Bundle</p>
           <p data-role="document-bundle-count">選択 ${state.selectedBundle.length} 件</p>
@@ -135,10 +139,12 @@ export class DocumentWorkspaceView {
           ${consultationResponseMarkup}
         </section>
         <section class="directory-group preview-column" data-role="draft-column">
-          <div class="preview-action-guide">
+          <div class="action-panel" data-role="draft-panel">
             <p class="eyebrow">Draft</p>
-            <p><strong>Draft:</strong> local draft を作り、文書本文の編集と保存を行います。safe apply 前は元ソースを変えません。</p>
-            <p>original source remains unchanged until safe apply.</p>
+            <h3>編集案を作って保存する</h3>
+            <p><strong>目的:</strong> local draft を作り、文書本文の編集案を試します。</p>
+            <p><strong>反映内容:</strong> Draft の保存は local draft にだけ反映されます。</p>
+            <p><strong>元ソース:</strong> original source remains unchanged until safe apply.</p>
           </div>
           ${state.editor.saveMessage ? `<p class="result-count" data-role="save-message">${this.escapeHtml(state.editor.saveMessage)}</p>` : ""}
           ${draftMarkup}

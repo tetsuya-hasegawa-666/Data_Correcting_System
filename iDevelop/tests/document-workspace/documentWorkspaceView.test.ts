@@ -29,42 +29,9 @@ const editableState: DocumentWorkspaceState = {
     }
   ],
   directoryGroups: [
-    {
-      directoryPath: "docs/artifact",
-      documents: [
-        {
-          id: "doc-1",
-          title: "System Blueprint",
-          path: "docs/artifact/system_blueprint.md",
-          body: "MVC boundaries and module guidance.",
-          tags: ["artifact"]
-        }
-      ]
-    },
-    {
-      directoryPath: "docs/process",
-      documents: [
-        {
-          id: "doc-2",
-          title: "Research Operation",
-          path: "docs/process/research_operation.md",
-          body: "BDD and TDD operating rules.",
-          tags: ["process"]
-        }
-      ]
-    },
-    {
-      directoryPath: "docs/process/sub",
-      documents: [
-        {
-          id: "doc-3",
-          title: "Guide",
-          path: "docs/process/sub/guide.md",
-          body: "Nested folder guide.",
-          tags: ["process"]
-        }
-      ]
-    }
+    { directoryPath: "docs/artifact", documents: [] },
+    { directoryPath: "docs/process", documents: [] },
+    { directoryPath: "docs/process/sub", documents: [] }
   ],
   selectedDocument: {
     id: "doc-2",
@@ -112,33 +79,32 @@ const editableState: DocumentWorkspaceState = {
 };
 
 describe("DocumentWorkspaceView", () => {
-  it("renders explorer search on the left and split preview columns on the right", () => {
+  it("renders aligned consultation and draft panels with the same information structure", () => {
     const container = document.createElement("section");
     const view = new DocumentWorkspaceView(container);
 
     view.render(editableState);
 
-    expect(container.querySelector("[data-role='document-layout']")?.getAttribute("data-layout")).toBe(
-      "explorer-preview"
-    );
-    expect(container.querySelector("[data-role='explorer-tree']")).not.toBeNull();
-    expect(container.querySelectorAll("[data-role='tree-node'][data-kind='directory']")).toHaveLength(
-      4
-    );
-    expect(container.querySelector("[data-role='tree-node'][data-kind='file'][data-document-id='doc-3']"))
-      .not.toBeNull();
     expect(container.querySelector("[data-role='preview-columns']")).not.toBeNull();
-    expect(container.querySelector("[data-role='consultation-column']")).not.toBeNull();
-    expect(container.querySelector("[data-role='draft-column']")).not.toBeNull();
+    expect(container.querySelector("[data-role='consultation-panel']")?.textContent).toContain(
+      "目的:"
+    );
+    expect(container.querySelector("[data-role='consultation-panel']")?.textContent).toContain(
+      "返る内容:"
+    );
+    expect(container.querySelector("[data-role='consultation-panel']")?.textContent).toContain(
+      "変更範囲:"
+    );
+    expect(container.querySelector("[data-role='draft-panel']")?.textContent).toContain("目的:");
+    expect(container.querySelector("[data-role='draft-panel']")?.textContent).toContain("反映内容:");
+    expect(container.querySelector("[data-role='draft-panel']")?.textContent).toContain("元ソース:");
     expect(container.querySelector("[data-role='consultation-column']")?.textContent).toContain(
       "相談"
     );
     expect(container.querySelector("[data-role='draft-column']")?.textContent).toContain("Draft");
-    expect(container.querySelector("[data-role='consultation-focus-input']")).not.toBeNull();
-    expect(container.querySelector("[data-role='edit-document']")).not.toBeNull();
   });
 
-  it("shows read-only unlock inside the draft column", () => {
+  it("shows read-only unlock inside the draft panel only", () => {
     const container = document.createElement("section");
     const view = new DocumentWorkspaceView(container);
 
@@ -155,9 +121,9 @@ describe("DocumentWorkspaceView", () => {
     });
 
     expect(container.querySelector("[data-role='unlock-document-guidance']")).not.toBeNull();
-    expect(container.querySelector("[data-role='draft-column']")?.textContent).toContain("解除条件");
+    expect(container.querySelector("[data-role='draft-column']")?.textContent).toContain("解除条件:");
     expect(container.querySelector("[data-role='consultation-column']")?.textContent).not.toContain(
-      "解除条件"
+      "解除条件:"
     );
     expect(container.querySelector("[data-role='unlock-document-editing']")).not.toBeNull();
   });
