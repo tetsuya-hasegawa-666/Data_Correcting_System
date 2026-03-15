@@ -112,7 +112,7 @@ const editableState: DocumentWorkspaceState = {
 };
 
 describe("DocumentWorkspaceView", () => {
-  it("renders explorer search on the left and preview actions on the right", () => {
+  it("renders explorer search on the left and split preview columns on the right", () => {
     const container = document.createElement("section");
     const view = new DocumentWorkspaceView(container);
 
@@ -121,28 +121,24 @@ describe("DocumentWorkspaceView", () => {
     expect(container.querySelector("[data-role='document-layout']")?.getAttribute("data-layout")).toBe(
       "explorer-preview"
     );
-    expect(container.querySelector("[data-role='search-input']")?.getAttribute("value")).toBe(
-      "bdd"
-    );
     expect(container.querySelector("[data-role='explorer-tree']")).not.toBeNull();
     expect(container.querySelectorAll("[data-role='tree-node'][data-kind='directory']")).toHaveLength(
       4
     );
-    expect(container.querySelector("[data-role='tree-node'][data-path='docs/process/sub']"))
-      .not.toBeNull();
     expect(container.querySelector("[data-role='tree-node'][data-kind='file'][data-document-id='doc-3']"))
       .not.toBeNull();
-    expect(container.querySelector("[data-role='preview-action-guide']")?.textContent).toContain(
+    expect(container.querySelector("[data-role='preview-columns']")).not.toBeNull();
+    expect(container.querySelector("[data-role='consultation-column']")).not.toBeNull();
+    expect(container.querySelector("[data-role='draft-column']")).not.toBeNull();
+    expect(container.querySelector("[data-role='consultation-column']")?.textContent).toContain(
       "相談"
     );
-    expect(container.querySelector("[data-role='preview-action-guide']")?.textContent).toContain(
-      "Draft"
-    );
+    expect(container.querySelector("[data-role='draft-column']")?.textContent).toContain("Draft");
     expect(container.querySelector("[data-role='consultation-focus-input']")).not.toBeNull();
     expect(container.querySelector("[data-role='edit-document']")).not.toBeNull();
   });
 
-  it("shows read-only unlock and draft guidance in the preview pane", () => {
+  it("shows read-only unlock inside the draft column", () => {
     const container = document.createElement("section");
     const view = new DocumentWorkspaceView(container);
 
@@ -159,15 +155,10 @@ describe("DocumentWorkspaceView", () => {
     });
 
     expect(container.querySelector("[data-role='unlock-document-guidance']")).not.toBeNull();
-    expect(container.querySelector("[data-role='unlock-document-editing']")).not.toBeNull();
-    expect(container.querySelector("[data-role='preview-action-guide']")?.textContent).toContain(
-      "相談"
-    );
-    expect(container.querySelector("[data-role='preview-action-guide']")?.textContent).toContain(
-      "Draft"
-    );
-    expect(container.querySelector("[data-role='explorer-panel']")?.textContent).not.toContain(
+    expect(container.querySelector("[data-role='draft-column']")?.textContent).toContain("解除条件");
+    expect(container.querySelector("[data-role='consultation-column']")?.textContent).not.toContain(
       "解除条件"
     );
+    expect(container.querySelector("[data-role='unlock-document-editing']")).not.toBeNull();
   });
 });

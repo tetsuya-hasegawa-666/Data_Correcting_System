@@ -17,7 +17,7 @@ export class DocumentWorkspaceView {
     const selectedDocumentMarkup = state.selectedDocument
       ? this.renderSelectedDocument(state.selectedDocument, state)
       : "<p>No document is selected.</p>";
-    const treeMarkup = this.buildTreeNodes(state.documents, state)
+    const treeMarkup = this.buildTreeNodes(state.documents)
       .map((node) => this.renderTreeNode(node, state))
       .join("");
 
@@ -57,7 +57,20 @@ export class DocumentWorkspaceView {
     const tagMarkup = document.tags
       .map((tag) => `<span class="tag">${this.escapeHtml(tag)}</span>`)
       .join("");
-    const draftButtonMarkup = state.isReadOnly
+    const consultationResponseMarkup = state.consultation.lastResponse
+      ? `
+        <div class="document-body" data-role="document-consultation-response">
+          <p><strong>Summary</strong> ${this.escapeHtml(state.consultation.lastResponse.summary)}</p>
+          <ul>
+            ${state.consultation.lastResponse.evidence
+              .map((evidence) => `<li>${this.escapeHtml(evidence)}</li>`)
+              .join("")}
+          </ul>
+          <p><strong>Next Action</strong> ${this.escapeHtml(state.consultation.lastResponse.nextAction)}</p>
+        </div>
+      `
+      : "";
+    const draftMarkup = state.isReadOnly
       ? `
         <div class="unlock-guidance" data-role="unlock-document-guidance">
           <p><strong>解除条件:</strong> Draft を開始すると、現在の read-only 文書を local draft に複製して編集可能にします。</p>
@@ -86,59 +99,52 @@ export class DocumentWorkspaceView {
       <h2 data-role="document-title">${this.escapeHtml(document.title)}</h2>
       <p class="document-path">${this.escapeHtml(document.path)}</p>
       <div class="tag-row">${tagMarkup}</div>
-      <section class="directory-group">
-        <div class="preview-action-guide" data-role="preview-action-guide">
-          <p class="eyebrow">相談と Draft の使い分け</p>
-          <p><strong>相談:</strong> selected bundle を読み、Summary / Evidence / Next Action を返します。内容は変えません。</p>
-          <p><strong>Draft:</strong> local draft を作り、文書本文の編集と保存を行います。safe apply 前は元ソースを変えません。</p>
-          <p>original source remains unchanged until safe apply.</p>
-        </div>
-        <p class="eyebrow">Consultation Bundle</p>
-        <p data-role="document-bundle-count">選択 ${state.selectedBundle.length} 件</p>
-        <ul data-role="document-bundle-list">
-          ${state.selectedBundle
-            .map(
-              (selected) =>
-                `<li>${this.escapeHtml(selected.title)} <span>${this.escapeHtml(selected.path)}</span></li>`
-            )
-            .join("")}
-        </ul>
-        <div class="capability-note" data-role="consultation-capabilities">
-          <p class="eyebrow">相談でできること</p>
-          <ul>
-            <li><strong>Summary</strong> bundle の要点整理</li>
-            <li><strong>Evidence</strong> 参照した文書の列挙</li>
-            <li><strong>Next Action</strong> 次に確認すべき行動の提案</li>
+      <div class="preview-columns" data-role="preview-columns">
+        <section class="directory-group preview-column" data-role="consultation-column">
+          <div class="preview-action-guide">
+            <p class="eyebrow">相談</p>
+            <p><strong>相談:</strong> selected bundle を読み、Summary / Evidence / Next Action を返します。内容は変えません。</p>
+          </div>
+          <p class="eyebrow">Consultation Bundle</p>
+          <p data-role="document-bundle-count">選択 ${state.selectedBundle.length} 件</p>
+          <ul data-role="document-bundle-list">
+            ${state.selectedBundle
+              .map(
+                (selected) =>
+                  `<li>${this.escapeHtml(selected.title)} <span>${this.escapeHtml(selected.path)}</span></li>`
+              )
+              .join("")}
           </ul>
-        </div>
-        <form data-role="document-consultation-form">
-          <textarea
-            class="document-editor"
-            data-role="consultation-focus-input"
-            name="consultation-focus"
-            placeholder="相談したい観点を入力"
-          >${this.escapeHtml(state.consultation.focusPrompt)}</textarea>
-          <button class="document-item is-selected" data-role="run-document-consultation" type="submit">相談する</button>
-        </form>
-        ${
-          state.consultation.lastResponse
-            ? `
-              <div class="document-body" data-role="document-consultation-response">
-                <p><strong>Summary</strong> ${this.escapeHtml(state.consultation.lastResponse.summary)}</p>
-                <ul>
-                  ${state.consultation.lastResponse.evidence
-                    .map((evidence) => `<li>${this.escapeHtml(evidence)}</li>`)
-                    .join("")}
-                </ul>
-                <p><strong>Next Action</strong> ${this.escapeHtml(state.consultation.lastResponse.nextAction)}</p>
-              </div>
-            `
-            : ""
-        }
-      </section>
-      ${state.editor.saveMessage ? `<p class="result-count" data-role="save-message">${this.escapeHtml(state.editor.saveMessage)}</p>` : ""}
-      ${draftButtonMarkup}
-      <pre class="document-body" data-role="document-body">${this.escapeHtml(document.body)}</pre>
+          <div class="capability-note" data-role="consultation-capabilities">
+            <p class="eyebrow">相談でできること</p>
+            <ul>
+              <li><strong>Summary</strong> bundle の要点整理</li>
+              <li><strong>Evidence</strong> 参照した文書の列挙</li>
+              <li><strong>Next Action</strong> 次に確認すべき行動の提案</li>
+            </ul>
+          </div>
+          <form data-role="document-consultation-form">
+            <textarea
+              class="document-editor"
+              data-role="consultation-focus-input"
+              name="consultation-focus"
+              placeholder="相談したい観点を入力"
+            >${this.escapeHtml(state.consultation.focusPrompt)}</textarea>
+            <button class="document-item is-selected" data-role="run-document-consultation" type="submit">相談する</button>
+          </form>
+          ${consultationResponseMarkup}
+        </section>
+        <section class="directory-group preview-column" data-role="draft-column">
+          <div class="preview-action-guide">
+            <p class="eyebrow">Draft</p>
+            <p><strong>Draft:</strong> local draft を作り、文書本文の編集と保存を行います。safe apply 前は元ソースを変えません。</p>
+            <p>original source remains unchanged until safe apply.</p>
+          </div>
+          ${state.editor.saveMessage ? `<p class="result-count" data-role="save-message">${this.escapeHtml(state.editor.saveMessage)}</p>` : ""}
+          ${draftMarkup}
+          <pre class="document-body" data-role="document-body">${this.escapeHtml(document.body)}</pre>
+        </section>
+      </div>
     `;
   }
 
@@ -189,7 +195,7 @@ export class DocumentWorkspaceView {
     `;
   }
 
-  private buildTreeNodes(documents: DocumentRecord[], state: DocumentWorkspaceState): TreeNode[] {
+  private buildTreeNodes(documents: DocumentRecord[]): TreeNode[] {
     const nodes: TreeNode[] = [];
     const seenDirectories = new Set<string>();
 
