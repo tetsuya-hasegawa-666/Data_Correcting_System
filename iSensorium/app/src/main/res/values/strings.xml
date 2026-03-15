@@ -3,6 +3,7 @@
     <string name="start_recording">Start Session</string>
     <string name="stop_recording">Stop Session</string>
     <string name="refresh_session">Refresh</string>
+    <string name="guarded_route_switch">Use guarded replacement route</string>
     <string name="ble_switch">Enable BLE capture</string>
     <string name="arcore_switch">Enable ARCore capture</string>
     <string name="sampling_header">Sampling interval (ms)</string>

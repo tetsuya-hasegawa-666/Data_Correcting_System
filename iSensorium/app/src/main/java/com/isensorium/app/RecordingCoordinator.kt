@@ -75,11 +75,12 @@ class RecordingCoordinator(
     private val previewView: PreviewView,
     private val arCoreGlSurfaceView: GLSurfaceView,
     private val statusListener: (SessionUiState) -> Unit,
+    requestedRouteValue: String = BuildConfig.CAMERA_STACK_ROUTE,
 ) : DefaultLifecycleObserver {
 
     private val routeResolution =
         GuardedUpstreamTrialContract.resolve(
-            BuildConfig.CAMERA_STACK_ROUTE,
+            requestedRouteValue,
             BuildConfig.CORECAMERA_RUNTIME_ENABLED,
         )
     private val sessionManager = SessionManager(context, routeResolution)
@@ -145,6 +146,7 @@ class RecordingCoordinator(
 
     fun shutdown() {
         sessionRouteAdapter.shutdown()
+        lifecycleOwner.lifecycle.removeObserver(this)
     }
 
     fun onHostResume() {
@@ -531,19 +533,15 @@ class RecordingCoordinator(
                 if (runtimeMetadata["runtimeStatus"] == "error") "finalized_with_error" else "finalized",
             )
             sessionManager.closeSessionOutputs(session)
-            statusListener(
-                SessionUiState(
-                    recording = false,
-                    session = session,
-                    statusText = if (runtimeMetadata["runtimeStatus"] == "error") {
-                        "Guarded replacement runtime stopped with error. Frozen preview restored."
-                    } else {
-                        "Guarded replacement runtime finalized. Frozen preview restored."
-                    },
-                    toastMessage = if (runtimeMetadata["runtimeStatus"] == "error") null else "Replacement-route session saved",
-                ),
+            restoreFrozenPreview(
+                session = session,
+                statusText = if (runtimeMetadata["runtimeStatus"] == "error") {
+                    "Guarded replacement runtime stopped with error. Frozen preview restored."
+                } else {
+                    "Guarded replacement runtime finalized. Frozen preview restored."
+                },
+                toastMessage = if (runtimeMetadata["runtimeStatus"] == "error") null else "Replacement-route session saved",
             )
-            startFrozenPreview(lastPreviewCameraSelector)
         }
 
         override fun findLatestSession(): RecordingSession? = sessionManager.findLatestSession()
@@ -552,6 +550,9 @@ class RecordingCoordinator(
             if (trialRecordingActive) {
                 stopSession()
             }
+            cameraProvider?.unbindAll()
+            analysis?.clearAnalyzer()
+            cameraExecutor.shutdown()
             runCatching { cameraThread.quitSafely() }
         }
 
@@ -773,24 +774,38 @@ class RecordingCoordinator(
 
         private fun closeRuntime(session: RecordingSession): Map<String, String> {
             closingRuntime = true
+            var runtimeStatus = "stopped"
             stopCollectors()
             pauseSharedArSession()
             runCatching { captureSession?.stopRepeating() }
             val videoBytes =
                 runCatching { videoRecorder?.stopAndRelease() ?: session.videoFile.length() }
-                    .getOrElse { session.videoFile.length() }
+                    .getOrElse {
+                        runtimeStatus = "error"
+                        session.videoFile.length()
+                    }
             runCatching { captureSession?.abortCaptures() }
-            captureSession?.close()
+                .onFailure { runtimeStatus = "error" }
+            runCatching { captureSession?.close() }
+                .onFailure { runtimeStatus = "error" }
             captureSession = null
-            cameraDevice?.close()
+            runCatching { cameraDevice?.close() }
+                .onFailure { runtimeStatus = "error" }
             cameraDevice = null
             runCatching { sharedArSession?.close() }
+                .onFailure { runtimeStatus = "error" }
             sharedArSession = null
             videoRecorder = null
+            poseSampler = null
+            sharedCameraHostResumed = false
+            sharedCameraResumed = false
             closingRuntime = false
             sessionManager.appendCollectorStatus(session, "video", if (videoBytes > 0L) "captured" else "empty_output")
             sessionManager.appendCollectorStatus(session, "sharedCamera", "closed")
             sessionManager.appendCollectorStatus(session, "camera2", "closed")
+            if (runtimeStatus == "error") {
+                sessionManager.appendCollectorStatus(session, "sharedCamera", "closed_with_error")
+            }
             sessionManager.appendVideoEvent(
                 session,
                 VideoEvent(
@@ -799,9 +814,10 @@ class RecordingCoordinator(
                     elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos(),
                     bytesRecorded = videoBytes,
                     durationNanos = (SystemClock.elapsedRealtimeNanos() - session.timebase.sessionStartElapsedRealtimeNanos).coerceAtLeast(0L),
+                    cause = if (runtimeStatus == "error") "runtime_close_error" else null,
                 ),
             )
-            return mapOf("runtimeStatus" to "stopped")
+            return mapOf("runtimeStatus" to runtimeStatus)
         }
 
         private fun failSharedCameraSession(session: RecordingSession, message: String) {
@@ -811,8 +827,27 @@ class RecordingCoordinator(
             closeRuntime(session)
             sessionManager.finalizeManifest(session, "finalized_with_error")
             sessionManager.closeSessionOutputs(session)
-            statusListener(SessionUiState(false, session, message))
+            restoreFrozenPreview(
+                session = session,
+                statusText = "$message Frozen preview restored.",
+                toastMessage = null,
+            )
+        }
+
+        private fun restoreFrozenPreview(
+            session: RecordingSession,
+            statusText: String,
+            toastMessage: String?,
+        ) {
             startFrozenPreview(lastPreviewCameraSelector)
+            statusListener(
+                SessionUiState(
+                    recording = false,
+                    session = session,
+                    statusText = statusText,
+                    toastMessage = toastMessage,
+                ),
+            )
         }
     }
 

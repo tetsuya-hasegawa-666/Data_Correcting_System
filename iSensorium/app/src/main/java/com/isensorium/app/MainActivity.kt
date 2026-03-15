@@ -1,6 +1,7 @@
 package com.isensorium.app
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.SystemClock
@@ -17,6 +18,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var recordingCoordinator: RecordingCoordinator
+    private val preferences by lazy { getSharedPreferences("guarded_upstream_trial", Context.MODE_PRIVATE) }
     private var currentSession: RecordingSession? = null
 
     private val permissionLauncher =
@@ -36,13 +38,7 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        recordingCoordinator = RecordingCoordinator(
-            context = applicationContext,
-            lifecycleOwner = this,
-            previewView = binding.previewView,
-            arCoreGlSurfaceView = binding.arCoreGlSurfaceView,
-            statusListener = ::onSessionStateChanged,
-        )
+        recordingCoordinator = buildRecordingCoordinator()
 
         binding.recordButton.setOnClickListener {
             if (recordingCoordinator.isRecording()) {
@@ -57,6 +53,27 @@ class MainActivity : AppCompatActivity() {
 
         binding.refreshButton.setOnClickListener {
             refreshLatestSessionDetails()
+        }
+        binding.guardedRouteSwitch.isChecked = prefersGuardedReplacementRoute()
+        binding.guardedRouteSwitch.isEnabled = BuildConfig.CORECAMERA_RUNTIME_ENABLED
+        binding.guardedRouteSwitch.setOnCheckedChangeListener { _, isChecked ->
+            if (recordingCoordinator.isRecording()) {
+                binding.guardedRouteSwitch.isChecked = !isChecked
+                Toast.makeText(this, "Stop the current session before changing camera route", Toast.LENGTH_SHORT).show()
+                return@setOnCheckedChangeListener
+            }
+            preferences.edit().putBoolean(PREF_GUARDED_ROUTE, isChecked).apply()
+            recordingCoordinator.shutdown()
+            recordingCoordinator = buildRecordingCoordinator()
+            renderModeState(readRecordingConfig())
+            currentSession = null
+            refreshSessionDetails(null)
+            ensurePermissionsAndStartPreview()
+            Toast.makeText(
+                this,
+                if (isChecked) "Guarded replacement route selected" else "Frozen route selected",
+                Toast.LENGTH_SHORT,
+            ).show()
         }
         renderState("Ready. Start mRL-0-1 session initialization.")
         renderModeState(readRecordingConfig())
@@ -101,6 +118,26 @@ class MainActivity : AppCompatActivity() {
             ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
         }
 
+    private fun buildRecordingCoordinator(): RecordingCoordinator =
+        RecordingCoordinator(
+            context = applicationContext,
+            lifecycleOwner = this,
+            previewView = binding.previewView,
+            arCoreGlSurfaceView = binding.arCoreGlSurfaceView,
+            statusListener = ::onSessionStateChanged,
+            requestedRouteValue = selectedRoute().routeId,
+        )
+
+    private fun selectedRoute(): CameraStackRoute =
+        if (BuildConfig.CORECAMERA_RUNTIME_ENABLED && prefersGuardedReplacementRoute()) {
+            CameraStackRoute.CORECAMERA_SHARED_CAMERA_TRIAL
+        } else {
+            CameraStackRoute.FROZEN_CAMERAX_ARCORE
+        }
+
+    private fun prefersGuardedReplacementRoute(): Boolean =
+        preferences.getBoolean(PREF_GUARDED_ROUTE, false)
+
     private fun startCamera() {
         recordingCoordinator.startPreview(CameraSelector.DEFAULT_BACK_CAMERA)
     }
@@ -136,9 +173,9 @@ class MainActivity : AppCompatActivity() {
     private fun renderModeState(config: RecordingConfig) {
         binding.recordingModeText.text =
             if (config.bleEnabled || config.arCoreEnabled) {
-                "Mode: Video + IMU + GNSS always on. BLE / ARCore optional low-rate confirmation."
+                "Mode: route=${selectedRoute().routeId}, Video + IMU + GNSS always on. BLE / ARCore optional low-rate confirmation."
             } else {
-                "Mode: Video + IMU + GNSS. BLE / ARCore disabled."
+                "Mode: route=${selectedRoute().routeId}, Video + IMU + GNSS. BLE / ARCore disabled."
             }
     }
 
@@ -230,6 +267,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     companion object {
+        private const val PREF_GUARDED_ROUTE = "pref_guarded_route"
+
         private val requiredPermissions = arrayOf(
             Manifest.permission.CAMERA,
             Manifest.permission.RECORD_AUDIO,

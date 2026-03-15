@@ -58,6 +58,13 @@
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
 
                 <com.google.android.material.materialswitch.MaterialSwitch
+                    android:id="@+id/guardedRouteSwitch"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/guarded_route_switch" />
+
+                <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/bleSwitch"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

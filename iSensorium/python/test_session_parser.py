@@ -29,14 +29,14 @@ class SessionParserAdditiveFieldTest(unittest.TestCase):
                 "sessionAdapter": {
                     "adapterSeamId": "shared-camera-session-adapter",
                     "requestedRoute": "corecamera_shared_camera_trial",
-                    "activeRoute": "frozen_camerax_arcore",
-                    "cutoverGateStatus": "HOLD_FROZEN_ROUTE",
+                    "activeRoute": "corecamera_shared_camera_trial",
+                    "cutoverGateStatus": "READY_FOR_RUNTIME_WIRING",
                 },
                 "guardedUpstreamTrial": {
                     "status": "PREPARED",
                     "requestedRoute": "corecamera_shared_camera_trial",
-                    "activeRoute": "frozen_camerax_arcore",
-                    "cutoverGateStatus": "HOLD_FROZEN_ROUTE",
+                    "activeRoute": "corecamera_shared_camera_trial",
+                    "cutoverGateStatus": "READY_FOR_RUNTIME_WIRING",
                     "upstreamTrialPackageStatus": "READY",
                 },
             }
@@ -51,6 +51,11 @@ class SessionParserAdditiveFieldTest(unittest.TestCase):
             )
             (session_dir / "gnss.csv").write_text(
                 "provider,elapsed_realtime_ns,wall_time_ms,latitude,longitude,altitude,accuracy_m,speed_mps,bearing_deg,vertical_accuracy_m\ngps,2003,1003,0,0,0,1,0,0,1\n",
+                encoding="utf-8",
+            )
+            (session_dir / "video_events.jsonl").write_text(
+                '{"type":"replacement_runtime_recording_start","eventTimeMillis":1005,"elapsedRealtimeNanos":2005,"bytesRecorded":0,"durationNanos":0}\n'
+                '{"type":"replacement_runtime_recording_finalize","eventTimeMillis":1010,"elapsedRealtimeNanos":2010,"bytesRecorded":2048,"durationNanos":8}\n',
                 encoding="utf-8",
             )
             (session_dir / "ble_scan.jsonl").write_text('{"elapsedRealtimeNanos":2004}\n', encoding="utf-8")
