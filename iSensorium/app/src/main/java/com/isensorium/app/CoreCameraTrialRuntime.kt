@@ -19,8 +19,10 @@ import android.opengl.EGLSurface
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
 import android.os.Handler
+import android.os.SystemClock
 import android.util.Size
 import android.view.Surface
+import android.util.Log
 import com.google.ar.core.Session
 import java.io.File
 import java.io.ByteArrayOutputStream
@@ -89,12 +91,14 @@ class TrialCpuImageVideoRecorder(
     private val callbackHandler: Handler,
     private val targetFrameRate: Int = 10,
 ) {
+    private val logTag = "isensorium-preview"
     private val minFrameIntervalNs = 1_000_000_000L / targetFrameRate
     private val frames = mutableListOf<VideoFrame>()
     private val frameLock = Any()
     private var previewListener: ((Bitmap, Long) -> Unit)? = null
     private var previewFrameIntervalNs: Long = 200_000_000L
     private var lastPreviewTimestampNs = Long.MIN_VALUE
+    private var lastPreviewLogNs = Long.MIN_VALUE
 
     private var imageReader: ImageReader? = null
     private var recording = false
@@ -139,6 +143,7 @@ class TrialCpuImageVideoRecorder(
         val fps = previewFps.coerceAtLeast(1)
         previewFrameIntervalNs = 1_000_000_000L / fps
         lastPreviewTimestampNs = Long.MIN_VALUE
+        lastPreviewLogNs = Long.MIN_VALUE
     }
 
     fun stopAndRelease(): Long {
@@ -200,9 +205,22 @@ class TrialCpuImageVideoRecorder(
         ) {
             return
         }
-        val bitmap = runCatching { yuv420888ToBitmap(image) }.getOrNull() ?: return
+        val bitmap = runCatching { yuv420888ToBitmap(image) }.getOrNull()
+        if (bitmap == null) {
+            val nowNs = SystemClock.elapsedRealtimeNanos()
+            if (lastPreviewLogNs == Long.MIN_VALUE || nowNs - lastPreviewLogNs > 2_000_000_000L) {
+                lastPreviewLogNs = nowNs
+                Log.d(logTag, "preview frame dropped: bitmap decode failed")
+            }
+            return
+        }
         lastPreviewTimestampNs = timestampNs
         listener.invoke(bitmap, timestampNs)
+        val nowNs = SystemClock.elapsedRealtimeNanos()
+        if (lastPreviewLogNs == Long.MIN_VALUE || nowNs - lastPreviewLogNs > 2_000_000_000L) {
+            lastPreviewLogNs = nowNs
+            Log.d(logTag, "preview frame emitted: ${bitmap.width}x${bitmap.height}")
+        }
     }
 
     private fun encodeFrames(capturedFrames: List<VideoFrame>) {

@@ -32,6 +32,7 @@ import android.view.Surface
 import android.view.View
 import android.widget.ImageView
 import android.graphics.Bitmap
+import android.util.Log
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -423,12 +424,16 @@ class RecordingCoordinator(
     ) {
         @Volatile
         private var active = false
+        private var firstFrame = true
+        private val logTag = "isensorium-preview"
 
         fun start() {
             active = true
+            firstFrame = true
             imageView.post {
                 imageView.visibility = View.VISIBLE
             }
+            Log.d(logTag, "preview renderer started")
         }
 
         fun stop() {
@@ -437,12 +442,17 @@ class RecordingCoordinator(
                 imageView.setImageDrawable(null)
                 imageView.visibility = View.GONE
             }
+            Log.d(logTag, "preview renderer stopped")
         }
 
         fun onFrame(bitmap: Bitmap, timestampNs: Long) {
             if (!active) return
             imageView.post {
                 if (!active) return@post
+                if (firstFrame) {
+                    firstFrame = false
+                    Log.d(logTag, "preview renderer first frame ${bitmap.width}x${bitmap.height}")
+                }
                 imageView.setImageBitmap(bitmap)
             }
         }
