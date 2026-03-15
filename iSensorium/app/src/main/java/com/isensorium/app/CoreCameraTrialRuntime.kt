@@ -2,9 +2,6 @@ package com.isensorium.app
 
 import android.graphics.ImageFormat
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
-import android.graphics.Rect
-import android.graphics.YuvImage
 import android.media.Image
 import android.media.ImageReader
 import android.media.MediaCodec
@@ -25,7 +22,6 @@ import android.view.Surface
 import android.util.Log
 import com.google.ar.core.Session
 import java.io.File
-import java.io.ByteArrayOutputStream
 import java.nio.ByteBuffer
 
 enum class TrialSharedCameraLifecycleState {
@@ -335,85 +331,45 @@ class TrialCpuImageVideoRecorder(
     private fun yuv420888ToBitmap(image: Image): Bitmap? {
         val width = image.width
         val height = image.height
-        val nv21 = yuv420888ToNv21(image) ?: return null
-        val yuvImage = YuvImage(nv21, ImageFormat.NV21, width, height, null)
-        val out = ByteArrayOutputStream()
-        if (!yuvImage.compressToJpeg(Rect(0, 0, width, height), 60, out)) {
-            return null
-        }
-        val bytes = out.toByteArray()
-        return BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-    }
-
-    private fun yuv420888ToNv21(image: Image): ByteArray? {
-        val width = image.width
-        val height = image.height
         val yPlane = image.planes.getOrNull(0) ?: return null
         val uPlane = image.planes.getOrNull(1) ?: return null
         val vPlane = image.planes.getOrNull(2) ?: return null
 
-        val ySize = width * height
-        val uvSize = width * height / 2
-        val nv21 = ByteArray(ySize + uvSize)
-
         val yBuffer = yPlane.buffer.duplicate()
-        val yRowStride = yPlane.rowStride
-        val yPixelStride = yPlane.pixelStride
-        var pos = 0
-        if (yPixelStride == 1 && yRowStride == width) {
-            yBuffer.get(nv21, 0, ySize)
-            pos = ySize
-        } else {
-            val row = ByteArray(yRowStride)
-            for (rowIndex in 0 until height) {
-                yBuffer.position(rowIndex * yRowStride)
-                yBuffer.get(row, 0, yRowStride)
-                var col = 0
-                while (col < width) {
-                    nv21[pos++] = row[col * yPixelStride]
-                    col++
-                }
-            }
-        }
-
-        val chromaHeight = height / 2
-        val chromaWidth = width / 2
         val uBuffer = uPlane.buffer.duplicate()
         val vBuffer = vPlane.buffer.duplicate()
+        val yRowStride = yPlane.rowStride
+        val yPixelStride = yPlane.pixelStride
         val uvRowStride = uPlane.rowStride
         val uvPixelStride = uPlane.pixelStride
 
-        if (uvPixelStride == 2 && uPlane.rowStride == vPlane.rowStride) {
-            for (row in 0 until chromaHeight) {
-                val rowOffset = row * uvRowStride
-                var col = 0
-                while (col < chromaWidth) {
-                    val uvOffset = rowOffset + col * uvPixelStride
-                    nv21[pos++] = vBuffer.get(uvOffset)
-                    nv21[pos++] = uBuffer.get(uvOffset)
-                    col++
-                }
-            }
-            return nv21
-        }
-
-        val uRow = ByteArray(uvRowStride)
-        val vRow = ByteArray(uvRowStride)
-        for (rowIndex in 0 until chromaHeight) {
-            uBuffer.position(rowIndex * uvRowStride)
-            vBuffer.position(rowIndex * uvRowStride)
-            uBuffer.get(uRow, 0, uvRowStride)
-            vBuffer.get(vRow, 0, uvRowStride)
+        val out = IntArray(width * height)
+        var outIndex = 0
+        var row = 0
+        while (row < height) {
+            val yRowOffset = row * yRowStride
+            val uvRowOffset = (row / 2) * uvRowStride
             var col = 0
-            while (col < chromaWidth) {
-                val uvIndex = col * uvPixelStride
-                nv21[pos++] = vRow[uvIndex]
-                nv21[pos++] = uRow[uvIndex]
+            while (col < width) {
+                val y = (yBuffer.get(yRowOffset + col * yPixelStride).toInt() and 0xFF)
+                val uvOffset = uvRowOffset + (col / 2) * uvPixelStride
+                val u = (uBuffer.get(uvOffset).toInt() and 0xFF) - 128
+                val v = (vBuffer.get(uvOffset).toInt() and 0xFF) - 128
+                val c = y - 16
+                val r = (298 * c + 409 * v + 128) shr 8
+                val g = (298 * c - 100 * u - 208 * v + 128) shr 8
+                val b = (298 * c + 516 * u + 128) shr 8
+                val cr = r.coerceIn(0, 255)
+                val cg = g.coerceIn(0, 255)
+                val cb = b.coerceIn(0, 255)
+                out[outIndex++] = (0xFF shl 24) or (cr shl 16) or (cg shl 8) or cb
                 col++
             }
+            row++
         }
-        return nv21
+        return Bitmap.createBitmap(out, width, height, Bitmap.Config.ARGB_8888)
     }
+
 
     private fun copyPlane(
         plane: Image.Plane,
