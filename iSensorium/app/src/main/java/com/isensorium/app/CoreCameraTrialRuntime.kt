@@ -338,7 +338,7 @@ class TrialCpuImageVideoRecorder(
         val uvSize = width * height / 2
         val nv21 = ByteArray(ySize + uvSize)
 
-        val yBuffer = yPlane.buffer
+        val yBuffer = yPlane.buffer.duplicate()
         val yRowStride = yPlane.rowStride
         val yPixelStride = yPlane.pixelStride
         var pos = 0
@@ -360,8 +360,8 @@ class TrialCpuImageVideoRecorder(
 
         val chromaHeight = height / 2
         val chromaWidth = width / 2
-        val uBuffer = uPlane.buffer
-        val vBuffer = vPlane.buffer
+        val uBuffer = uPlane.buffer.duplicate()
+        val vBuffer = vPlane.buffer.duplicate()
         val uvRowStride = uPlane.rowStride
         val uvPixelStride = uPlane.pixelStride
 
