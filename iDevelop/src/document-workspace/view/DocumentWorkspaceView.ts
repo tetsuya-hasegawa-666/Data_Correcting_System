@@ -1,8 +1,14 @@
-import type {
-  DocumentDirectoryGroup,
-  DocumentWorkspaceState
-} from "../controller/DocumentWorkspaceController";
+import type { DocumentWorkspaceState } from "../controller/DocumentWorkspaceController";
 import type { DocumentRecord } from "../model/DocumentRecord";
+
+interface TreeNode {
+  id: string;
+  kind: "directory" | "file";
+  label: string;
+  path: string;
+  depth: number;
+  document?: DocumentRecord;
+}
 
 export class DocumentWorkspaceView {
   public constructor(private readonly rootElement: HTMLElement) {}
@@ -11,38 +17,21 @@ export class DocumentWorkspaceView {
     const selectedDocumentMarkup = state.selectedDocument
       ? this.renderSelectedDocument(state.selectedDocument, state)
       : "<p>No document is selected.</p>";
-    const resultMarkup = state.directoryGroups
-      .map((group) => this.renderDirectoryGroup(group, state))
+    const treeMarkup = this.buildTreeNodes(state.documents, state)
+      .map((node) => this.renderTreeNode(node, state))
       .join("");
-    const modeLabel = state.isReadOnly ? "Read-only / 読み取り専用" : "Editable / 編集可能";
-    const sourceGuidance = state.isReadOnly
-      ? `
-        <div class="unlock-guidance" data-role="unlock-document-guidance">
-          <p><strong>解除条件:</strong> local draft を開始すると、この一覧を現在の表示内容で複製し、以後の編集はブラウザ内の下書きにだけ反映します。</p>
-          <p><strong>何が起こるか:</strong> original source remains unchanged。safe apply を明示的に進めるまで元ソースは書き換えません。</p>
-          <button class="document-item is-selected" data-role="unlock-document-editing" type="button">local draft を開始</button>
-        </div>
-      `
-      : `
-        <div class="unlock-guidance">
-          <p>現在は local draft で編集中です。保存は下書きへ反映され、safe apply までは元ソースを書き換えません。</p>
-          <p>original source remains unchanged until safe apply.</p>
-        </div>
-      `;
 
     this.rootElement.innerHTML = `
-      <div class="dashboard-shell document-dashboard-shell">
-        <section class="workspace-panel document-list-panel">
+      <div class="dashboard-shell document-dashboard-shell" data-role="document-layout" data-layout="explorer-preview">
+        <section class="workspace-panel document-explorer-panel" data-role="explorer-panel">
           <div class="workspace-header">
             <div>
               <p class="eyebrow">文書</p>
-              <h1>文書一覧と検索</h1>
+              <h1>検索と Explorer</h1>
             </div>
           </div>
-          <p>ディレクトリ単位で文書をまとめて表示します。検索はタイトル、パス、本文、タグを対象にします。</p>
+          <p>文字列検索とディレクトリツリーで文書を探します。</p>
           <p class="result-count">読み込みポリシー: ${this.escapeHtml(state.sourcePolicy)}</p>
-          <p class="result-count" data-role="document-mode-note">${modeLabel}</p>
-          ${sourceGuidance}
           <input
             class="search-input"
             data-role="search-input"
@@ -55,70 +44,12 @@ export class DocumentWorkspaceView {
             <p class="result-count" data-role="result-count">文書 ${state.documents.length} 件</p>
             <p class="result-count" data-role="directory-group-count">ディレクトリ ${state.directoryGroups.length} 件</p>
           </div>
-          <div class="document-list">${resultMarkup}</div>
+          <div class="document-tree-scroll">
+            <div class="document-tree" data-role="explorer-tree">${treeMarkup}</div>
+          </div>
         </section>
         <section class="preview-panel document-preview-panel">${selectedDocumentMarkup}</section>
       </div>
-    `;
-  }
-
-  private renderDirectoryGroup(
-    group: DocumentDirectoryGroup,
-    state: DocumentWorkspaceState
-  ): string {
-    const itemMarkup = group.documents
-      .map((document) =>
-        this.renderDocumentItem(
-          document,
-          document.id === state.selectedDocument?.id,
-          state.selectedBundle.some((selected) => selected.id === document.id)
-        )
-      )
-      .join("");
-    const modeClass = state.isReadOnly ? "mode-read-only" : "mode-editable";
-    const modeLabel = state.isReadOnly ? "Read-only / 読み取り専用" : "Editable / 編集可能";
-
-    return `
-      <section class="directory-group" data-role="directory-group">
-        <div class="directory-group-header">
-          <p class="eyebrow">ディレクトリ</p>
-          <h3 data-role="directory-group-title">${this.escapeHtml(group.directoryPath)}</h3>
-          <p class="result-count">${group.documents.length} 件</p>
-        </div>
-        <div class="directory-group-status ${modeClass}" data-role="directory-group-status">
-          <span class="directory-group-status-label" data-role="directory-group-status-label">${modeLabel}</span>
-        </div>
-        <div class="directory-group-items">${itemMarkup}</div>
-      </section>
-    `;
-  }
-
-  private renderDocumentItem(
-    document: DocumentRecord,
-    isSelected: boolean,
-    isInBundle: boolean
-  ): string {
-    const fileName = this.resolveFileName(document.path);
-
-    return `
-      <button
-        class="document-item ${isSelected ? "is-selected" : ""}"
-        data-role="document-item"
-        data-document-id="${this.escapeAttribute(document.id)}"
-        type="button"
-      >
-        <p class="eyebrow">${this.escapeHtml(document.tags.join(" / "))}</p>
-        <h4>${this.escapeHtml(document.title)}</h4>
-        <p>${this.escapeHtml(fileName)}</p>
-      </button>
-      <button
-        class="document-item ${isInBundle ? "is-selected" : ""}"
-        data-role="toggle-document-bundle"
-        data-document-id="${this.escapeAttribute(document.id)}"
-        type="button"
-      >
-        ${isInBundle ? "相談対象から外す" : "相談対象に追加"}
-      </button>
     `;
   }
 
@@ -126,21 +57,28 @@ export class DocumentWorkspaceView {
     const tagMarkup = document.tags
       .map((tag) => `<span class="tag">${this.escapeHtml(tag)}</span>`)
       .join("");
-
-    const editorMarkup = state.isReadOnly
-      ? '<p class="result-count">読み取り専用のため、この画面では編集できません。local draft を開始すると編集できます。</p>'
+    const draftButtonMarkup = state.isReadOnly
+      ? `
+        <div class="unlock-guidance" data-role="unlock-document-guidance">
+          <p><strong>解除条件:</strong> Draft を開始すると、現在の read-only 文書を local draft に複製して編集可能にします。</p>
+          <p><strong>何が起こるか:</strong> original source remains unchanged until safe apply.</p>
+          <button class="document-item is-selected" data-role="unlock-document-editing" type="button">Draft を開始</button>
+        </div>
+      `
       : state.editor.isEditing
         ? `
           <form data-role="document-edit-form">
             <textarea class="document-editor" data-role="document-editor" name="document-body">${this.escapeHtml(state.editor.draftBody)}</textarea>
             <div class="editor-actions">
-              <button class="document-item is-selected" data-role="save-document" data-document-id="${this.escapeAttribute(document.id)}" type="submit">保存</button>
+              <button class="document-item is-selected" data-role="save-document" data-document-id="${this.escapeAttribute(document.id)}" type="submit">Draft を保存</button>
               <button class="document-item" data-role="cancel-document" data-document-id="${this.escapeAttribute(document.id)}" type="button">キャンセル</button>
             </div>
           </form>
         `
         : `
-          <button class="document-item" data-role="edit-document" data-document-id="${this.escapeAttribute(document.id)}" type="button">編集</button>
+          <div class="editor-actions">
+            <button class="document-item" data-role="edit-document" data-document-id="${this.escapeAttribute(document.id)}" type="button">Draft を編集</button>
+          </div>
         `;
 
     return `
@@ -149,6 +87,12 @@ export class DocumentWorkspaceView {
       <p class="document-path">${this.escapeHtml(document.path)}</p>
       <div class="tag-row">${tagMarkup}</div>
       <section class="directory-group">
+        <div class="preview-action-guide" data-role="preview-action-guide">
+          <p class="eyebrow">相談と Draft の使い分け</p>
+          <p><strong>相談:</strong> selected bundle を読み、Summary / Evidence / Next Action を返します。内容は変えません。</p>
+          <p><strong>Draft:</strong> local draft を作り、文書本文の編集と保存を行います。safe apply 前は元ソースを変えません。</p>
+          <p>original source remains unchanged until safe apply.</p>
+        </div>
         <p class="eyebrow">Consultation Bundle</p>
         <p data-role="document-bundle-count">選択 ${state.selectedBundle.length} 件</p>
         <ul data-role="document-bundle-list">
@@ -193,9 +137,98 @@ export class DocumentWorkspaceView {
         }
       </section>
       ${state.editor.saveMessage ? `<p class="result-count" data-role="save-message">${this.escapeHtml(state.editor.saveMessage)}</p>` : ""}
-      ${editorMarkup}
+      ${draftButtonMarkup}
       <pre class="document-body" data-role="document-body">${this.escapeHtml(document.body)}</pre>
     `;
+  }
+
+  private renderTreeNode(node: TreeNode, state: DocumentWorkspaceState): string {
+    const indent = node.depth * 18;
+
+    if (node.kind === "directory") {
+      return `
+        <div
+          class="tree-node tree-node-directory"
+          data-role="tree-node"
+          data-kind="directory"
+          data-path="${this.escapeAttribute(node.path)}"
+          style="padding-left: ${indent}px"
+        >
+          <span class="tree-glyph">▸</span>
+          <span>${this.escapeHtml(node.label)}</span>
+        </div>
+      `;
+    }
+
+    const document = node.document!;
+    const isSelected = document.id === state.selectedDocument?.id;
+    const isInBundle = state.selectedBundle.some((selected) => selected.id === document.id);
+
+    return `
+      <div class="tree-node-row" style="padding-left: ${indent}px">
+        <button
+          class="tree-node tree-node-file ${isSelected ? "is-selected" : ""}"
+          data-role="tree-node"
+          data-kind="file"
+          data-path="${this.escapeAttribute(node.path)}"
+          data-document-id="${this.escapeAttribute(document.id)}"
+          type="button"
+        >
+          <span class="tree-glyph">•</span>
+          <span>${this.escapeHtml(document.title)}</span>
+        </button>
+        <button
+          class="tree-toggle ${isInBundle ? "is-selected" : ""}"
+          data-role="toggle-document-bundle"
+          data-document-id="${this.escapeAttribute(document.id)}"
+          type="button"
+        >
+          ${isInBundle ? "相談から外す" : "相談へ追加"}
+        </button>
+      </div>
+    `;
+  }
+
+  private buildTreeNodes(documents: DocumentRecord[], state: DocumentWorkspaceState): TreeNode[] {
+    const nodes: TreeNode[] = [];
+    const seenDirectories = new Set<string>();
+
+    for (const document of documents) {
+      const directoryParts = document.path.split("/").slice(0, -1);
+
+      directoryParts.forEach((_, index) => {
+        const path = directoryParts.slice(0, index + 1).join("/");
+        if (seenDirectories.has(path)) {
+          return;
+        }
+
+        seenDirectories.add(path);
+        nodes.push({
+          id: `dir:${path}`,
+          kind: "directory",
+          label: directoryParts[index] ?? path,
+          path,
+          depth: index
+        });
+      });
+
+      nodes.push({
+        id: document.id,
+        kind: "file",
+        label: document.title,
+        path: document.path,
+        depth: directoryParts.length,
+        document
+      });
+    }
+
+    return nodes.sort((left, right) => {
+      if (left.path === right.path) {
+        return left.kind.localeCompare(right.kind);
+      }
+
+      return left.path.localeCompare(right.path, "ja");
+    });
   }
 
   private escapeHtml(value: string): string {
@@ -209,10 +242,5 @@ export class DocumentWorkspaceView {
 
   private escapeAttribute(value: string): string {
     return this.escapeHtml(value);
-  }
-
-  private resolveFileName(path: string): string {
-    const segments = path.split("/");
-    return segments[segments.length - 1] ?? path;
   }
 }

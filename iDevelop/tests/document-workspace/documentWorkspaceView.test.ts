@@ -19,6 +19,13 @@ const editableState: DocumentWorkspaceState = {
       path: "docs/process/research_operation.md",
       body: "BDD and TDD operating rules.",
       tags: ["process"]
+    },
+    {
+      id: "doc-3",
+      title: "Guide",
+      path: "docs/process/sub/guide.md",
+      body: "Nested folder guide.",
+      tags: ["process"]
     }
   ],
   directoryGroups: [
@@ -45,6 +52,18 @@ const editableState: DocumentWorkspaceState = {
           tags: ["process"]
         }
       ]
+    },
+    {
+      directoryPath: "docs/process/sub",
+      documents: [
+        {
+          id: "doc-3",
+          title: "Guide",
+          path: "docs/process/sub/guide.md",
+          body: "Nested folder guide.",
+          tags: ["process"]
+        }
+      ]
     }
   ],
   selectedDocument: {
@@ -57,7 +76,7 @@ const editableState: DocumentWorkspaceState = {
   sourcePolicy: "Seed bootstrap + in-app save",
   isReadOnly: false,
   editor: {
-    isEditing: true,
+    isEditing: false,
     draftBody: "BDD and TDD operating rules.",
     lastSavedBody: "BDD and TDD operating rules.",
     saveMessage: "Saved."
@@ -93,51 +112,37 @@ const editableState: DocumentWorkspaceState = {
 };
 
 describe("DocumentWorkspaceView", () => {
-  it("renders the current query, grouped directory list, and selected document preview", () => {
+  it("renders explorer search on the left and preview actions on the right", () => {
     const container = document.createElement("section");
     const view = new DocumentWorkspaceView(container);
 
     view.render(editableState);
 
+    expect(container.querySelector("[data-role='document-layout']")?.getAttribute("data-layout")).toBe(
+      "explorer-preview"
+    );
     expect(container.querySelector("[data-role='search-input']")?.getAttribute("value")).toBe(
       "bdd"
     );
-    expect(container.querySelector("[data-role='result-count']")?.textContent).toContain("2");
-    expect(container.querySelector("[data-role='directory-group-count']")?.textContent).toContain(
-      "2"
+    expect(container.querySelector("[data-role='explorer-tree']")).not.toBeNull();
+    expect(container.querySelectorAll("[data-role='tree-node'][data-kind='directory']")).toHaveLength(
+      4
     );
-    expect(container.querySelector("[data-role='directory-group-title']")?.textContent).toContain(
-      "docs/artifact"
+    expect(container.querySelector("[data-role='tree-node'][data-path='docs/process/sub']"))
+      .not.toBeNull();
+    expect(container.querySelector("[data-role='tree-node'][data-kind='file'][data-document-id='doc-3']"))
+      .not.toBeNull();
+    expect(container.querySelector("[data-role='preview-action-guide']")?.textContent).toContain(
+      "相談"
     );
-    expect(
-      container.querySelector("[data-role='directory-group-status-label']")?.textContent
-    ).toContain("Editable");
-    expect(container.querySelector("[data-role='document-title']")?.textContent).toContain(
-      "Research Operation"
+    expect(container.querySelector("[data-role='preview-action-guide']")?.textContent).toContain(
+      "Draft"
     );
-    expect(container.querySelector("[data-role='document-body']")?.textContent).toContain("BDD");
-    expect(
-      (container.querySelector("[data-role='document-editor']") as HTMLTextAreaElement | null)?.value
-    ).toContain("BDD");
-    expect(container.querySelector("[data-role='save-message']")?.textContent).toContain("Saved.");
-    expect(container.querySelector("[data-role='document-bundle-count']")?.textContent).toContain(
-      "2"
-    );
-    expect(container.querySelector("[data-role='consultation-focus-input']")?.textContent).toContain(
-      "Explain"
-    );
-    expect(
-      container.querySelector("[data-role='document-consultation-response']")?.textContent
-    ).toContain("Summary");
-    expect(container.querySelector("[data-role='consultation-capabilities']")?.textContent).toContain(
-      "Summary"
-    );
-    expect(container.querySelector("[data-role='consultation-capabilities']")?.textContent).toContain(
-      "Next Action"
-    );
+    expect(container.querySelector("[data-role='consultation-focus-input']")).not.toBeNull();
+    expect(container.querySelector("[data-role='edit-document']")).not.toBeNull();
   });
 
-  it("shows read-only guidance and local draft unlock controls for live documents", () => {
+  it("shows read-only unlock and draft guidance in the preview pane", () => {
     const container = document.createElement("section");
     const view = new DocumentWorkspaceView(container);
 
@@ -153,14 +158,16 @@ describe("DocumentWorkspaceView", () => {
       }
     });
 
-    expect(container.textContent).toContain("Read-only");
-    expect(
-      container.querySelector("[data-role='directory-group-status-label']")?.textContent
-    ).toContain("Read-only");
-    expect(container.querySelector("[data-role='edit-document']")).toBeNull();
+    expect(container.querySelector("[data-role='unlock-document-guidance']")).not.toBeNull();
     expect(container.querySelector("[data-role='unlock-document-editing']")).not.toBeNull();
-    expect(container.querySelector("[data-role='unlock-document-guidance']")?.textContent).toContain(
-      "local draft"
+    expect(container.querySelector("[data-role='preview-action-guide']")?.textContent).toContain(
+      "相談"
+    );
+    expect(container.querySelector("[data-role='preview-action-guide']")?.textContent).toContain(
+      "Draft"
+    );
+    expect(container.querySelector("[data-role='explorer-panel']")?.textContent).not.toContain(
+      "解除条件"
     );
   });
 });

@@ -167,6 +167,10 @@ body {
   min-height: 70vh;
 }
 
+.document-dashboard-shell {
+  grid-template-columns: minmax(220px, 25%) minmax(0, 75%);
+}
+
 .workspace-panel,
 .preview-panel,
 .data-workspace {
@@ -263,9 +267,67 @@ body {
   margin: 0 0 8px;
 }
 
-.document-list {
+.document-explorer-panel {
+  overflow: hidden;
+}
+
+.document-tree-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  padding-bottom: 8px;
+}
+
+.document-tree {
+  min-width: max-content;
   display: grid;
-  gap: 14px;
+  gap: 8px;
+}
+
+.tree-node-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: max-content;
+}
+
+.tree-node,
+.tree-toggle {
+  border: 1px solid rgba(19, 34, 56, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.tree-node {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 12px;
+}
+
+.tree-node-directory {
+  color: #4d627c;
+}
+
+.tree-node-file {
+  cursor: pointer;
+}
+
+.tree-node-file.is-selected,
+.tree-toggle.is-selected {
+  border-color: #23547e;
+  box-shadow: 0 10px 24px rgba(35, 84, 126, 0.12);
+}
+
+.tree-toggle {
+  white-space: nowrap;
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.tree-glyph {
+  width: 12px;
+  color: #23547e;
 }
 
 .directory-group {
@@ -274,6 +336,16 @@ body {
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.7);
   min-width: 0;
+}
+
+.preview-action-guide {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(19, 34, 56, 0.08);
+  background: rgba(35, 84, 126, 0.06);
 }
 
 .directory-group + .directory-group {
