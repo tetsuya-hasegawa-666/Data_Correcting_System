@@ -14,7 +14,7 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         buildConfigField("String", "CAMERA_STACK_ROUTE", "\"frozen_camerax_arcore\"")
-        buildConfigField("boolean", "CORECAMERA_RUNTIME_ENABLED", "false")
+        buildConfigField("boolean", "CORECAMERA_RUNTIME_ENABLED", "true")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

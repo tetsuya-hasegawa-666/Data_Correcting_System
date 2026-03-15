@@ -9,16 +9,26 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.hardware.camera2.CameraCaptureSession
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraDevice
+import android.hardware.camera2.CameraManager
+import android.hardware.camera2.CaptureRequest
+import android.hardware.camera2.CaptureResult
+import android.hardware.camera2.TotalCaptureResult
 import android.location.Location
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.Handler
+import android.os.HandlerThread
 import android.os.Looper
 import android.os.SystemClock
 import android.opengl.GLES11Ext
 import android.opengl.GLES20
 import android.opengl.GLSurfaceView
+import android.util.Size
+import android.view.Surface
 import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
@@ -44,6 +54,7 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.ar.core.ArCoreApk
 import com.google.ar.core.Config
+import com.google.ar.core.Session
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -89,7 +100,13 @@ class RecordingCoordinator(
     private var lastStatusUiUpdateElapsedNs: Long = 0L
     private var recordingConfig: RecordingConfig = RecordingConfig()
     private var lastVideoTimestampLoggedAtNs: Long = 0L
-    private val sessionRouteAdapter: SessionRouteAdapter = FrozenCameraSessionAdapter()
+    private var lastPreviewCameraSelector: CameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+    private var trialRecordingActive: Boolean = false
+    private val sessionRouteAdapter: SessionRouteAdapter =
+        when (routeResolution.activeRoute) {
+            CameraStackRoute.CORECAMERA_SHARED_CAMERA_TRIAL -> CoreCameraTrialSessionAdapter()
+            CameraStackRoute.FROZEN_CAMERAX_ARCORE -> FrozenCameraSessionAdapter()
+        }
 
     init {
         lifecycleOwner.lifecycle.addObserver(this)
@@ -105,7 +122,7 @@ class RecordingCoordinator(
         }
     }
 
-    fun isRecording(): Boolean = recording != null
+    fun isRecording(): Boolean = recording != null || trialRecordingActive
 
     fun updateRecordingConfig(config: RecordingConfig) {
         recordingConfig = config
@@ -114,6 +131,7 @@ class RecordingCoordinator(
     fun findLatestSession(): RecordingSession? = sessionRouteAdapter.findLatestSession()
 
     fun startPreview(cameraSelector: CameraSelector) {
+        lastPreviewCameraSelector = cameraSelector
         sessionRouteAdapter.startPreview(cameraSelector)
     }
 
@@ -419,6 +437,382 @@ class RecordingCoordinator(
 
         override fun onHostPause() {
             pauseFrozenSession()
+        }
+    }
+
+    private inner class CoreCameraTrialSessionAdapter : SessionRouteAdapter {
+        private val lifecycleMachine = TrialSharedCameraLifecycleMachine().apply { markPreviewReady() }
+        private val cameraThread = HandlerThread("isensorium-shared-camera-trial").apply { start() }
+        private val cameraHandler = Handler(cameraThread.looper)
+        private val cameraManager = context.getSystemService(CameraManager::class.java)
+
+        private var sharedArSession: Session? = null
+        private var cameraDevice: CameraDevice? = null
+        private var captureSession: CameraCaptureSession? = null
+        private var videoRecorder: TrialCpuImageVideoRecorder? = null
+        private var poseSampler: OffscreenArCorePoseSampler? = null
+        private var sharedCameraHostResumed = false
+        private var sharedCameraResumed = false
+        private var closingRuntime = false
+        private var collectorStatus: MutableMap<String, String> = mutableMapOf(
+            "camera2" to "idle",
+            "sharedCamera" to "idle",
+            "video" to "idle",
+            "pose" to "idle",
+        )
+
+        override fun startPreview(cameraSelector: CameraSelector) {
+            startFrozenPreview(cameraSelector)
+            lifecycleMachine.markPreviewReady()
+            statusListener(
+                SessionUiState(
+                    recording = false,
+                    session = currentSession,
+                    statusText = "Guarded replacement route armed. Idle preview stays on the frozen path until session start.",
+                ),
+            )
+        }
+
+        override fun startSession() {
+            if (trialRecordingActive || lifecycleMachine.state == TrialSharedCameraLifecycleState.STARTING) {
+                return
+            }
+            lifecycleMachine.beginStart()
+            cameraProvider?.unbindAll()
+            analysis?.clearAnalyzer()
+
+            val session = sessionManager.createSession()
+            currentSession = session
+            session.recordingConfig = recordingConfig
+            sessionManager.writeInitialManifest(session)
+            sessionManager.appendCollectorStatus(session, "camera2", "starting")
+            sessionManager.appendCollectorStatus(session, "sharedCamera", "starting")
+            sessionManager.appendCollectorStatus(session, "video", "starting")
+            sessionManager.appendCollectorStatus(session, "pose", if (session.recordingConfig.arCoreEnabled) "starting" else "disabled")
+            trialRecordingActive = true
+            collectorStatus = mutableMapOf(
+                "camera2" to "starting",
+                "sharedCamera" to "starting",
+                "video" to "starting",
+                "pose" to if (session.recordingConfig.arCoreEnabled) "starting" else "disabled",
+            )
+
+            imuLogger.start(sensorManager, session)
+            gnssLogger.start(session)
+            if (session.recordingConfig.bleEnabled) {
+                bleLogger.start(session)
+            } else {
+                sessionManager.appendCollectorStatus(session, "ble", "disabled")
+            }
+            if (!session.recordingConfig.arCoreEnabled) {
+                sessionManager.appendCollectorStatus(session, "arcore", "disabled")
+            }
+            statusListener(
+                SessionUiState(
+                    recording = false,
+                    session = session,
+                    statusText = "Starting guarded replacement runtime behind the shared-camera adapter seam.",
+                ),
+            )
+            initializeSharedCamera(session)
+        }
+
+        override fun stopSession() {
+            val session = currentSession ?: return
+            if (!trialRecordingActive && lifecycleMachine.state != TrialSharedCameraLifecycleState.STARTING) {
+                return
+            }
+            lifecycleMachine.beginStop()
+            val runtimeMetadata = closeRuntime(session)
+            lifecycleMachine.markStopped()
+            trialRecordingActive = false
+            sessionManager.finalizeManifest(
+                session,
+                if (runtimeMetadata["runtimeStatus"] == "error") "finalized_with_error" else "finalized",
+            )
+            sessionManager.closeSessionOutputs(session)
+            statusListener(
+                SessionUiState(
+                    recording = false,
+                    session = session,
+                    statusText = if (runtimeMetadata["runtimeStatus"] == "error") {
+                        "Guarded replacement runtime stopped with error. Frozen preview restored."
+                    } else {
+                        "Guarded replacement runtime finalized. Frozen preview restored."
+                    },
+                    toastMessage = if (runtimeMetadata["runtimeStatus"] == "error") null else "Replacement-route session saved",
+                ),
+            )
+            startFrozenPreview(lastPreviewCameraSelector)
+        }
+
+        override fun findLatestSession(): RecordingSession? = sessionManager.findLatestSession()
+
+        override fun shutdown() {
+            if (trialRecordingActive) {
+                stopSession()
+            }
+            runCatching { cameraThread.quitSafely() }
+        }
+
+        override fun onHostResume() {
+            sharedCameraHostResumed = true
+            if (trialRecordingActive && !sharedCameraResumed) {
+                resumeSharedArSession(currentSession)
+            }
+        }
+
+        override fun onHostPause() {
+            sharedCameraHostResumed = false
+            pauseSharedArSession()
+        }
+
+        private fun initializeSharedCamera(session: RecordingSession) {
+            try {
+                val arSession = Session(context, setOf(Session.Feature.SHARED_CAMERA))
+                arSession.configure(
+                    Config(arSession).apply {
+                        updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
+                    },
+                )
+                sharedArSession = arSession
+                collectorStatus["sharedCamera"] = "ar_session_created"
+                sessionManager.appendCollectorStatus(session, "sharedCamera", "ar_session_created")
+                val cameraId = resolveBackCameraId(arSession)
+                prepareOutputRuntime(session)
+                openSharedCamera(arSession, session, cameraId)
+            } catch (error: Exception) {
+                failSharedCameraSession(session, "Shared camera initialization failed: ${error.javaClass.simpleName}")
+            }
+        }
+
+        private fun resolveBackCameraId(arSession: Session): String {
+            val preferredId = arSession.cameraConfig.cameraId
+            if (preferredId.isNotBlank()) {
+                return preferredId
+            }
+            return cameraManager.cameraIdList.firstOrNull { id ->
+                cameraManager.getCameraCharacteristics(id)
+                    .get(CameraCharacteristics.LENS_FACING) == CameraCharacteristics.LENS_FACING_BACK
+            } ?: cameraManager.cameraIdList.first()
+        }
+
+        private fun prepareOutputRuntime(session: RecordingSession) {
+            videoRecorder?.release()
+            videoRecorder =
+                TrialCpuImageVideoRecorder(
+                    outputFile = session.videoFile,
+                    recordingSize = Size(640, 480),
+                    callbackHandler = cameraHandler,
+                ).also { it.prepare() }
+            sessionManager.appendCollectorStatus(session, "video", "prepared")
+        }
+
+        @SuppressLint("MissingPermission")
+        private fun openSharedCamera(arSession: Session, session: RecordingSession, cameraId: String) {
+            val wrappedCallback =
+                arSession.sharedCamera.createARDeviceStateCallback(
+                    object : CameraDevice.StateCallback() {
+                        override fun onOpened(device: CameraDevice) {
+                            cameraDevice = device
+                            collectorStatus["camera2"] = "camera_opened"
+                            sessionManager.appendCollectorStatus(session, "camera2", "camera_opened")
+                            createSharedCaptureSession(device, arSession, session, cameraId)
+                        }
+
+                        override fun onDisconnected(device: CameraDevice) {
+                            device.close()
+                            if (!closingRuntime) {
+                                failSharedCameraSession(session, "Shared camera disconnected during bootstrap.")
+                            }
+                        }
+
+                        override fun onError(device: CameraDevice, error: Int) {
+                            device.close()
+                            if (!closingRuntime) {
+                                failSharedCameraSession(session, "Shared camera open failed with error $error.")
+                            }
+                        }
+                    },
+                    cameraHandler,
+                )
+            cameraManager.openCamera(cameraId, wrappedCallback, cameraHandler)
+        }
+
+        private fun createSharedCaptureSession(
+            device: CameraDevice,
+            arSession: Session,
+            session: RecordingSession,
+            cameraId: String,
+        ) {
+            val recorderSurface = checkNotNull(videoRecorder?.surface) { "Replacement runtime recorder surface missing." }
+            arSession.sharedCamera.setAppSurfaces(cameraId, listOf(recorderSurface))
+            val targets =
+                buildList {
+                    addAll(arSession.sharedCamera.arCoreSurfaces)
+                    add(recorderSurface)
+                }
+            val request =
+                device.createCaptureRequest(CameraDevice.TEMPLATE_RECORD).apply {
+                    targets.forEach(::addTarget)
+                    set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO)
+                }
+            val captureCallback =
+                object : CameraCaptureSession.CaptureCallback() {
+                    override fun onCaptureCompleted(
+                        sessionCapture: CameraCaptureSession,
+                        request: CaptureRequest,
+                        result: TotalCaptureResult,
+                    ) {
+                        collectorStatus["camera2"] = "streaming"
+                        sessionManager.appendCollectorStatus(session, "camera2", "streaming")
+                        sessionManager.appendFrameTimestamp(
+                            session,
+                            FrameTimestamp(
+                                sensorTimestampNs = result.get(CaptureResult.SENSOR_TIMESTAMP) ?: -1L,
+                                elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos(),
+                                wallTimeMillis = System.currentTimeMillis(),
+                                rotationDegrees = 0,
+                            ),
+                        )
+                    }
+                }
+            arSession.sharedCamera.setCaptureCallback(captureCallback, cameraHandler)
+            val wrappedSessionCallback =
+                arSession.sharedCamera.createARSessionStateCallback(
+                    object : CameraCaptureSession.StateCallback() {
+                        override fun onConfigured(cameraCaptureSession: CameraCaptureSession) {
+                            captureSession = cameraCaptureSession
+                            collectorStatus["sharedCamera"] = "capture_session_configured"
+                            sessionManager.appendCollectorStatus(session, "sharedCamera", "capture_session_configured")
+                            cameraCaptureSession.setRepeatingRequest(request.build(), captureCallback, cameraHandler)
+                            checkNotNull(videoRecorder).start()
+                            collectorStatus["video"] = "recording"
+                            sessionManager.appendCollectorStatus(session, "video", "recording")
+                            lifecycleMachine.markRunning()
+                            sessionManager.appendVideoEvent(
+                                session,
+                                VideoEvent(
+                                    type = "replacement_runtime_recording_start",
+                                    eventTimeMillis = System.currentTimeMillis(),
+                                    elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos(),
+                                    bytesRecorded = 0L,
+                                    durationNanos = 0L,
+                                ),
+                            )
+                            sessionManager.finalizeManifest(session, "recording")
+                            resumeSharedArSession(session)
+                            statusListener(
+                                SessionUiState(
+                                    recording = true,
+                                    session = session,
+                                    statusText = "Guarded replacement runtime recording ${session.sessionId}",
+                                    toastMessage = "Replacement route active",
+                                ),
+                            )
+                        }
+
+                        override fun onConfigureFailed(cameraCaptureSession: CameraCaptureSession) {
+                            failSharedCameraSession(session, "Shared camera capture session configuration failed.")
+                        }
+                    },
+                    cameraHandler,
+                )
+            device.createCaptureSession(targets, wrappedSessionCallback, cameraHandler)
+        }
+
+        private fun resumeSharedArSession(session: RecordingSession?) {
+            val activeSession = sharedArSession ?: return
+            val recordingSession = session ?: return
+            if (!recordingSession.recordingConfig.arCoreEnabled) {
+                return
+            }
+            runCatching { activeSession.resume() }
+                .onSuccess {
+                    sharedCameraResumed = true
+                    sessionManager.appendCollectorStatus(recordingSession, "arcore", "resumed")
+                    poseSampler?.stop()
+                    poseSampler =
+                        OffscreenArCorePoseSampler(cameraHandler) { frameTimestampNs, trackingState, translation, rotationQuaternion ->
+                            val nowNs = SystemClock.elapsedRealtimeNanos()
+                            sessionManager.appendArCorePose(
+                                recordingSession,
+                                ArCorePoseSample(
+                                    elapsedRealtimeNanos = nowNs,
+                                    wallTimeMillis = System.currentTimeMillis(),
+                                    trackingState = trackingState,
+                                    translation = translation.toList(),
+                                    rotationQuaternion = rotationQuaternion.toList(),
+                                ),
+                            )
+                            recordingSession.arCoreSampleCount += 1
+                            sessionManager.appendCollectorStatus(recordingSession, "pose", "sampling")
+                            sessionManager.appendCollectorStatus(recordingSession, "arcore", "active")
+                            sessionManager.appendFrameTimestamp(
+                                recordingSession,
+                                FrameTimestamp(
+                                    sensorTimestampNs = frameTimestampNs,
+                                    elapsedRealtimeNanos = nowNs,
+                                    wallTimeMillis = System.currentTimeMillis(),
+                                    rotationDegrees = 0,
+                                ),
+                            )
+                        }.also { it.start(activeSession) }
+                }
+                .onFailure {
+                    sessionManager.appendCollectorStatus(recordingSession, "arcore", "resume_failed_${it.javaClass.simpleName}")
+                }
+        }
+
+        private fun pauseSharedArSession() {
+            poseSampler?.stop()
+            poseSampler = null
+            runCatching { sharedArSession?.pause() }
+            sharedCameraResumed = false
+        }
+
+        private fun closeRuntime(session: RecordingSession): Map<String, String> {
+            closingRuntime = true
+            stopCollectors()
+            pauseSharedArSession()
+            runCatching { captureSession?.stopRepeating() }
+            val videoBytes =
+                runCatching { videoRecorder?.stopAndRelease() ?: session.videoFile.length() }
+                    .getOrElse { session.videoFile.length() }
+            runCatching { captureSession?.abortCaptures() }
+            captureSession?.close()
+            captureSession = null
+            cameraDevice?.close()
+            cameraDevice = null
+            runCatching { sharedArSession?.close() }
+            sharedArSession = null
+            videoRecorder = null
+            closingRuntime = false
+            sessionManager.appendCollectorStatus(session, "video", if (videoBytes > 0L) "captured" else "empty_output")
+            sessionManager.appendCollectorStatus(session, "sharedCamera", "closed")
+            sessionManager.appendCollectorStatus(session, "camera2", "closed")
+            sessionManager.appendVideoEvent(
+                session,
+                VideoEvent(
+                    type = "replacement_runtime_recording_finalize",
+                    eventTimeMillis = System.currentTimeMillis(),
+                    elapsedRealtimeNanos = SystemClock.elapsedRealtimeNanos(),
+                    bytesRecorded = videoBytes,
+                    durationNanos = (SystemClock.elapsedRealtimeNanos() - session.timebase.sessionStartElapsedRealtimeNanos).coerceAtLeast(0L),
+                ),
+            )
+            return mapOf("runtimeStatus" to "stopped")
+        }
+
+        private fun failSharedCameraSession(session: RecordingSession, message: String) {
+            lifecycleMachine.fail()
+            trialRecordingActive = false
+            sessionManager.appendCollectorStatus(session, "sharedCamera", "error")
+            closeRuntime(session)
+            sessionManager.finalizeManifest(session, "finalized_with_error")
+            sessionManager.closeSessionOutputs(session)
+            statusListener(SessionUiState(false, session, message))
+            startFrozenPreview(lastPreviewCameraSelector)
         }
     }
 
@@ -885,7 +1279,9 @@ data class VideoEvent(
     val type: String,
     val eventTimeMillis: Long,
     val elapsedRealtimeNanos: Long,
-    val recordingStats: androidx.camera.video.RecordingStats,
+    val recordingStats: androidx.camera.video.RecordingStats? = null,
+    val bytesRecorded: Long? = null,
+    val durationNanos: Long? = null,
     val outputUri: Uri? = null,
     val error: String? = null,
     val cause: String? = null,
@@ -1028,8 +1424,8 @@ class SessionManager(
             .put("type", event.type)
             .put("eventTimeMillis", event.eventTimeMillis)
             .put("elapsedRealtimeNanos", event.elapsedRealtimeNanos)
-            .put("bytesRecorded", event.recordingStats.numBytesRecorded)
-            .put("durationNanos", event.recordingStats.recordedDurationNanos)
+            .put("bytesRecorded", event.bytesRecorded ?: event.recordingStats?.numBytesRecorded ?: 0L)
+            .put("durationNanos", event.durationNanos ?: event.recordingStats?.recordedDurationNanos ?: 0L)
             .put("outputUri", event.outputUri?.toString())
             .put("error", event.error)
             .put("cause", event.cause)
