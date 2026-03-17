@@ -1,10 +1,10 @@
-# Market Release Line Plan
+# 市場リリースライン計画
 
-## Purpose
+## 目的
 
 この文書は、`docs/` で定義された Human Goal と User Story Map を、外部価値として説明可能な Market Release Line へ具体化する。
 
-## Planning Rules
+## 計画ルール
 
 - Market Release Line は外部価値の成立単位として定義する。
 - 各 line は複数の Micro Release Line を持つ。
@@ -20,14 +20,14 @@
 | MRL-3 | 屋外運用成立ライン | 通信断、発熱、権限拒否、部分欠落下でもセッション回収できる | 例外系とフォールバック設計が一巡している | 30 分級運用で継続的に回収できる | mRL-3-1, mRL-3-2, mRL-3-3 | バッテリー、通信品質、OS 制約 |
 | MRL-4 | Human + AI 継続研究成立ライン | release line 再編と変更追跡を保ちつつ研究開発を継続できる | docs/develop の境界と履歴規約が有効 | 変更要求が release line と検証計画へ反映され続ける | mRL-4-1, mRL-4-2, mRL-4-3 | 研究価値再定義、優先度変化 |
 
-## Release Ordering
+## リリース順序
 
 1. MRL-0 を最初に成立させる。
 2. MRL-1 で同期記録基盤を成立させる。
 3. MRL-2 と MRL-3 は並行可能だが、再利用性と運用性の両面から往復で改善する。
 4. MRL-4 は常時並走し、他 line の変更を吸収する。
 
-## Current Recommendation
+## 現在の推奨順序
 
 - 最初の到達目標は `MRL-0`。
 - その直後の主ラインは `MRL-1`。

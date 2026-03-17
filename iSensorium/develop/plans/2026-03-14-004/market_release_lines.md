@@ -1,10 +1,10 @@
-# Market Release Line Plan
+# 市場リリースライン計画
 
-## Purpose
+## 目的
 
 この文書は、`iDevelop/` を companion project として分離配置するための、`iSensorium` 側 bootstrap 計画を定義する。
 
-## Planning Rules
+## 計画ルール
 
 - ルート側では subproject 境界と初期化だけを扱う。
 - ダッシュボード機能そのものの詳細計画は `iDevelop/develop/` に委譲する。
@@ -18,7 +18,7 @@
 | MRL-1 | ローカル規約成立ライン | companion project 内部で docs/develop 規約に従って作業できる | `iDevelop/` のディレクトリが存在する | ローカル `AGENTS.md`, `docs/index.md`, `develop/index.md` が揃う | mRL-1-1, mRL-1-2 | 運用一貫性、履歴追跡 |
 | MRL-2 | 実装着手準備ライン | 次スレッドからダッシュボード設計と実装を始められる | ローカル規約が成立している | 初期 release line 計画と現況がサブプロジェクト側に置かれる | mRL-2-1, mRL-2-2 | BDD/TDD 準備、拡張方針明確化 |
 
-## Current Recommendation
+## 現在の推奨順序
 
 - 最初に `MRL-0` を成立させる。
 - 次に `MRL-1` でローカル規約を固定する。

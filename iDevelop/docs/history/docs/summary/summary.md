@@ -1,5 +1,12 @@
 # Docs History Summary
 
+## 2026-03-17-030 archive-viewer-planning-baseline
+
+- scope: dashboard documentation system
+- trigger: session archive viewer、compact tree explorer、one-click download、詳細 error handling を consultation workspace の次段として source-of-truth へ先置きする必要が生じた
+- resulting_direction: `north_star.md`、`project_contract.md`、`system_blueprint.md`、`process/*.md`、`current_state.md`、`develop/index.md` を更新し、次 plan set `2026-03-17-006` と `MRL-22` 以降を active 前提へ切り替えた
+- expected_benefit: 次の実装は archive contract、compact tree、retrieval UX、MVC hardening を文書先行で進められ、完了根拠も `Codex retest` と `user validation` の両方で追跡できる
+
 ## 2026-03-15-034 header-and-action-box-stabilization-line
 
 - scope: dashboard documentation system

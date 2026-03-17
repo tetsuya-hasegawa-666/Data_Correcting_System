@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.SystemClock
+import android.view.View
 import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -12,15 +13,17 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.camera.core.CameraSelector
 import androidx.core.content.ContextCompat
 import com.isensorium.app.databinding.ActivityMainBinding
-import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var recordingCoordinator: RecordingCoordinator
+    private val mainScreenController = MainScreenController()
     private val preferences by lazy { getSharedPreferences("guarded_upstream_trial", Context.MODE_PRIVATE) }
     private var currentSession: RecordingSession? = null
     private var routeTransitionInProgress: Boolean = false
+    private var runtimeIssue: RecordingIssue? = null
+    private var configurationIssue: RecordingIssue? = null
 
     private val permissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
@@ -28,9 +31,13 @@ class MainActivity : AppCompatActivity() {
                 result[it] == true || ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
             }
             if (requiredGranted) {
+                runtimeIssue = null
+                refreshConfigurationState()
                 startCamera()
             } else {
-                renderState("Camera / audio permission is required to start recording sessions.")
+                runtimeIssue = mainScreenController.buildPermissionDeniedIssue()
+                refreshDisplayedIssue()
+                renderState(runtimeIssue!!.message)
             }
         }
 
@@ -55,6 +62,11 @@ class MainActivity : AppCompatActivity() {
         binding.refreshButton.setOnClickListener {
             refreshLatestSessionDetails()
         }
+        binding.recordingModeGroup.setOnCheckedChangeListener { _, _ ->
+            if (!recordingCoordinator.isRecording()) {
+                refreshConfigurationState()
+            }
+        }
         binding.guardedRouteSwitch.isChecked = prefersGuardedReplacementRoute()
         binding.guardedRouteSwitch.isEnabled = BuildConfig.CORECAMERA_RUNTIME_ENABLED
         binding.guardedRouteSwitch.setOnCheckedChangeListener { _, isChecked ->
@@ -64,7 +76,9 @@ class MainActivity : AppCompatActivity() {
             }
             if (recordingCoordinator.isRecording()) {
                 binding.guardedRouteSwitch.isChecked = !isChecked
-                Toast.makeText(this, "Stop the current session before changing camera route", Toast.LENGTH_SHORT).show()
+                runtimeIssue = mainScreenController.buildRouteChangeBlockedIssue()
+                refreshDisplayedIssue()
+                Toast.makeText(this, runtimeIssue!!.suggestedAction, Toast.LENGTH_SHORT).show()
                 return@setOnCheckedChangeListener
             }
             routeTransitionInProgress = true
@@ -72,22 +86,19 @@ class MainActivity : AppCompatActivity() {
             preferences.edit().putBoolean(PREF_GUARDED_ROUTE, isChecked).apply()
             recordingCoordinator.shutdown()
             recordingCoordinator = buildRecordingCoordinator()
-            renderModeState(readRecordingConfig())
             currentSession = null
+            runtimeIssue = null
             refreshSessionDetails(null)
+            refreshConfigurationState()
             ensurePermissionsAndStartPreview()
             binding.guardedRouteSwitch.postDelayed({
                 routeTransitionInProgress = false
                 binding.guardedRouteSwitch.isEnabled = BuildConfig.CORECAMERA_RUNTIME_ENABLED
             }, ROUTE_SWITCH_GUARD_MS)
-            Toast.makeText(
-                this,
-                if (isChecked) "Guarded replacement route selected" else "Frozen route selected",
-                Toast.LENGTH_SHORT,
-            ).show()
+            Toast.makeText(this, mainScreenController.buildRouteSwitchToast(isChecked), Toast.LENGTH_SHORT).show()
         }
-        renderState("Ready. Start mRL-0-1 session initialization.")
-        renderModeState(readRecordingConfig())
+        renderState(mainScreenController.buildInitialStatus())
+        refreshConfigurationState()
         ensurePermissionsAndStartPreview()
     }
 
@@ -116,9 +127,17 @@ class MainActivity : AppCompatActivity() {
 
     private fun ensurePermissionsAndStart() {
         if (hasRequiredPermissions()) {
-            val config = readRecordingConfig()
-            recordingCoordinator.updateRecordingConfig(config)
-            recordingCoordinator.startSession()
+            val resolution = resolveRecordingConfig()
+            runCatching {
+                recordingCoordinator.updateRecordingConfig(resolution.config)
+                recordingCoordinator.startSession()
+                runtimeIssue = null
+                refreshDisplayedIssue()
+            }.onFailure { error ->
+                runtimeIssue = mainScreenController.buildSessionStartIssue(resolution.config, error)
+                refreshDisplayedIssue()
+                renderState(runtimeIssue!!.message)
+            }
         } else {
             permissionLauncher.launch(allRequestedPermissions)
         }
@@ -151,12 +170,21 @@ class MainActivity : AppCompatActivity() {
         preferences.getBoolean(PREF_GUARDED_ROUTE, false)
 
     private fun startCamera() {
-        recordingCoordinator.startPreview(CameraSelector.DEFAULT_BACK_CAMERA)
+        runCatching {
+            recordingCoordinator.startPreview(CameraSelector.DEFAULT_BACK_CAMERA)
+            runtimeIssue = null
+            refreshDisplayedIssue()
+        }.onFailure { error ->
+            runtimeIssue = mainScreenController.buildPreviewStartIssue(error)
+            refreshDisplayedIssue()
+            renderState(runtimeIssue!!.message)
+        }
     }
 
     private fun onSessionStateChanged(state: SessionUiState) {
         runOnUiThread {
             currentSession = state.session
+            runtimeIssue = state.issue
             binding.recordButton.text =
                 if (state.recording) getString(R.string.stop_recording) else getString(R.string.start_recording)
             binding.bleSwitch.isEnabled = !state.recording
@@ -164,9 +192,13 @@ class MainActivity : AppCompatActivity() {
             setInputsEnabled(!state.recording)
             showRecordingUi(state.recording, state.statusText)
             renderState(state.statusText)
+            refreshDisplayedIssue()
             refreshSessionDetails(state.session)
             state.toastMessage?.let {
                 Toast.makeText(this, it, Toast.LENGTH_SHORT).show()
+            }
+            if (!state.recording) {
+                refreshConfigurationState()
             }
         }
     }
@@ -175,20 +207,29 @@ class MainActivity : AppCompatActivity() {
         binding.statusText.text = message
     }
 
+    private fun refreshDisplayedIssue() {
+        renderIssue(runtimeIssue ?: configurationIssue)
+    }
+
+    private fun renderIssue(issue: RecordingIssue?) {
+        if (issue == null) {
+            binding.issueText.visibility = View.GONE
+            binding.issueText.text = ""
+            return
+        }
+        binding.issueText.visibility = View.VISIBLE
+        binding.issueText.text = "${issue.message}\n対応: ${issue.suggestedAction}"
+    }
+
     private fun showRecordingUi(recording: Boolean, statusText: String) {
-        binding.controlsCard.visibility = if (recording) android.view.View.GONE else android.view.View.VISIBLE
-        binding.recordingOverlay.visibility = if (recording) android.view.View.VISIBLE else android.view.View.GONE
+        binding.controlsCard.visibility = if (recording) View.GONE else View.VISIBLE
+        binding.recordingOverlay.visibility = if (recording) View.VISIBLE else View.GONE
         binding.recordingOverlayText.text =
             if (recording) statusText else getString(R.string.recording_overlay_default)
     }
 
     private fun renderModeState(config: RecordingConfig) {
-        binding.recordingModeText.text =
-            if (config.bleEnabled || config.arCoreEnabled) {
-                "Mode: route=${selectedRoute().routeId}, Video + IMU + GNSS always on. BLE / ARCore optional low-rate confirmation."
-            } else {
-                "Mode: route=${selectedRoute().routeId}, Video + IMU + GNSS. BLE / ARCore disabled."
-            }
+        binding.recordingModeText.text = mainScreenController.buildModeSummary(config, selectedRoute().routeId)
     }
 
     private fun setInputsEnabled(enabled: Boolean) {
@@ -198,47 +239,65 @@ class MainActivity : AppCompatActivity() {
             binding.gnssIntervalInput,
             binding.bleIntervalInput,
             binding.arcoreIntervalInput,
+            binding.standardModeRadio,
+            binding.pocketModeRadio,
         ).forEach { it.isEnabled = enabled }
     }
 
-    private fun readRecordingConfig(): RecordingConfig {
-        val config = RecordingConfig(
-            videoFrameLogIntervalMs = readMs(binding.videoIntervalInput, 100L),
-            imuIntervalMs = readMs(binding.imuIntervalInput, 20L),
-            gnssIntervalMs = readMs(binding.gnssIntervalInput, 1000L),
-            bleIntervalMs = readMs(binding.bleIntervalInput, 2000L),
-            arCoreIntervalMs = readMs(binding.arcoreIntervalInput, 2000L),
-            bleEnabled = binding.bleSwitch.isChecked,
-            arCoreEnabled = binding.arcoreSwitch.isChecked,
+    private fun resolveRecordingConfig(): RecordingConfigResolution =
+        mainScreenController.resolveRecordingConfig(
+            MainScreenFormState(
+                videoFrameLogIntervalMs = readMs(binding.videoIntervalInput, 100L),
+                imuIntervalMs = readMs(binding.imuIntervalInput, 20L),
+                gnssIntervalMs = readMs(binding.gnssIntervalInput, 1000L),
+                bleIntervalMs = readMs(binding.bleIntervalInput, 2000L),
+                arCoreIntervalMs = readMs(binding.arcoreIntervalInput, 2000L),
+                bleEnabled = binding.bleSwitch.isChecked,
+                arCoreEnabled = binding.arcoreSwitch.isChecked,
+                recordingMode = selectedRecordingMode(),
+            ),
         )
-        renderModeState(config)
-        return config
+
+    private fun refreshConfigurationState() {
+        val resolution = resolveRecordingConfig()
+        configurationIssue = resolution.issue
+        renderModeState(resolution.config)
+        refreshDisplayedIssue()
     }
+
+    private fun selectedRecordingMode(): RecordingMode =
+        if (binding.pocketModeRadio.isChecked) {
+            RecordingMode.POCKET_RECORDING
+        } else {
+            RecordingMode.STANDARD_HANDHELD
+        }
 
     private fun readMs(input: EditText, fallback: Long): Long =
         input.text?.toString()?.trim()?.toLongOrNull()?.coerceAtLeast(1L) ?: fallback
 
     private fun refreshLatestSessionDetails() {
-        val refreshed = recordingCoordinator.findLatestSession()
-        currentSession = refreshed ?: currentSession
-        refreshSessionDetails(currentSession)
-        renderState(
-            if (currentSession == null) {
-                "No saved session found yet."
-            } else {
-                "Latest session reloaded from storage at ${System.currentTimeMillis()}."
-            },
-        )
-        Toast.makeText(
-            this,
-            if (currentSession == null) "No session found" else "Refresh completed",
-            Toast.LENGTH_SHORT,
-        ).show()
+        runCatching {
+            val refreshed = recordingCoordinator.findLatestSession()
+            currentSession = refreshed ?: currentSession
+            refreshSessionDetails(currentSession)
+            runtimeIssue = mainScreenController.buildRefreshIssue(currentSession != null)
+            renderState(mainScreenController.buildRefreshStatus(currentSession != null, System.currentTimeMillis()))
+            refreshDisplayedIssue()
+            Toast.makeText(
+                this,
+                if (currentSession == null) "最新 session はまだありません" else "再読み込みが完了しました",
+                Toast.LENGTH_SHORT,
+            ).show()
+        }.onFailure { error ->
+            runtimeIssue = mainScreenController.buildRefreshExecutionIssue(error)
+            refreshDisplayedIssue()
+            renderState(runtimeIssue!!.message)
+        }
     }
 
     private fun refreshSessionDetails(session: RecordingSession?) {
         if (session == null) {
-            binding.sessionText.text = "No active session."
+            binding.sessionText.text = "現在表示できる session はありません。"
             binding.filesText.text = ""
             return
         }
@@ -249,33 +308,9 @@ class MainActivity : AppCompatActivity() {
             } else {
                 -1.0
             }
-        val summary = buildString {
-            appendLine("Session: ${session.sessionId}")
-            appendLine("Directory: ${session.sessionDir.absolutePath}")
-            appendLine(
-                "Camera route: requested=${session.adapterMetadata.requestedRoute}, active=${session.adapterMetadata.activeRoute}",
-            )
-            appendLine("Cutover gate: ${session.adapterMetadata.cutoverGateStatus} via ${session.adapterMetadata.adapterSeamId}")
-            session.adapterMetadata.fallbackReason?.let { appendLine("Guard: $it") }
-            appendLine(
-                "Started: wall=${session.timebase.sessionStartWallTimeMs} ms, mono=${session.timebase.sessionStartElapsedRealtimeNanos} ns",
-            )
-            if (sessionElapsedSec >= 0.0) {
-                appendLine(String.format(Locale.US, "Elapsed since start: %.1f sec", sessionElapsedSec))
-            }
-        }.trim()
-
-        val fileLines = session.listOutputFiles().joinToString("\n") { file ->
-            String.format(
-                Locale.US,
-                "%s (%d bytes)",
-                file.name,
-                file.length(),
-            )
-        }
-
-        binding.sessionText.text = summary
-        binding.filesText.text = fileLines.ifBlank { "No session outputs yet." }
+        val presentation = mainScreenController.buildSessionPresentation(session, sessionElapsedSec)
+        binding.sessionText.text = presentation.summaryText
+        binding.filesText.text = presentation.filesText
     }
 
     companion object {

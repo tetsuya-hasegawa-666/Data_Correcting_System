@@ -48,71 +48,71 @@ class StubDatasetRepository implements DatasetRepository {
 }
 
 describe("DataWorkspaceController", () => {
-  it("returns datasets sorted by updatedAt descending and aggregates rows by status", () => {
+  it("returns datasets sorted by updatedAt descending and groups them by top directory", () => {
     const controller = new DataWorkspaceController(
       new StubDatasetRepository([
         {
           id: "dataset-1",
-          name: "Doc Sync Coverage",
-          category: "document",
+          name: "session-1",
+          category: "session",
           recordCount: 12,
           status: "ready",
-          updatedAt: "2026-03-14T08:30:00Z"
+          updatedAt: "2026-03-14T08:30:00Z",
+          path: "iSensorium/tmp/session-1",
+          topDirectory: "iSensorium"
         },
         {
           id: "dataset-2",
-          name: "Correction Result Summary",
-          category: "result",
+          name: "summary",
+          category: "json",
           recordCount: 5,
           status: "draft",
-          updatedAt: "2026-03-14T09:30:00Z"
-        },
-        {
-          id: "dataset-3",
-          name: "Research Backlog",
-          category: "process",
-          recordCount: 7,
-          status: "ready",
-          updatedAt: "2026-03-13T20:30:00Z"
+          updatedAt: "2026-03-14T09:30:00Z",
+          path: "exports/summary.json",
+          topDirectory: "exports"
         }
       ])
     );
 
     const state = controller.createState();
 
-    expect(state.datasets.map((dataset) => dataset.id)).toEqual([
-      "dataset-2",
-      "dataset-1",
-      "dataset-3"
+    expect(state.datasets.map((dataset) => dataset.id)).toEqual(["dataset-2", "dataset-1"]);
+    expect(state.summary.totalDatasets).toBe(2);
+    expect(state.summary.totalRecords).toBe(17);
+    expect(state.directoryGroups.map((group) => group.topDirectory)).toEqual([
+      "exports",
+      "iSensorium"
     ]);
-    expect(state.summary.totalDatasets).toBe(3);
-    expect(state.summary.totalRecords).toBe(24);
-    expect(state.summary.byStatus).toEqual([
-      { status: "draft", datasetCount: 1, recordCount: 5 },
-      { status: "ready", datasetCount: 2, recordCount: 19 }
-    ]);
-    expect(state.sourcePolicy).toContain("Seed");
-    expect(state.isReadOnly).toBe(false);
+    expect(state.selectedDataset?.id).toBe("dataset-2");
   });
 
-  it("records a result summary when a dataset is updated", () => {
+  it("reports a warning when selected archive is missing a source file", () => {
     const controller = new DataWorkspaceController(
       new StubDatasetRepository([
         {
           id: "dataset-1",
-          name: "Doc Sync Coverage",
-          category: "document",
-          recordCount: 12,
+          name: "session-1",
+          category: "session",
+          recordCount: 2,
           status: "ready",
-          updatedAt: "2026-03-14T08:30:00Z"
+          updatedAt: "2026-03-14T08:30:00Z",
+          files: [
+            { name: "session_manifest.json", relativePath: "tmp/session-1/session_manifest.json", sizeBytes: 120, present: true },
+            { name: "video.mp4", relativePath: "tmp/session-1/video.mp4", sizeBytes: 0, present: false }
+          ],
+          download: {
+            kind: "directory",
+            relativePath: "tmp/session-1",
+            fileName: "session-1.zip"
+          }
         }
       ])
     );
 
-    const state = controller.updateDataset("dataset-1", "review", 14);
+    const state = controller.createState();
 
-    expect(state.datasets[0].status).toBe("review");
-    expect(state.results[0]?.summary).toContain("review");
+    expect(state.issue?.severity).toBe("warning");
+    expect(state.issue?.message).toContain("source file");
   });
 
   it("keeps a multi-dataset consultation bundle and returns a consultation response", () => {
@@ -120,16 +120,16 @@ describe("DataWorkspaceController", () => {
       new StubDatasetRepository([
         {
           id: "dataset-1",
-          name: "Doc Sync Coverage",
-          category: "document",
+          name: "session-1",
+          category: "session",
           recordCount: 12,
           status: "ready",
           updatedAt: "2026-03-14T08:30:00Z"
         },
         {
           id: "dataset-2",
-          name: "Correction Result Summary",
-          category: "result",
+          name: "summary",
+          category: "json",
           recordCount: 5,
           status: "draft",
           updatedAt: "2026-03-14T09:30:00Z"
@@ -138,7 +138,8 @@ describe("DataWorkspaceController", () => {
     );
 
     const selected = controller.toggleDatasetSelection("dataset-1", {
-      selectedDatasetIds: ["dataset-2"]
+      selectedDatasetIds: ["dataset-2"],
+      selectedDatasetId: "dataset-2"
     });
     const consulted = controller.consultDatasets({
       ...selected.consultation,

@@ -21,6 +21,7 @@ class SessionParserAdditiveFieldTest(unittest.TestCase):
                 "sessionId": "session-20260315-guarded",
                 "status": "stopped",
                 "deviceModel": "Xperia 5 III",
+                "recordingMode": "pocket_recording",
                 "timebase": {
                     "sessionStartWallTimeMs": 1000,
                     "sessionStartElapsedRealtimeNanos": 2000,
@@ -66,6 +67,7 @@ class SessionParserAdditiveFieldTest(unittest.TestCase):
             join_report = parser.build_join_report()
 
             self.assertEqual("session-20260315-guarded", summary.session_id)
+            self.assertEqual("pocket_recording", summary.recording_mode)
             self.assertEqual(1, summary.stream_counts["frames"])
             self.assertTrue(join_report["metadataSufficiency"]["hasCollectorStatus"])
 

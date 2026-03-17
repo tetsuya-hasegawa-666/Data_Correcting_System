@@ -5,6 +5,10 @@ import android.opengl.GLSurfaceView;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.RadioGroup;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -14,6 +18,8 @@ import androidx.viewbinding.ViewBinding;
 import androidx.viewbinding.ViewBindings;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.materialswitch.MaterialSwitch;
+import com.google.android.material.radiobutton.MaterialRadioButton;
 import com.isensorium.app.R;
 import java.lang.NullPointerException;
 import java.lang.Override;
@@ -27,10 +33,40 @@ public final class ActivityMainBinding implements ViewBinding {
   public final GLSurfaceView arCoreGlSurfaceView;
 
   @NonNull
+  public final EditText arcoreIntervalInput;
+
+  @NonNull
+  public final MaterialSwitch arcoreSwitch;
+
+  @NonNull
+  public final EditText bleIntervalInput;
+
+  @NonNull
+  public final MaterialSwitch bleSwitch;
+
+  @NonNull
   public final MaterialCardView controlsCard;
 
   @NonNull
   public final TextView filesText;
+
+  @NonNull
+  public final EditText gnssIntervalInput;
+
+  @NonNull
+  public final MaterialSwitch guardedRouteSwitch;
+
+  @NonNull
+  public final EditText imuIntervalInput;
+
+  @NonNull
+  public final TextView issueText;
+
+  @NonNull
+  public final MaterialButton overlayStopButton;
+
+  @NonNull
+  public final MaterialRadioButton pocketModeRadio;
 
   @NonNull
   public final PreviewView previewView;
@@ -39,28 +75,84 @@ public final class ActivityMainBinding implements ViewBinding {
   public final MaterialButton recordButton;
 
   @NonNull
+  public final RadioGroup recordingModeGroup;
+
+  @NonNull
+  public final TextView recordingModeHeaderText;
+
+  @NonNull
+  public final TextView recordingModeText;
+
+  @NonNull
+  public final LinearLayout recordingOverlay;
+
+  @NonNull
+  public final TextView recordingOverlayText;
+
+  @NonNull
   public final MaterialButton refreshButton;
+
+  @NonNull
+  public final ImageView replacementPreviewImage;
+
+  @NonNull
+  public final TextView samplingHeaderText;
 
   @NonNull
   public final TextView sessionText;
 
   @NonNull
+  public final MaterialRadioButton standardModeRadio;
+
+  @NonNull
   public final TextView statusText;
 
+  @NonNull
+  public final EditText videoIntervalInput;
+
   private ActivityMainBinding(@NonNull ConstraintLayout rootView,
-      @NonNull GLSurfaceView arCoreGlSurfaceView, @NonNull MaterialCardView controlsCard,
-      @NonNull TextView filesText, @NonNull PreviewView previewView,
-      @NonNull MaterialButton recordButton, @NonNull MaterialButton refreshButton,
-      @NonNull TextView sessionText, @NonNull TextView statusText) {
+      @NonNull GLSurfaceView arCoreGlSurfaceView, @NonNull EditText arcoreIntervalInput,
+      @NonNull MaterialSwitch arcoreSwitch, @NonNull EditText bleIntervalInput,
+      @NonNull MaterialSwitch bleSwitch, @NonNull MaterialCardView controlsCard,
+      @NonNull TextView filesText, @NonNull EditText gnssIntervalInput,
+      @NonNull MaterialSwitch guardedRouteSwitch, @NonNull EditText imuIntervalInput,
+      @NonNull TextView issueText, @NonNull MaterialButton overlayStopButton,
+      @NonNull MaterialRadioButton pocketModeRadio, @NonNull PreviewView previewView,
+      @NonNull MaterialButton recordButton, @NonNull RadioGroup recordingModeGroup,
+      @NonNull TextView recordingModeHeaderText, @NonNull TextView recordingModeText,
+      @NonNull LinearLayout recordingOverlay, @NonNull TextView recordingOverlayText,
+      @NonNull MaterialButton refreshButton, @NonNull ImageView replacementPreviewImage,
+      @NonNull TextView samplingHeaderText, @NonNull TextView sessionText,
+      @NonNull MaterialRadioButton standardModeRadio, @NonNull TextView statusText,
+      @NonNull EditText videoIntervalInput) {
     this.rootView = rootView;
     this.arCoreGlSurfaceView = arCoreGlSurfaceView;
+    this.arcoreIntervalInput = arcoreIntervalInput;
+    this.arcoreSwitch = arcoreSwitch;
+    this.bleIntervalInput = bleIntervalInput;
+    this.bleSwitch = bleSwitch;
     this.controlsCard = controlsCard;
     this.filesText = filesText;
+    this.gnssIntervalInput = gnssIntervalInput;
+    this.guardedRouteSwitch = guardedRouteSwitch;
+    this.imuIntervalInput = imuIntervalInput;
+    this.issueText = issueText;
+    this.overlayStopButton = overlayStopButton;
+    this.pocketModeRadio = pocketModeRadio;
     this.previewView = previewView;
     this.recordButton = recordButton;
+    this.recordingModeGroup = recordingModeGroup;
+    this.recordingModeHeaderText = recordingModeHeaderText;
+    this.recordingModeText = recordingModeText;
+    this.recordingOverlay = recordingOverlay;
+    this.recordingOverlayText = recordingOverlayText;
     this.refreshButton = refreshButton;
+    this.replacementPreviewImage = replacementPreviewImage;
+    this.samplingHeaderText = samplingHeaderText;
     this.sessionText = sessionText;
+    this.standardModeRadio = standardModeRadio;
     this.statusText = statusText;
+    this.videoIntervalInput = videoIntervalInput;
   }
 
   @Override
@@ -96,6 +188,30 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.arcoreIntervalInput;
+      EditText arcoreIntervalInput = ViewBindings.findChildViewById(rootView, id);
+      if (arcoreIntervalInput == null) {
+        break missingId;
+      }
+
+      id = R.id.arcoreSwitch;
+      MaterialSwitch arcoreSwitch = ViewBindings.findChildViewById(rootView, id);
+      if (arcoreSwitch == null) {
+        break missingId;
+      }
+
+      id = R.id.bleIntervalInput;
+      EditText bleIntervalInput = ViewBindings.findChildViewById(rootView, id);
+      if (bleIntervalInput == null) {
+        break missingId;
+      }
+
+      id = R.id.bleSwitch;
+      MaterialSwitch bleSwitch = ViewBindings.findChildViewById(rootView, id);
+      if (bleSwitch == null) {
+        break missingId;
+      }
+
       id = R.id.controlsCard;
       MaterialCardView controlsCard = ViewBindings.findChildViewById(rootView, id);
       if (controlsCard == null) {
@@ -105,6 +221,42 @@ public final class ActivityMainBinding implements ViewBinding {
       id = R.id.filesText;
       TextView filesText = ViewBindings.findChildViewById(rootView, id);
       if (filesText == null) {
+        break missingId;
+      }
+
+      id = R.id.gnssIntervalInput;
+      EditText gnssIntervalInput = ViewBindings.findChildViewById(rootView, id);
+      if (gnssIntervalInput == null) {
+        break missingId;
+      }
+
+      id = R.id.guardedRouteSwitch;
+      MaterialSwitch guardedRouteSwitch = ViewBindings.findChildViewById(rootView, id);
+      if (guardedRouteSwitch == null) {
+        break missingId;
+      }
+
+      id = R.id.imuIntervalInput;
+      EditText imuIntervalInput = ViewBindings.findChildViewById(rootView, id);
+      if (imuIntervalInput == null) {
+        break missingId;
+      }
+
+      id = R.id.issueText;
+      TextView issueText = ViewBindings.findChildViewById(rootView, id);
+      if (issueText == null) {
+        break missingId;
+      }
+
+      id = R.id.overlayStopButton;
+      MaterialButton overlayStopButton = ViewBindings.findChildViewById(rootView, id);
+      if (overlayStopButton == null) {
+        break missingId;
+      }
+
+      id = R.id.pocketModeRadio;
+      MaterialRadioButton pocketModeRadio = ViewBindings.findChildViewById(rootView, id);
+      if (pocketModeRadio == null) {
         break missingId;
       }
 
@@ -120,9 +272,51 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.recordingModeGroup;
+      RadioGroup recordingModeGroup = ViewBindings.findChildViewById(rootView, id);
+      if (recordingModeGroup == null) {
+        break missingId;
+      }
+
+      id = R.id.recordingModeHeaderText;
+      TextView recordingModeHeaderText = ViewBindings.findChildViewById(rootView, id);
+      if (recordingModeHeaderText == null) {
+        break missingId;
+      }
+
+      id = R.id.recordingModeText;
+      TextView recordingModeText = ViewBindings.findChildViewById(rootView, id);
+      if (recordingModeText == null) {
+        break missingId;
+      }
+
+      id = R.id.recordingOverlay;
+      LinearLayout recordingOverlay = ViewBindings.findChildViewById(rootView, id);
+      if (recordingOverlay == null) {
+        break missingId;
+      }
+
+      id = R.id.recordingOverlayText;
+      TextView recordingOverlayText = ViewBindings.findChildViewById(rootView, id);
+      if (recordingOverlayText == null) {
+        break missingId;
+      }
+
       id = R.id.refreshButton;
       MaterialButton refreshButton = ViewBindings.findChildViewById(rootView, id);
       if (refreshButton == null) {
+        break missingId;
+      }
+
+      id = R.id.replacementPreviewImage;
+      ImageView replacementPreviewImage = ViewBindings.findChildViewById(rootView, id);
+      if (replacementPreviewImage == null) {
+        break missingId;
+      }
+
+      id = R.id.samplingHeaderText;
+      TextView samplingHeaderText = ViewBindings.findChildViewById(rootView, id);
+      if (samplingHeaderText == null) {
         break missingId;
       }
 
@@ -132,14 +326,31 @@ public final class ActivityMainBinding implements ViewBinding {
         break missingId;
       }
 
+      id = R.id.standardModeRadio;
+      MaterialRadioButton standardModeRadio = ViewBindings.findChildViewById(rootView, id);
+      if (standardModeRadio == null) {
+        break missingId;
+      }
+
       id = R.id.statusText;
       TextView statusText = ViewBindings.findChildViewById(rootView, id);
       if (statusText == null) {
         break missingId;
       }
 
-      return new ActivityMainBinding((ConstraintLayout) rootView, arCoreGlSurfaceView, controlsCard,
-          filesText, previewView, recordButton, refreshButton, sessionText, statusText);
+      id = R.id.videoIntervalInput;
+      EditText videoIntervalInput = ViewBindings.findChildViewById(rootView, id);
+      if (videoIntervalInput == null) {
+        break missingId;
+      }
+
+      return new ActivityMainBinding((ConstraintLayout) rootView, arCoreGlSurfaceView,
+          arcoreIntervalInput, arcoreSwitch, bleIntervalInput, bleSwitch, controlsCard, filesText,
+          gnssIntervalInput, guardedRouteSwitch, imuIntervalInput, issueText, overlayStopButton,
+          pocketModeRadio, previewView, recordButton, recordingModeGroup, recordingModeHeaderText,
+          recordingModeText, recordingOverlay, recordingOverlayText, refreshButton,
+          replacementPreviewImage, samplingHeaderText, sessionText, standardModeRadio, statusText,
+          videoIntervalInput);
     }
     String missingId = rootView.getResources().getResourceName(id);
     throw new NullPointerException("Missing required view with ID: ".concat(missingId));

@@ -1,10 +1,10 @@
-# Micro Release Line Plan
+# マイクリリースライン計画
 
-## Purpose
+## 目的
 
 この文書は、各 Market Release Line を、開発者が実機スマホで体験し検証できる Micro Release Line へ分解する。
 
-## Definition Rule
+## 定義ルール
 
 - 各 Micro Release は単独で体験可能であること。
 - 各 Micro Release は実機確認行為を含むこと。
@@ -32,7 +32,7 @@
 | mRL-4-2 | MRL-4 | 開発履歴と変更文書 snapshot を対で残せる | develop 文書変更後に履歴確認 | 変更理由と対象文書が追える | snapshot 漏れ | develop history rule |
 | mRL-4-3 | MRL-4 | 現在の到達点が次の体験へつながる | current release を更新し確認 | 次の最小検証単位が明確 | release 分解不足 | autonomous cycle |
 
-## Current Recommendation
+## 現在の推奨順序
 
 1. まず `mRL-0-1` から `mRL-0-3` を成立させる。
 2. 次に `mRL-1-1` を最優先し、動画と IMU の同期から基盤を固める。

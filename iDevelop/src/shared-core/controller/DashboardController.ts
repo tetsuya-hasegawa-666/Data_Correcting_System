@@ -59,6 +59,7 @@ export class DashboardController {
   private workspaceId: WorkspaceId = "document";
   private query = "";
   private selectedDocumentId?: string;
+  private selectedDatasetId?: string;
   private editorState?: Partial<DocumentEditorState>;
   private documentConsultationState?: Partial<DocumentConsultationState>;
   private dataConsultationState?: Partial<DataConsultationState>;
@@ -281,8 +282,20 @@ export class DashboardController {
     if (toggleDatasetButton?.dataset.datasetId) {
       this.dataConsultationState = this.dataController.toggleDatasetSelection(
         toggleDatasetButton.dataset.datasetId,
-        this.dataConsultationState
+        {
+          ...this.dataConsultationState,
+          selectedDatasetId: this.selectedDatasetId
+        }
       ).consultation;
+      this.workspaceId = "data";
+      this.render();
+      return;
+    }
+    const datasetItem = target.closest<HTMLElement>("[data-role='dataset-item']");
+    if (datasetItem?.dataset.datasetId) {
+      const state = this.dataController.selectDataset(datasetItem.dataset.datasetId, this.dataConsultationState);
+      this.selectedDatasetId = state.selectedDataset?.id;
+      this.dataConsultationState = state.consultation;
       this.workspaceId = "data";
       this.render();
       return;
@@ -402,8 +415,12 @@ export class DashboardController {
     }
     if (form.dataset.role === "data-consultation-form") {
       event.preventDefault();
-      const state = this.dataController.consultDatasets(this.dataConsultationState);
+      const state = this.dataController.consultDatasets({
+        ...this.dataConsultationState,
+        selectedDatasetId: this.selectedDatasetId
+      });
       this.dataConsultationState = state.consultation;
+      this.selectedDatasetId = state.selectedDataset?.id;
       this.sharedConversationState = appendConversationEntry(this.sharedConversationState, {
         workspaceId: "data",
         prompt: state.consultation.focusPrompt,
@@ -556,8 +573,12 @@ export class DashboardController {
       return;
     }
     if (this.workspaceId === "data") {
-      const state = this.dataController.createState(this.dataConsultationState);
+      const state = this.dataController.createState({
+        ...this.dataConsultationState,
+        selectedDatasetId: this.selectedDatasetId
+      });
       this.dataConsultationState = state.consultation;
+      this.selectedDatasetId = state.selectedDataset?.id;
       new DataWorkspaceView(content).render(state);
       return;
     }
@@ -685,6 +706,7 @@ export class DashboardController {
       return;
     }
     const state = this.dataController.createState(this.dataConsultationState);
+    this.selectedDatasetId = state.selectedDataset?.id;
     const primary = state.selectedDatasets[0];
     if (state.isReadOnly || !primary) {
       this.sharedConversationState = updateApplyState(this.sharedConversationState, "cancelled", "consultation-only");

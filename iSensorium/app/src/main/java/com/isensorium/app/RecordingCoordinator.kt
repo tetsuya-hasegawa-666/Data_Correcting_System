@@ -177,7 +177,18 @@ class RecordingCoordinator(
         if (recording != null) return
 
         val capture = videoCapture ?: run {
-            statusListener(SessionUiState(false, null, "Camera is not ready yet."))
+            statusListener(
+                SessionUiState(
+                    recording = false,
+                    session = null,
+                    statusText = "カメラの準備がまだ完了していません。",
+                    issue = RecordingIssue(
+                        severity = RecordingIssueSeverity.ERROR,
+                        message = "カメラが未初期化のため、セッションを開始できません。",
+                        suggestedAction = "数秒待ってから再度開始するか、再読み込みしてください。",
+                    ),
+                ),
+            )
             return
         }
 
@@ -192,9 +203,9 @@ class RecordingCoordinator(
                 false,
                 session,
                 if (recordingConfig.bleEnabled || recordingConfig.arCoreEnabled) {
-                    "Session created. Preparing video + IMU + GNSS, with low-rate BLE / ARCore."
+                    "${recordingModeLabel(recordingConfig.recordingMode)}でセッションを作成しました。動画・IMU・GNSS を準備し、BLE / ARCore は低頻度確認として開始します。"
                 } else {
-                    "Session created. Preparing video + IMU + GNSS."
+                    "${recordingModeLabel(recordingConfig.recordingMode)}でセッションを作成しました。動画・IMU・GNSS の記録を開始します。"
                 },
             ),
         )
@@ -225,12 +236,12 @@ class RecordingCoordinator(
         recording?.stop()
         recording = null
         stopCollectors()
-        currentSession?.let {
-            sessionManager.flushSessionOutputs(it)
-            sessionManager.finalizeManifest(it, "stopped")
-            statusListener(SessionUiState(false, it, "Session stopped. Review session directory for continuation."))
+            currentSession?.let {
+                sessionManager.flushSessionOutputs(it)
+                sessionManager.finalizeManifest(it, "stopped")
+                statusListener(SessionUiState(false, it, "セッションを停止しました。保存先を確認して続きの判断を行ってください。"))
+            }
         }
-    }
 
     private fun shutdownFrozenSession() {
         if (isRecording()) {
@@ -252,6 +263,12 @@ class RecordingCoordinator(
         arCoreGlSurfaceView.onPause()
     }
 
+    private fun recordingModeLabel(mode: RecordingMode): String =
+        when (mode) {
+            RecordingMode.STANDARD_HANDHELD -> "通常計測"
+            RecordingMode.POCKET_RECORDING -> "ポケット収納計測"
+        }
+
     @SuppressLint("MissingPermission")
     private fun startRecording(pendingRecording: PendingRecording, session: RecordingSession) {
         recording = pendingRecording.start(ContextCompat.getMainExecutor(context)) { event ->
@@ -271,11 +288,11 @@ class RecordingCoordinator(
                         SessionUiState(
                             recording = true,
                             session = session,
-                            statusText = "Recording session ${session.sessionId}",
+                            statusText = "${recordingModeLabel(session.recordingConfig.recordingMode)}: ${session.sessionId} を記録中です。",
                             toastMessage = if (session.recordingConfig.bleEnabled || session.recordingConfig.arCoreEnabled) {
-                                "Video + IMU + GNSS active, BLE / ARCore low-rate"
+                                "動画・IMU・GNSS を記録中、BLE / ARCore は低頻度確認です"
                             } else {
-                                "Video + IMU + GNSS active"
+                                "動画・IMU・GNSS を記録中です"
                             },
                         ),
                     )
@@ -298,7 +315,7 @@ class RecordingCoordinator(
                             SessionUiState(
                                 recording = true,
                                 session = session,
-                                statusText = "Recording ${session.sessionId} (${event.recordingStats.numBytesRecorded} bytes, streams: ${session.activeStreamSummary()})",
+                                statusText = "記録中: ${session.sessionId} (${event.recordingStats.numBytesRecorded} bytes / ${session.activeStreamSummary()})",
                             ),
                         )
                     }
@@ -330,21 +347,31 @@ class RecordingCoordinator(
                             recording = false,
                             session = session,
                             statusText = if (event.hasError()) {
-                                "Session finalized with error: ${event.error}"
+                                "セッション終了時にエラーが発生しました: ${event.error}"
                             } else {
                                 if (session.recordingConfig.bleEnabled || session.recordingConfig.arCoreEnabled) {
-                                    "Session finalized with five-stream configuration. Review directory."
+                                    "5 系統構成のセッションを保存しました。保存先を確認してください。"
                                 } else {
-                                    "Session finalized with video + IMU + GNSS. Review directory."
+                                    "動画・IMU・GNSS のセッションを保存しました。保存先を確認してください。"
                                 }
                             },
                             toastMessage = if (event.hasError()) {
                                 null
                             } else if (session.recordingConfig.bleEnabled || session.recordingConfig.arCoreEnabled) {
-                                "Five-stream session saved"
+                                "5 系統構成のセッションを保存しました"
                             } else {
-                                "Video + IMU + GNSS session saved"
+                                "動画・IMU・GNSS のセッションを保存しました"
                             },
+                            issue =
+                                if (event.hasError()) {
+                                    RecordingIssue(
+                                        severity = RecordingIssueSeverity.ERROR,
+                                        message = "セッション保存は完了しましたが、finalize 処理に異常があります。",
+                                        suggestedAction = "session_manifest.json と video_events.jsonl を確認し、再度セッションを試してください。",
+                                    )
+                                } else {
+                                    null
+                                },
                         ),
                     )
                 }
@@ -406,7 +433,7 @@ class RecordingCoordinator(
             analysis,
         )
 
-        statusListener(SessionUiState(false, currentSession, "Camera ready. Extended sensors can start."))
+        statusListener(SessionUiState(false, currentSession, "カメラの準備ができました。追加センサを含む記録を開始できます。"))
     }
 
     private fun initializeArCoreGlSurfaceView() {
@@ -535,7 +562,7 @@ class RecordingCoordinator(
                 SessionUiState(
                     recording = false,
                     session = currentSession,
-                    statusText = "Guarded replacement route armed. Idle preview stays on the frozen path until session start.",
+                    statusText = "guarded replacement route を待機状態にしました。開始前の preview は frozen path を維持します。",
                 ),
             )
         }
@@ -579,7 +606,7 @@ class RecordingCoordinator(
                 SessionUiState(
                     recording = false,
                     session = session,
-                    statusText = "Starting guarded replacement runtime behind the shared-camera adapter seam.",
+                    statusText = "${recordingModeLabel(session.recordingConfig.recordingMode)}で guarded replacement runtime を開始しています。",
                 ),
             )
             initializeSharedCamera(session)
@@ -604,11 +631,21 @@ class RecordingCoordinator(
             restoreFrozenPreview(
                 session = session,
                 statusText = if (runtimeMetadata["runtimeStatus"] == "error") {
-                    "Guarded replacement runtime stopped with error. Frozen preview restored."
+                    "guarded replacement runtime をエラー付きで停止しました。frozen preview を復帰しました。"
                 } else {
-                    "Guarded replacement runtime finalized. Frozen preview restored."
+                    "guarded replacement runtime を終了し、frozen preview を復帰しました。"
                 },
-                toastMessage = if (runtimeMetadata["runtimeStatus"] == "error") null else "Replacement-route session saved",
+                toastMessage = if (runtimeMetadata["runtimeStatus"] == "error") null else "replacement route の session を保存しました",
+                issue =
+                    if (runtimeMetadata["runtimeStatus"] == "error") {
+                        RecordingIssue(
+                            severity = RecordingIssueSeverity.ERROR,
+                            message = "replacement runtime の終了処理に異常があります。",
+                            suggestedAction = "session_manifest.json と video_events.jsonl を確認し、必要なら frozen route で再試行してください。",
+                        )
+                    } else {
+                        null
+                    },
             )
         }
 
@@ -654,7 +691,7 @@ class RecordingCoordinator(
                 prepareOutputRuntime(session)
                 openSharedCamera(arSession, session, cameraId)
             } catch (error: Exception) {
-                failSharedCameraSession(session, "Shared camera initialization failed: ${error.javaClass.simpleName}")
+                failSharedCameraSession(session, "shared camera の初期化に失敗しました: ${error.javaClass.simpleName}。")
             }
         }
 
@@ -711,14 +748,14 @@ class RecordingCoordinator(
                         override fun onDisconnected(device: CameraDevice) {
                             device.close()
                             if (!closingRuntime) {
-                                failSharedCameraSession(session, "Shared camera disconnected during bootstrap.")
+                                failSharedCameraSession(session, "shared camera が起動中に切断されました。")
                             }
                         }
 
                         override fun onError(device: CameraDevice, error: Int) {
                             device.close()
                             if (!closingRuntime) {
-                                failSharedCameraSession(session, "Shared camera open failed with error $error.")
+                                failSharedCameraSession(session, "shared camera の起動に失敗しました。error=$error。")
                             }
                         }
                     },
@@ -794,14 +831,14 @@ class RecordingCoordinator(
                                 SessionUiState(
                                     recording = true,
                                     session = session,
-                                    statusText = "Guarded replacement runtime recording ${session.sessionId}",
-                                    toastMessage = "Replacement route active",
+                                    statusText = "${recordingModeLabel(session.recordingConfig.recordingMode)}: guarded replacement runtime で ${session.sessionId} を記録中です。",
+                                    toastMessage = "replacement route を有効化しました",
                                 ),
                             )
                         }
 
                         override fun onConfigureFailed(cameraCaptureSession: CameraCaptureSession) {
-                            failSharedCameraSession(session, "Shared camera capture session configuration failed.")
+                            failSharedCameraSession(session, "shared camera capture session の構成に失敗しました。")
                         }
                     },
                     cameraHandler,
@@ -921,8 +958,13 @@ class RecordingCoordinator(
             replacementPreviewRenderer.stop()
             restoreFrozenPreview(
                 session = session,
-                statusText = "$message Frozen preview restored.",
+                statusText = "$message frozen preview を復帰しました。",
                 toastMessage = null,
+                issue = RecordingIssue(
+                    severity = RecordingIssueSeverity.ERROR,
+                    message = message,
+                    suggestedAction = "route fallback 状態を確認し、必要なら frozen route で再試行してください。",
+                ),
             )
         }
 
@@ -930,6 +972,7 @@ class RecordingCoordinator(
             session: RecordingSession,
             statusText: String,
             toastMessage: String?,
+            issue: RecordingIssue? = null,
         ) {
             replacementPreviewRenderer.stop()
             startFrozenPreview(lastPreviewCameraSelector)
@@ -939,6 +982,7 @@ class RecordingCoordinator(
                     session = session,
                     statusText = statusText,
                     toastMessage = toastMessage,
+                    issue = issue,
                 ),
             )
         }
@@ -1345,6 +1389,7 @@ data class SessionUiState(
     val session: RecordingSession?,
     val statusText: String,
     val toastMessage: String? = null,
+    val issue: RecordingIssue? = null,
 )
 
 data class RecordingSession(
@@ -1390,6 +1435,7 @@ data class RecordingConfig(
     val arCoreIntervalMs: Long = 2000L,
     val bleEnabled: Boolean = true,
     val arCoreEnabled: Boolean = true,
+    val recordingMode: RecordingMode = RecordingMode.STANDARD_HANDHELD,
 )
 
 data class SessionTimebase(
@@ -1482,7 +1528,10 @@ class SessionManager(
                         .put("sessionStartWallTimeMs", session.timebase.sessionStartWallTimeMs)
                         .put("sessionStartElapsedRealtimeNanos", session.timebase.sessionStartElapsedRealtimeNanos),
                 )
+                .put("recordingMode", session.recordingConfig.recordingMode.modeId)
+                .put("recordingModeLabel", recordingModeLabel(session.recordingConfig.recordingMode))
                 .put("recordingConfig", recordingConfigJson(session.recordingConfig))
+                .put("modeBehavior", modeBehaviorJson(session.recordingConfig))
                 .put("sessionAdapter", GuardedUpstreamTrialContract.sessionAdapterMetadataJson(session.adapterMetadata))
                 .put("guardedUpstreamTrial", GuardedUpstreamTrialContract.guardedUpstreamTrialJson(routeResolution))
                 .put(
@@ -1509,7 +1558,10 @@ class SessionManager(
         manifest.put("gnssSampleCount", session.gnssSampleCount)
         manifest.put("bleSampleCount", session.bleSampleCount)
         manifest.put("arCoreSampleCount", session.arCoreSampleCount)
+        manifest.put("recordingMode", session.recordingConfig.recordingMode.modeId)
+        manifest.put("recordingModeLabel", recordingModeLabel(session.recordingConfig.recordingMode))
         manifest.put("recordingConfig", recordingConfigJson(session.recordingConfig))
+        manifest.put("modeBehavior", modeBehaviorJson(session.recordingConfig))
         writeManifestWithResolvedFileSizes(session, manifest)
     }
 
@@ -1645,7 +1697,9 @@ class SessionManager(
             gnssSampleCount = manifest?.optLong("gnssSampleCount") ?: 0L,
             bleSampleCount = manifest?.optLong("bleSampleCount") ?: 0L,
             arCoreSampleCount = manifest?.optLong("arCoreSampleCount") ?: 0L,
-            recordingConfig = manifest?.optJSONObject("recordingConfig")?.let(::recordingConfigFromJson) ?: RecordingConfig(),
+            recordingConfig =
+                manifest?.optJSONObject("recordingConfig")?.let(::recordingConfigFromJson)
+                    ?: RecordingConfig(recordingMode = RecordingMode.fromModeId(manifest?.optString("recordingMode"))),
         )
     }
 
@@ -1658,6 +1712,28 @@ class SessionManager(
             .put("arCoreIntervalMs", config.arCoreIntervalMs)
             .put("bleEnabled", config.bleEnabled)
             .put("arCoreEnabled", config.arCoreEnabled)
+            .put("recordingMode", config.recordingMode.modeId)
+
+    private fun modeBehaviorJson(config: RecordingConfig): JSONObject =
+        JSONObject()
+            .put("displayLabel", recordingModeLabel(config.recordingMode))
+            .put(
+                "optionalSensorPolicy",
+                if (config.recordingMode == RecordingMode.POCKET_RECORDING) {
+                    "low_frequency_confirmation"
+                } else {
+                    "operator_selected"
+                },
+            )
+            .put("videoFrameLogIntervalMs", config.videoFrameLogIntervalMs)
+            .put("bleIntervalMs", config.bleIntervalMs)
+            .put("arCoreIntervalMs", config.arCoreIntervalMs)
+
+    private fun recordingModeLabel(mode: RecordingMode): String =
+        when (mode) {
+            RecordingMode.STANDARD_HANDHELD -> "通常計測"
+            RecordingMode.POCKET_RECORDING -> "ポケット収納計測"
+        }
 
     private fun recordingConfigFromJson(json: JSONObject): RecordingConfig =
         RecordingConfig(
@@ -1668,6 +1744,7 @@ class SessionManager(
             arCoreIntervalMs = json.optLong("arCoreIntervalMs", 2000L),
             bleEnabled = json.optBoolean("bleEnabled", true),
             arCoreEnabled = json.optBoolean("arCoreEnabled", true),
+            recordingMode = RecordingMode.fromModeId(json.optString("recordingMode")),
         )
 
     private data class SessionWriters(

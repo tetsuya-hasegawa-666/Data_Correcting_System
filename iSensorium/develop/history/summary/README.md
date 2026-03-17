@@ -1,17 +1,17 @@
-# Develop History Summary Rules
+# develop 要約履歴ルール
 
-## Purpose
+## 目的
 
 `summary.md` を develop 側の単一要約履歴として扱う。
 個別ファイル分割ではなく、1 文書内に時系列で追記する。
 
-## Format
+## 形式
 
 - 1 変更につき 1 エントリを追加する。
 - 各エントリは `## YYYY-MM-DD-XXX <short-name>` で始める。
 - 対応スナップショットは `develop/history/snapshot/YYYY-MM-DD-XXX/` に置く。
 
-## Policy
+## 方針
 
 - 拡張にオープン:
   新しい観点は各エントリに項目追加できる。

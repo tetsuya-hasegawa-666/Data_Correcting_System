@@ -12,6 +12,7 @@ class SessionSummary:
     session_id: str
     status: str
     device_model: str
+    recording_mode: str
     session_dir: Path
     stream_counts: dict[str, int]
     collector_status: dict[str, str]
@@ -43,6 +44,7 @@ class SessionParser:
             session_id=self.manifest["sessionId"],
             status=self.manifest["status"],
             device_model=self.manifest["deviceModel"],
+            recording_mode=self.manifest.get("recordingMode", self.manifest.get("recordingConfig", {}).get("recordingMode", "standard_handheld")),
             session_dir=self.session_dir,
             stream_counts={
                 "frames": len(frame_rows),
@@ -135,4 +137,3 @@ class SessionParser:
             candidate = min(abs(frame_value - sensor_value) for sensor_value in sensor_values)
             nearest = candidate if nearest is None else min(nearest, candidate)
         return nearest
-

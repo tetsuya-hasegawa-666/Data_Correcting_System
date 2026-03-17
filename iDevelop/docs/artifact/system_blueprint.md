@@ -1,102 +1,65 @@
-# System Blueprint For Codex Dashboard
-
-## Purpose
-
-`iDevelop` の module 境界、project contract、live connection、安全境界に加えて、ユーザーと Codex の consultation workflow をどこに置くかを定義する。
+# System Blueprint
 
 ## Module Structure
 
-- `document-workspace`
-  文書一覧、検索、プレビュー、相談対象選択
-- `data-workspace`
-  データ一覧、要約、相談対象選択
-- `code-workspace`
-  read-only の code / script browse と相談対象参照
-- `conversation-workspace`
-  ユーザー入力、選択 bundle、Codex 応答、根拠、承認 state、次 action
 - `shared-core`
-  workspace navigation、refresh、error 表示、entry shell、session coordination
-
-## Interaction Contract Boundary
-
-- `shared-core/model/ConsultationSession`
-  workspace 横断の consultation story、bundle、response contract、approval state を保持する
+  - workspace shell
+  - refresh
+  - shared conversation
 - `document-workspace`
-  選択中文書を `document` bundle item として shared-core へ渡す
+  - compact tree explorer
+  - preview-side consultation / draft
 - `data-workspace`
-  選択中 dataset を `dataset` bundle item として shared-core へ渡す
+  - archive explorer
+  - session preview
+  - one-click download
 - `code-workspace`
-  read-only target を `code` bundle item として shared-core へ渡し、phase gate を超えない
+  - read-only code browse
+- `tools/liveProjectSnapshot.ts`
+  - live manifest read
+  - session archive discovery
+  - download target resolution
 
 ## MVC Boundary
 
-- View:
-  表示と入力の責務だけを持つ
-- Controller:
-  workspace ごとのユースケース制御と conversation orchestration を担う
-- Model:
-  repository、manifest、consultation contract、response contract、evidence log を担う
+- Model
+  - repository
+  - manifest contract
+  - session/export contract
+  - download contract
+- Controller
+  - selection
+  - bundle orchestration
+  - issue resolution
+  - operator flow control
+- View
+  - explorer
+  - preview
+  - warning / error / empty state
+  - Japanese operator wording
 
-## Project Contract Entry
+## Archive / Download Flow
 
-- source-of-truth は [project_contract.md](C:\Users\tetsuya\playground\Data_Correcting_System\iDevelop\docs\artifact\project_contract.md) とする
-- live connection は project manifest で document / data / code roots を解決する
-- manifest field は `projectId` `projectRoot` `documentRoots` `dataRoots` `codeRoots` `ignoreGlobs` `readOnly` を固定する
+1. live snapshot が configured roots を recursive read する
+2. session directory に `session_manifest.json` があれば session archive dataset として扱う
+3. explorer で top directory ごとに compact 表示する
+4. preview で session contract と files を表示する
+5. download は file または directory zip として 1 ボタンで実行する
 
-## Recursive Read Rule
+## Error Handling Contract
 
-- document / data / code は、それぞれの root 配下を再帰的に読む
-- child / grandchild / deeper directory も同一ルールで読む
-- root 外 path は拒否する
-- missing root は warning として扱い、致命失敗にはしない
-- ignore glob に一致する path は除外する
+- empty archive
+  - archive が 0 件なら warning state を出す
+- missing file
+  - file list に `present: false` があれば warning state を出す
+- download unavailable
+  - download contract 不在なら error state を出す
+- refresh failure
+  - header evidence に `failed` を残す
 
-## Read Strategy
+## Current Focus
 
-- phase 1: seed data + browser storage
-- phase 2: filesystem read-only connection
-- phase 3: refresh / stale tracking
-- phase 4: pilot operation evidence
-- phase 5: consultation contract
-- phase 6: user-approved apply
-
-## Consultation Flow
-
-- user は document / data / code から consultation bundle を選ぶ
-- user は prompt と観点を入力する
-- Codex は bundle と prompt をもとに summary / risk / proposal / next action を返す
-- 応答には対象、根拠、提案種別、承認状態を持たせる
-- user は keep / discard / convert-to-task / apply-request を選ぶ
-
-## State Boundary
-
-- bundle state:
-  workspace が source selection を持ち、shared-core が contract へ正規化する
-- response state:
-  `summary` `evidence` `next_action` の 3 要素を最小 schema とする
-- approval state:
-  `consultation-only` と `phase-gated-read-only` を phase 5 の既定値とする
-- transition boundary:
-  keep / discard / task / apply-request は `MRL-15` 以降で解放する
-
-## Safety Boundary
-
-- live connection は read-only first とする
-- projectRoot 外の path には出ない
-- code workspace は read-only を維持し、実行や attach を許可しない
-- apply は approval state が定義されるまで導入しない
-
-## Current Implementation Status
-
-- phase 1: completed
-- phase 2: completed
-- phase 3: completed
-- phase 4: completed
-- phase 5: completed
-- phase 6: completed
-- current target: `2026-03-15-005 / MRL-17 / completed`
-
-## Next Design Focus
-
-- 次 plan set の export / multi-user / deeper automation 候補を絞る
-- consultation workspace の pilot evidence をもとに contract を微修正する
+- session archive viewer
+- top directory compact explorer
+- one-click download
+- operator-facing detailed error handling

@@ -62,11 +62,49 @@
                     android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
 
                 <TextView
+                    android:id="@+id/issueText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+                    android:textColor="@android:color/holo_red_light"
+                    android:visibility="gone" />
+
+                <TextView
                     android:id="@+id/recordingModeText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:textAppearance="@style/TextAppearance.Material3.BodySmall" />
+
+                <TextView
+                    android:id="@+id/recordingModeHeaderText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:text="@string/recording_mode_header"
+                    android:textAppearance="@style/TextAppearance.Material3.TitleSmall" />
+
+                <RadioGroup
+                    android:id="@+id/recordingModeGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:orientation="vertical">
+
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/standardModeRadio"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:text="@string/recording_mode_standard" />
+
+                    <com.google.android.material.radiobutton.MaterialRadioButton
+                        android:id="@+id/pocketModeRadio"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/recording_mode_pocket" />
+                </RadioGroup>
 
                 <com.google.android.material.materialswitch.MaterialSwitch
                     android:id="@+id/guardedRouteSwitch"

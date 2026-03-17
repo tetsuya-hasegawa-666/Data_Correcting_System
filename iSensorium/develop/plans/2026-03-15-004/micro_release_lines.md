@@ -1,26 +1,26 @@
-# Micro Release Line Plan
+# マイクリリースライン計画
 
-## Purpose
+## 目的
 
-This dated micro plan decomposes `MRL-6 guarded upstream trial` into rollback-safe steps inside `iSensorium`.
+この dated micro plan は、`MRL-6 guarded upstream trial` を `iSensorium` 内の rollback-safe な手順へ分解する。
 
 ## Micro Release Lines
 
-| ID | Parent | Developer Experience | Verification Method | Expected Result | Failure Split | Next Decomposition Target |
+| ID | 親 | 開発者体験 | 検証方法 | 期待結果 | 失敗時の分岐 | 次の分解対象 |
 |---|---|---|---|---|---|---|
-| mRL-6-1 | MRL-6 | preserved outer session operations are routed through `shared-camera-session-adapter` without changing the public call surface | local code inspection plus unit tests on route resolution metadata | `startSession`, `stopSession`, and `findLatestSession` remain unchanged upstream while a seam exists internally | seam leaks behavior upstream / fallback logic unclear | manifest metadata and guarded route reporting |
-| mRL-6-2 | MRL-6 | frozen session contract stays stable while additive guarded-trial metadata is emitted | run parser-facing sanity checks on manifest shape and required file names | downstream readers still see the same required file set and timestamp basis | additive field breaks parser assumptions / file set drifts | reversible cutover gate definition |
-| mRL-6-3 | MRL-6 | replacement route remains explicitly guarded and reversible before real runtime wiring | confirm rollback anchor, requested-route vs active-route reporting, and activation conditions | `corecamera_shared_camera_trial` can be requested without silently replacing the active frozen route | accidental cutover / rollback ambiguity | real runtime wiring only after explicit acceptance |
+| mRL-6-1 | MRL-6 | 外側の session operation を public call surface を変えずに `shared-camera-session-adapter` 経由へ通せる | route resolution metadata に対する local code inspection と unit test | `startSession`、`stopSession`、`findLatestSession` は upstream から見て不変のまま、内部に seam が存在する | seam が upstream へ挙動漏れする / fallback logic が不明瞭 | manifest metadata と guarded route reporting |
+| mRL-6-2 | MRL-6 | additive な guarded-trial metadata を出しても frozen session contract が安定したまま維持される | manifest shape と required file names に対する parser-facing sanity check を走らせる | downstream reader から見える required file set と timestamp basis が不変のまま保たれる | additive field が parser assumption を壊す / file set が drift する | reversible cutover gate の定義 |
+| mRL-6-3 | MRL-6 | real runtime wiring 前でも replacement route が明示的に guarded かつ reversible のまま維持される | rollback anchor、requested-route と active-route の reporting、activation conditions を確認する | `corecamera_shared_camera_trial` を要求しても active frozen route が暗黙に置換されない | accidental cutover / rollback ambiguity | explicit acceptance 後にだけ real runtime wiring へ進む |
 
-## Current Order
+## 現在の順序
 
 1. `mRL-6-1`
 2. `mRL-6-2`
 3. `mRL-6-3`
 
-## Scope Guard
+## 対象ガード
 
-- Do not edit `coreCamera/`.
-- Do not change the existing session file names.
-- Do not remove or rename parser-visible manifest fields.
-- Do not switch the default route away from `frozen_camerax_arcore`.
+- `coreCamera/` は編集しない。
+- 既存の session file 名は変更しない。
+- parser-visible な manifest field を削除したり rename したりしない。
+- default route を `frozen_camerax_arcore` から切り替えない。

@@ -1,7 +1,7 @@
-import { readFileSync, readdirSync, statSync } from "node:fs";
+import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
 import { basename, extname, join, relative, resolve, sep } from "node:path";
 
-import type { DatasetRecord } from "../src/data-workspace/model/DatasetRecord";
+import type { DatasetFileRecord, DatasetRecord } from "../src/data-workspace/model/DatasetRecord";
 import type { DocumentRecord } from "../src/document-workspace/model/DocumentRecord";
 import type { CodeTargetRecord } from "../src/code-workspace/model/CodeTargetRecord";
 
@@ -26,6 +26,30 @@ export interface LiveProjectSnapshot {
   sourceSignature: string;
 }
 
+export interface DownloadTarget {
+  absolutePath: string;
+  relativePath: string;
+  kind: "file" | "directory";
+  fileName: string;
+}
+
+interface SessionManifest {
+  sessionId?: string;
+  status?: string;
+  recordingMode?: string;
+  startedAt?: string;
+  finalizedAt?: string;
+  requestedRoute?: string;
+  activeRoute?: string;
+  recordingConfig?: {
+    requestedRoute?: string;
+  };
+  files?: Array<{
+    path?: string;
+    sizeBytes?: number;
+  }>;
+}
+
 export function loadLiveProjectSnapshot(manifestPath: string): LiveProjectSnapshot {
   const manifest = readManifest(manifestPath);
   const documents = collectDocuments(manifest);
@@ -44,12 +68,45 @@ export function loadLiveProjectSnapshot(manifestPath: string): LiveProjectSnapsh
   };
 }
 
+export function resolveDownloadTarget(manifestPath: string, relativePath: string): DownloadTarget {
+  const manifest = readManifest(manifestPath);
+  const absolutePath = resolve(manifest.projectRoot, relativePath);
+  const normalizedRelativePath = toProjectRelativePath(manifest.projectRoot, absolutePath);
+
+  if (!isInsideRoot(manifest.projectRoot, absolutePath)) {
+    throw new Error("Download path is outside projectRoot.");
+  }
+  if (!existsSync(absolutePath)) {
+    throw new Error("Download source was not found.");
+  }
+
+  const allowedRoots = [...manifest.dataRoots, ...manifest.documentRoots];
+  const isAllowed = allowedRoots.some((root) => {
+    const absoluteRoot = resolve(manifest.projectRoot, root);
+    return isInsideRoot(absoluteRoot, absolutePath) || absolutePath === absoluteRoot;
+  });
+  if (!isAllowed) {
+    throw new Error("Download path is outside configured roots.");
+  }
+
+  const targetStat = statSync(absolutePath);
+  return {
+    absolutePath,
+    relativePath: normalizedRelativePath,
+    kind: targetStat.isDirectory() ? "directory" : "file",
+    fileName: targetStat.isDirectory()
+      ? `${basename(absolutePath)}.zip`
+      : basename(absolutePath)
+  };
+}
+
 function readManifest(manifestPath: string): ProjectManifest {
   return JSON.parse(readFileSync(manifestPath, "utf8")) as ProjectManifest;
 }
 
 function collectDocuments(manifest: ProjectManifest): DocumentRecord[] {
   return collectFiles(manifest, manifest.documentRoots)
+    .filter((filePath) => extname(filePath).toLowerCase() === ".md")
     .map((filePath) => {
       const body = readFileSync(filePath, "utf8");
       const projectRelativePath = toProjectRelativePath(manifest.projectRoot, filePath);
@@ -66,21 +123,18 @@ function collectDocuments(manifest: ProjectManifest): DocumentRecord[] {
 }
 
 function collectDatasets(manifest: ProjectManifest): DatasetRecord[] {
-  return collectFiles(manifest, manifest.dataRoots)
-    .map((filePath) => {
-      const projectRelativePath = toProjectRelativePath(manifest.projectRoot, filePath);
-      const stats = statSync(filePath);
+  const sessionRoots = collectSessionArchiveRoots(manifest);
+  const sessionRootSet = new Set(sessionRoots.map((sessionRoot) => sessionRoot.absolutePath));
+  const sessionDatasets = sessionRoots.map((sessionRoot) => buildSessionDataset(manifest, sessionRoot));
+  const fileDatasets = collectFiles(manifest, manifest.dataRoots)
+    .filter((filePath) => isDataFile(filePath))
+    .filter((filePath) => extname(filePath).toLowerCase() !== ".md")
+    .filter((filePath) => !isInsideAnySessionRoot(filePath, sessionRootSet))
+    .map((filePath) => buildFileDataset(manifest, filePath));
 
-      return {
-        id: projectRelativePath,
-        name: basename(filePath, extname(filePath)),
-        category: resolveDatasetCategory(filePath),
-        recordCount: countRecords(filePath),
-        status: "live",
-        updatedAt: stats.mtime.toISOString()
-      };
-    })
-    .sort((left, right) => left.name.localeCompare(right.name, "ja"));
+  return [...sessionDatasets, ...fileDatasets].sort((left, right) =>
+    right.updatedAt.localeCompare(left.updatedAt)
+  );
 }
 
 function collectCodeTargets(manifest: ProjectManifest): CodeTargetRecord[] {
@@ -104,6 +158,158 @@ function collectCodeTargets(manifest: ProjectManifest): CodeTargetRecord[] {
     .sort((left, right) => left.path.localeCompare(right.path, "ja"));
 }
 
+function collectSessionArchiveRoots(
+  manifest: ProjectManifest
+): Array<{ absolutePath: string; manifestPath: string }> {
+  const result: Array<{ absolutePath: string; manifestPath: string }> = [];
+  for (const root of manifest.dataRoots) {
+    const absoluteRoot = resolve(manifest.projectRoot, root);
+    if (!existsSync(absoluteRoot)) {
+      continue;
+    }
+    walkDirectoryForSessions(manifest, absoluteRoot, result);
+  }
+  return result;
+}
+
+function walkDirectoryForSessions(
+  manifest: ProjectManifest,
+  currentPath: string,
+  result: Array<{ absolutePath: string; manifestPath: string }>
+): void {
+  const relativePath = toProjectRelativePath(manifest.projectRoot, currentPath);
+  if (relativePath && shouldIgnore(manifest.ignoreGlobs, relativePath)) {
+    return;
+  }
+
+  const manifestPath = join(currentPath, "session_manifest.json");
+  if (existsSync(manifestPath)) {
+    result.push({ absolutePath: currentPath, manifestPath });
+    return;
+  }
+
+  for (const entry of readdirSync(currentPath, { withFileTypes: true })) {
+    if (!entry.isDirectory()) {
+      continue;
+    }
+    walkDirectoryForSessions(manifest, join(currentPath, entry.name), result);
+  }
+}
+
+function buildSessionDataset(
+  manifest: ProjectManifest,
+  sessionRoot: { absolutePath: string; manifestPath: string }
+): DatasetRecord {
+  const stats = statSync(sessionRoot.absolutePath);
+  const sessionManifest = JSON.parse(
+    readFileSync(sessionRoot.manifestPath, "utf8")
+  ) as SessionManifest;
+  const relativeDirectory = toProjectRelativePath(manifest.projectRoot, sessionRoot.absolutePath);
+  const files = buildSessionFileList(manifest, sessionRoot.absolutePath, sessionManifest);
+  const requestedRoute =
+    sessionManifest.requestedRoute ?? sessionManifest.recordingConfig?.requestedRoute ?? "unknown";
+  const activeRoute = sessionManifest.activeRoute ?? requestedRoute;
+  const previewText = [
+    `sessionId: ${sessionManifest.sessionId ?? basename(sessionRoot.absolutePath)}`,
+    `recordingMode: ${sessionManifest.recordingMode ?? "standard_handheld"}`,
+    `requestedRoute: ${requestedRoute}`,
+    `activeRoute: ${activeRoute}`,
+    `status: ${sessionManifest.status ?? "unknown"}`
+  ].join("\n");
+
+  return {
+    id: relativeDirectory,
+    name: sessionManifest.sessionId ?? basename(sessionRoot.absolutePath),
+    category: "session",
+    recordCount: files.length,
+    status: normalizeStatus(sessionManifest.status),
+    updatedAt: stats.mtime.toISOString(),
+    path: relativeDirectory,
+    topDirectory: relativeDirectory.split("/")[0] ?? "root",
+    sessionId: sessionManifest.sessionId ?? basename(sessionRoot.absolutePath),
+    recordingMode: sessionManifest.recordingMode ?? "standard_handheld",
+    requestedRoute,
+    activeRoute,
+    startedAt: sessionManifest.startedAt,
+    finalizedAt: sessionManifest.finalizedAt,
+    statusMessage: `files: ${files.length}`,
+    files,
+    previewText,
+    download: {
+      kind: "directory",
+      relativePath: relativeDirectory,
+      fileName: `${basename(sessionRoot.absolutePath)}.zip`
+    }
+  };
+}
+
+function buildFileDataset(manifest: ProjectManifest, filePath: string): DatasetRecord {
+  const projectRelativePath = toProjectRelativePath(manifest.projectRoot, filePath);
+  const stats = statSync(filePath);
+  const previewText = readPreviewText(filePath);
+
+  return {
+    id: projectRelativePath,
+    name: basename(filePath, extname(filePath)),
+    category: resolveDatasetCategory(filePath),
+    recordCount: countRecords(filePath),
+    status: "live",
+    updatedAt: stats.mtime.toISOString(),
+    path: projectRelativePath,
+    topDirectory: projectRelativePath.split("/")[0] ?? "root",
+    statusMessage: "single file",
+    files: [
+      {
+        name: basename(filePath),
+        relativePath: projectRelativePath,
+        sizeBytes: stats.size,
+        present: true
+      }
+    ],
+    previewText,
+    download: {
+      kind: "file",
+      relativePath: projectRelativePath,
+      fileName: basename(filePath)
+    }
+  };
+}
+
+function buildSessionFileList(
+  manifest: ProjectManifest,
+  sessionRoot: string,
+  sessionManifest: SessionManifest
+): DatasetFileRecord[] {
+  const manifestFiles = sessionManifest.files ?? [];
+  if (manifestFiles.length > 0) {
+    return manifestFiles.map((file) => {
+      const relativePath = file.path
+        ? toProjectRelativePath(manifest.projectRoot, resolve(sessionRoot, file.path))
+        : toProjectRelativePath(manifest.projectRoot, sessionRoot);
+      const absolutePath = file.path ? resolve(sessionRoot, file.path) : sessionRoot;
+      return {
+        name: basename(file.path ?? sessionRoot),
+        relativePath,
+        sizeBytes: file.sizeBytes ?? (existsSync(absolutePath) ? statSync(absolutePath).size : 0),
+        present: existsSync(absolutePath)
+      };
+    });
+  }
+
+  return readdirSync(sessionRoot, { withFileTypes: true })
+    .filter((entry) => entry.isFile())
+    .map((entry) => {
+      const absolutePath = join(sessionRoot, entry.name);
+      return {
+        name: entry.name,
+        relativePath: toProjectRelativePath(manifest.projectRoot, absolutePath),
+        sizeBytes: statSync(absolutePath).size,
+        present: true
+      };
+    })
+    .sort((left, right) => left.name.localeCompare(right.name, "ja"));
+}
+
 function collectFiles(manifest: ProjectManifest, roots: string[]): string[] {
   const result: string[] = [];
 
@@ -114,13 +320,11 @@ function collectFiles(manifest: ProjectManifest, roots: string[]): string[] {
       throw new Error(`Root '${root}' is outside projectRoot.`);
     }
 
-    let rootStat;
-    try {
-      rootStat = statSync(absoluteRoot);
-    } catch {
-      throw new Error(`Root '${root}' was not found under projectRoot.`);
+    if (!existsSync(absoluteRoot)) {
+      continue;
     }
 
+    const rootStat = statSync(absoluteRoot);
     if (!rootStat.isDirectory()) {
       continue;
     }
@@ -133,26 +337,21 @@ function collectFiles(manifest: ProjectManifest, roots: string[]): string[] {
 
 function walkDirectory(manifest: ProjectManifest, currentPath: string, result: string[]): void {
   const relativePath = toProjectRelativePath(manifest.projectRoot, currentPath);
-
   if (relativePath && shouldIgnore(manifest.ignoreGlobs, relativePath)) {
     return;
   }
 
-  const entries = readdirSync(currentPath, { withFileTypes: true });
-
-  for (const entry of entries) {
+  for (const entry of readdirSync(currentPath, { withFileTypes: true })) {
     const absolutePath = join(currentPath, entry.name);
     const entryRelativePath = toProjectRelativePath(manifest.projectRoot, absolutePath);
 
     if (shouldIgnore(manifest.ignoreGlobs, entryRelativePath)) {
       continue;
     }
-
     if (entry.isDirectory()) {
       walkDirectory(manifest, absolutePath, result);
       continue;
     }
-
     if (entry.isFile()) {
       result.push(absolutePath);
     }
@@ -165,14 +364,21 @@ function shouldIgnore(ignoreGlobs: string[], relativePath: string): boolean {
 
   return ignoreGlobs.some((pattern) => {
     const token = pattern.replaceAll("**/", "").replaceAll("/**", "").replaceAll("*", "");
-
     if (token.length === 0) {
       return false;
     }
-
     const normalizedToken = token.replaceAll("\\", "/").replace(/^\/+|\/+$/g, "");
     return segments.includes(normalizedToken);
   });
+}
+
+function isInsideAnySessionRoot(filePath: string, sessionRoots: Set<string>): boolean {
+  for (const sessionRoot of sessionRoots) {
+    if (isInsideRoot(sessionRoot, filePath) && filePath !== sessionRoot) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function toProjectRelativePath(projectRoot: string, absolutePath: string): string {
@@ -211,7 +417,6 @@ function buildDocumentTags(projectRelativePath: string): string[] {
 
 function resolveDatasetCategory(filePath: string): string {
   const extension = extname(filePath).replace(".", "");
-
   switch (extension) {
     case "csv":
       return "csv";
@@ -226,26 +431,52 @@ function resolveDatasetCategory(filePath: string): string {
   }
 }
 
+function isDataFile(filePath: string): boolean {
+  const extension = extname(filePath).toLowerCase();
+  return new Set([".csv", ".json", ".jsonl", ".txt", ".mp4"]).has(extension);
+}
+
 function countRecords(filePath: string): number {
   const extension = extname(filePath).toLowerCase();
-  const body = readFileSync(filePath, "utf8");
+  const body = readFileSync(filePath, "utf8").replace(/^\uFEFF/, "");
 
   if (extension === ".json") {
-    const parsed = JSON.parse(body) as unknown;
-
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(body) as unknown;
+    } catch {
+      return Math.max(body.split(/\r?\n/).filter((line) => line.trim().length > 0).length, 1);
+    }
     if (Array.isArray(parsed)) {
       return parsed.length;
     }
-
     if (parsed && typeof parsed === "object") {
       return Object.keys(parsed).length;
     }
-
     return 1;
   }
 
   const lines = body.split(/\r?\n/).filter((line) => line.trim().length > 0);
   return Math.max(lines.length, 1);
+}
+
+function readPreviewText(filePath: string): string {
+  const body = readFileSync(filePath, "utf8");
+  const lines = body.split(/\r?\n/).slice(0, 12);
+  return lines.join("\n");
+}
+
+function normalizeStatus(status?: string): string {
+  if (!status) {
+    return "live";
+  }
+  if (status === "completed" || status === "finished" || status === "finalized") {
+    return "ready";
+  }
+  if (status === "failed" || status === "error") {
+    return "review";
+  }
+  return "live";
 }
 
 function buildSourceSignature(

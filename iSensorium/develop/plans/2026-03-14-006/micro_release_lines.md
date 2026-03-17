@@ -1,10 +1,10 @@
-# Micro Release Line Plan
+# マイクリリースライン計画
 
-## Purpose
+## 目的
 
 この文書は、最新版 Market Release Line を、次セッションでそのまま実装着手できる Micro Release Line に分解したものである。
 
-## Definition Rule
+## 定義ルール
 
 - 各 Micro Release は単独で体験可能であること。
 - 各 Micro Release は実機確認行為を含むこと。
@@ -35,7 +35,7 @@
 | mRL-5-2 | MRL-5 | develop 履歴と snapshot を対で残せる | plan 更新後に履歴確認 | 変更理由と対象文書が追える | snapshot miss | history discipline |
 | mRL-5-3 | MRL-5 | 次の最小検証単位が常に明確である | current target を更新し確認 | 次アクションが明確 | decomposition too large | autonomous cycle |
 
-## Immediate Start Sequence
+## 直近の開始順序
 
 1. `mRL-0-1`
 2. `mRL-0-2`
@@ -43,7 +43,7 @@
 4. `mRL-1-1`
 5. `mRL-1-2`
 
-## Do Not Start With
+## 初手にしない項目
 
 - `mRL-2-4`
 - `mRL-3-3`

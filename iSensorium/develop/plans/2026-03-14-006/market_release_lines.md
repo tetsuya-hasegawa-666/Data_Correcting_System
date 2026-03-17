@@ -1,10 +1,10 @@
-# Market Release Line Plan
+# 市場リリースライン計画
 
-## Purpose
+## 目的
 
 この文書は、次の実装セッション開始時点で迷いなく着手できるよう、`iSensorium` の Market Release Line を実装可能な順序へ再編した最新版である。
 
-## Validity Review
+## 妥当性レビュー
 
 現行見直しで修正した点は次のとおり。
 
@@ -12,9 +12,9 @@
 - 次セッションの最初の実装対象としては、Video + Session + Timestamp + IMU を先に成立させるほうが妥当である。
 - GNSS、BLE、ARCore は同期 spine 成立後の拡張 release として分離したほうが、進捗判定と障害切り分けが容易である。
 
-## Gate Status
+## ゲート状態
 
-| RL | Status | Reason |
+| RL | 状態 | 理由 |
 |---|---|---|
 | RL-0 | ready | 実装開始用の最小 spine が定義済み |
 | RL-1 | ready_after_RL0 | 同期 spine は妥当だが、基礎記録体験成立が前提 |
@@ -34,7 +34,7 @@
 | MRL-4 | 屋外運用成立ライン | 通信断、発熱、権限拒否、部分欠落下でもセッション回収できる | MRL-1 成立 | 15 分級の連続記録で回収可能性と劣化条件が把握される | mRL-4-1, mRL-4-2, mRL-4-3 | バッテリー、通信品質、OS 制約 |
 | MRL-5 | Human + AI 継続研究成立ライン | release line 再編と変更追跡を保ちつつ研究開発を継続できる | docs/develop 規約が有効 | 変更要求が line と検証計画へ継続反映される | mRL-5-1, mRL-5-2, mRL-5-3 | 研究価値再定義、優先度変化 |
 
-## Recommended Ordering
+## 推奨順序
 
 1. 最初の実装セッションは `MRL-0` を完了し、そのまま `MRL-1` へ入る。
 2. `MRL-2` は GNSS、BLE、ARCore を一括ではなく個別に開く。
@@ -42,7 +42,7 @@
 4. `MRL-4` は `MRL-1` 成立直後から短時間試験で前倒し観測してよい。
 5. `MRL-5` は常時並走させる。
 
-## Next Session Start Point
+## 次セッションの開始点
 
 - start release line: `MRL-0`
 - immediate target after first pass: `MRL-1`

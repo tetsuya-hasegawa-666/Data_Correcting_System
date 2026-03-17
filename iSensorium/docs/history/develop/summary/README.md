@@ -1,31 +1,31 @@
-# Develop History Summary
+# develop 履歴要約
 
-## Purpose
+## 目的
 
 このディレクトリは、実開発における変更の意図と背景を残す専用履歴である。
 単なる作業記録ではなく、「何の振る舞いを、なぜ、どう変えたか」を短く追える形で保持する。
 
-## Policy
+## 方針
 
 - 拡張的変更にオープン:
   新機能、新観点、新検証、新設計意図を追加できる。
 - 修正的変更にクローズ:
   既存変更の意味を上書きせず、各変更を独立履歴として残す。
 
-## Required Template
+## 必須テンプレート
 
 ```md
-# Development Change
+# 開発変更
 
-- date:
-- target_behavior:
-- intended_change:
-- background_reason:
-- change_summary:
-- affected_documents:
-- expected_effect:
+- 日付:
+- 目標動作:
+- 変更意図:
+- 背景理由:
+- 変更要約:
+- 影響文書:
+- 期待効果:
 ```
 
-## Naming
+## 命名
 
 - `YYYY-MM-DD-XXX-<short-name>.md`

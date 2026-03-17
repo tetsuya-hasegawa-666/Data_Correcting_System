@@ -36,14 +36,62 @@ describe("loadLiveProjectSnapshot", () => {
 
     const snapshot = loadLiveProjectSnapshot(manifestPath);
 
-    expect(snapshot.datasets.map((dataset) => dataset.name)).toEqual([
+    expect(snapshot.datasets.map((dataset) => dataset.name).sort()).toEqual([
       "events",
       "summary"
     ]);
-    expect(snapshot.datasets[0]?.recordCount).toBe(3);
-    expect(snapshot.datasets[0]?.status).toBe("live");
-    expect(snapshot.datasets[1]?.recordCount).toBe(2);
+    expect(snapshot.datasets.find((dataset) => dataset.name === "events")?.recordCount).toBe(3);
+    expect(snapshot.datasets.find((dataset) => dataset.name === "events")?.status).toBe("live");
+    expect(snapshot.datasets.find((dataset) => dataset.name === "summary")?.recordCount).toBe(2);
     expect(snapshot.datasetSourcePolicy).toContain("filesystem");
+  });
+
+  it("reads session archive roots and exposes session contract fields", () => {
+    const { manifestPath, root } = createProjectFixture();
+    mkdirSync(join(root, "archives", "session-20260317-0001"), { recursive: true });
+    writeFileSync(
+      join(root, "archives", "session-20260317-0001", "session_manifest.json"),
+      JSON.stringify(
+        {
+          sessionId: "session-20260317-0001",
+          status: "completed",
+          recordingMode: "pocket_recording",
+          requestedRoute: "frozen_camerax_arcore",
+          activeRoute: "frozen_camerax_arcore",
+          files: [{ path: "session_manifest.json", sizeBytes: 128 }]
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    writeFileSync(
+      join(root, "project-manifest.json"),
+      JSON.stringify(
+        {
+          projectId: "fixture-project",
+          projectRoot: root,
+          documentRoots: ["docs", "develop"],
+          dataRoots: ["data", "archives"],
+          codeRoots: ["src", "tools"],
+          ignoreGlobs: ["**/node_modules/**", "**/.git/**", "**/dist/**", "**/build/**"],
+          readOnly: true
+        },
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    const snapshot = loadLiveProjectSnapshot(manifestPath);
+    const sessionDataset = snapshot.datasets.find(
+      (dataset) => dataset.sessionId === "session-20260317-0001"
+    );
+
+    expect(sessionDataset?.recordingMode).toBe("pocket_recording");
+    expect(sessionDataset?.download?.kind).toBe("directory");
+    expect(sessionDataset?.files?.[0]?.present).toBe(true);
   });
 
   it("reads code roots recursively and returns read-only browse targets", () => {
@@ -60,7 +108,7 @@ describe("loadLiveProjectSnapshot", () => {
   });
 });
 
-function createProjectFixture(): { manifestPath: string } {
+function createProjectFixture(): { manifestPath: string; root: string } {
   const root = mkdtempSync(join(tmpdir(), "idevelop-live-read-"));
   tempRoots.push(root);
 
@@ -102,5 +150,5 @@ function createProjectFixture(): { manifestPath: string } {
     "utf8"
   );
 
-  return { manifestPath };
+  return { manifestPath, root };
 }

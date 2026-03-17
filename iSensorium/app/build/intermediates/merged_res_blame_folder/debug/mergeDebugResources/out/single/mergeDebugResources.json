@@ -1,26 +1,22 @@
 [
     {
-        "merged": "C:\\Users\\tetsuya\\.gradle\\daemon\\8.10.2\\com.isensorium.app-debug-43:\\mipmap-anydpi-v26_ic_launcher.xml.flat",
-        "source": "C:\\Users\\tetsuya\\.gradle\\daemon\\8.10.2\\com.isensorium.app-main-45:\\mipmap-anydpi-v26\\ic_launcher.xml"
+        "merged": "com.isensorium.app-debug-43:/xml_backup_rules.xml.flat",
+        "source": "com.isensorium.app-main-45:/xml/backup_rules.xml"
     },
     {
-        "merged": "C:\\Users\\tetsuya\\.gradle\\daemon\\8.10.2\\com.isensorium.app-debug-43:\\xml_data_extraction_rules.xml.flat",
-        "source": "C:\\Users\\tetsuya\\.gradle\\daemon\\8.10.2\\com.isensorium.app-main-45:\\xml\\data_extraction_rules.xml"
-    },
-    {
-        "merged": "C:\\Users\\tetsuya\\.gradle\\daemon\\8.10.2\\com.isensorium.app-debug-43:\\mipmap-anydpi-v26_ic_launcher_round.xml.flat",
-        "source": "C:\\Users\\tetsuya\\.gradle\\daemon\\8.10.2\\com.isensorium.app-main-45:\\mipmap-anydpi-v26\\ic_launcher_round.xml"
-    },
-    {
-        "merged": "C:\\Users\\tetsuya\\.gradle\\daemon\\8.10.2\\com.isensorium.app-debug-43:\\layout_activity_main.xml.flat",
-        "source": "C:\\Users\\tetsuya\\.gradle\\daemon\\8.10.2\\com.isensorium.app-main-45:\\layout\\activity_main.xml"
-    },
-    {
-        "merged": "C:\\Users\\tetsuya\\.gradle\\daemon\\8.10.2\\com.isensorium.app-debug-43:\\xml_backup_rules.xml.flat",
-        "source": "C:\\Users\\tetsuya\\.gradle\\daemon\\8.10.2\\com.isensorium.app-main-45:\\xml\\backup_rules.xml"
+        "merged": "com.isensorium.app-debug-43:/mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "com.isensorium.app-main-45:/mipmap-anydpi-v26/ic_launcher.xml"
     },
     {
         "merged": "com.isensorium.app-debug-43:/layout_activity_main.xml.flat",
         "source": "com.isensorium.app-main-45:/layout/activity_main.xml"
+    },
+    {
+        "merged": "com.isensorium.app-debug-43:/xml_data_extraction_rules.xml.flat",
+        "source": "com.isensorium.app-main-45:/xml/data_extraction_rules.xml"
+    },
+    {
+        "merged": "com.isensorium.app-debug-43:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "com.isensorium.app-main-45:/mipmap-anydpi-v26/ic_launcher_round.xml"
     }
 ]

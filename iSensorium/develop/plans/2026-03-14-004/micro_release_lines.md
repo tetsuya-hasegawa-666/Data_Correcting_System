@@ -1,10 +1,10 @@
-# Micro Release Line Plan
+# マイクリリースライン計画
 
-## Purpose
+## 目的
 
 この文書は、`iDevelop/` bootstrap を、`iSensorium` 側で確認可能な最小単位へ分解する。
 
-## Definition Rule
+## 定義ルール
 
 - 各 Micro Release は境界確認可能であること。
 - 各 Micro Release はルート側から存在確認できること。
@@ -21,7 +21,7 @@
 | mRL-2-1 | MRL-2 | ダッシュボードの初期 release line を参照できる | ローカル plan set を確認する | 実装順序の骨格が読める | plan 不足 | feature design start |
 | mRL-2-2 | MRL-2 | BDD/TDD と MVC を前提にした設計方針を確認できる | ローカル north star / blueprint を確認する | 次スレッドで設計詳細化できる | 方針欠落 | implementation breakdown |
 
-## Current Recommendation
+## 現在の推奨順序
 
 1. まず `mRL-0-1` と `mRL-0-2` で分離を成立させる。
 2. 次に `mRL-1-1` と `mRL-1-2` でローカル入口を揃える。

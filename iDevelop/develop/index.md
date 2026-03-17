@@ -1,30 +1,33 @@
 # Develop Index
 
-このディレクトリでは、`docs/` で定義された dashboard 原則に従って、開発計画と履歴を管理する。
+## 現在の plan set
 
-## Governance Principle
+- active dated plan set: `none`
+- latest completed plan set: `2026-03-17-006 archive explorer, retrieval UX, and resilient operator flow`
+- active market release target: `none`
+- latest completed market release target: `MRL-24 MVC and resilient operator line`
+- active micro release target: `none`
+- latest completed micro release target: `mRL-24-3 completion evidence rule close`
 
-- 新しい feature 計画は release line に落として実装する。
-- 変更後は、結果、証拠、関連差分を履歴として残す。
-- plan set と release line の採番は、ユーザーが別指定しない限り連番を使う。
-- plan、history、current state に書く ID、名称、状態名、成果物名、データ名は、明示変更がない限り既存表記を再利用する。
+## 2026-03-17-006 の完了内容
 
-## Layout
+- `MRL-22`
+  - `iSensorium` session/export contract intake
+  - top directory compact archive explorer
+  - `.md` directory compact selection の文書整合
+- `MRL-23`
+  - preview-centered retrieval flow
+  - one-click download
+  - 日本語 operator wording
+- `MRL-24`
+  - viewer / explorer / download / consultation の MVC 整理
+  - detailed error handling contract
+  - completion evidence ルールと history close
 
-| Layer | File | Purpose |
-|---|---|---|
-| PlanSet | `develop/plans/YYYY-MM-DD-XXX/` | その時点の release line 計画を 2 文書セットで置く |
-| HistorySummary | `develop/history/summary/summary.md` | 開発計画変更の要約履歴 |
-| HistorySnapshot | `develop/history/snapshot/README.md` | 開発計画変更時点のスナップショット |
+## 完了 evidence
 
-## Rules
-
-1. release line 計画は `develop/plans/YYYY-MM-DD-XXX/` に置く。
-2. 1 つの plan set には `market_release_lines.md` と `micro_release_lines.md` を含める。
-3. plan set の `YYYY-MM-DD-XXX` は develop 履歴 entry id と一致させる。
-4. 計画変更時は `develop/history/summary/summary.md` にエントリを追加する。
-5. 同じ変更時点の plan スナップショットを `develop/history/snapshot/YYYY-MM-DD-XXX/` に残す。
-6. 開発計画文書は `docs/` の関連情報更新を伴わない。必要なら docs 側の変更を先に行う。
-7. 実装開始前の plan set では、feature 単位ではなく readiness milestone を release line として構成してよい。
-8. 連番採番と記載データ継続利用の規則は、新しい plan set 作成時にも維持する。
-9. active な market release line がある場合、user block または 6 時間上限に達しない限り、同一 session で exit criteria 到達まで継続する。
+- `npm test`
+- `npm run build`
+- live snapshot / archive contract は `vitest` で再確認済み
+- completion evidence は既定で `Codex retest`
+- ユーザーが検証できた旨を明示した場合は `user validation` も採用可能
