@@ -13,12 +13,6 @@
 
 この手順は、多忙な manager が Android で断片メモを残し、PC 側で project 文脈付き record と次の問いを確認するまでの UX を検証するためのワークフローである。
 
-## 現在の適用状態
-
-- この文書は `MRL-16` 以降で実装する target UX の確認手順であり、現行端末に入っている `com.isensorium.app` version `0.1.0` の実装手順ではない。
-- 2026-03-17 の実機確認では、現行端末の UI は `通常計測 / ポケット収納計測` を持つ capture recording app のままである。
-- 現時点の実機確認は `MRL-13` までの capture line 証跡として扱い、この文書の quick memo 導線は future workflow として読む。
-
 ## UX 設計の柱
 
 1. Zero-Friction Entry

@@ -1,13 +1,5 @@
 # docs 履歴要約
 
-## 2026-03-17-005 device reality check after pivot
-
-- 発生種別: observability alignment
-- 反映内容:
-  - `current_state.md` に、Xperia 5 III 実機で `com.isensorium.app` version `0.1.0` を再確認した結果を追加
-  - active docs が manager context pivot 後でも、現行 Android runtime は legacy capture line のままであることを明記
-  - `UX_check_work_flow.md` を target UX 用 workflow として位置づけ、現行端末の実装手順と混同しないように更新
-
 ## 2026-03-17-004 manager context collection pivot baseline
 
 - 発生種別: source-of-truth update
