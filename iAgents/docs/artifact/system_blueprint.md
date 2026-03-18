@@ -2,68 +2,67 @@
 
 ## 目的
 
-軽量 multi-agent 協働の最小実装を、mock provider で再現しつつ、将来の model adapter 差し替え先を固定する。
+Excel Online の横で動く external companion app として、Shadow Assistant prototype の feature matrix、API、browser UI を定義する。
 
-## 初期ディレクトリ構成
+## Prototype Feature Matrix
+
+| 機能名称 | prototype の振る舞い | 達成する UX | 備考 |
+|---|---|---|---|
+| Shadow Bar | 左端の常駐 UI を local web app 上で表現する | そこにいる安心感 | Excel Online の外側で動作 |
+| Range Pilot | 名前ボックスの range を入力すると拡張候補を返す | 視点のワープ | 手入力前提の prototype |
+| 選択履歴タイムマシン | 直近 5 件の range を localStorage へ保持する | やり直せる自由 | ブラウザ再読込でも保持 |
+| Smart Snap | header 行を含む table guess と data body を返す | 意図の補完 | visible rows / cols から推定 |
+| Graph Shadow Editor | 表データから棒グラフや複数系列候補を返す | 直感的な造形 | 実グラフ編集の前段 |
+| Clean Paste | Markdown table / CSV / TSV / 複数行テキストを正規化する | データの浄化 | single cell formula も返す |
+| Data Synthesizer | 2 つの表を見出し union で統合する | 過去遺産の整理 | 新ブック貼り戻し前提 |
+| Input Mode Halo | companion app 内で mode halo を可視化する | 状態の透明化 | 概念実証 |
+| Semantic Shadow Assist | 自然言語を range / clean paste / chart 候補へ解釈する | 意図の先読み | heuristic ベース |
+
+## Architecture
+
+```mermaid
+flowchart LR
+    A["Excel Online"] --- B["User"]
+    B --- C["Shadow Assistant Web UI"]
+    C --> D["Local HTTP Server"]
+    D --> E["Range Suggestion Logic"]
+    D --> F["Clean Paste Logic"]
+    D --> G["Data Synthesizer"]
+    D --> H["Graph Suggestion"]
+    D --> I["Intent Interpreter"]
+```
+
+## 実装構成
 
 ```text
 iAgents/
-├─ docs/
-├─ develop/
-├─ data/
-│  └─ seed/
-│     ├─ config/
-│     └─ session/
-├─ src/
-│  └─ iagents/
-│     ├─ cli.py
-│     ├─ agent.py
-│     ├─ models.py
-│     └─ orchestrator.py
+├─ data/seed/scenario/
+├─ src/iagents/
+│  ├─ cli.py
+│  ├─ logic.py
+│  ├─ server.py
+│  └─ web/
+│     ├─ index.html
+│     ├─ styles.css
+│     └─ app.js
 └─ tests/
+   └─ test_logic.py
 ```
 
-## 役割
+## API
 
-| role | responsibility |
+| endpoint | purpose |
 |---|---|
-| strategist | 課題の狙い、価値、進め方を整理する |
-| critic | リスク、曖昧さ、抜け漏れを指摘する |
-| builder | 次に試す具体策を提案する |
-| facilitator | 各 agent の出力を統合して最終提案にまとめる |
+| `GET /api/health` | 起動確認 |
+| `POST /api/range/suggest` | Range Pilot / Smart Snap 候補 |
+| `POST /api/paste/clean` | Clean Paste |
+| `POST /api/data/synthesize` | Data Synthesizer |
+| `POST /api/graph/suggest` | Graph Shadow Editor 候補 |
+| `POST /api/intent/interpret` | Semantic Shadow Assist |
 
-## 実行 flow
+## Safety ルール
 
-```mermaid
-flowchart TD
-    A["brief 読み込み"] --> B["team config 読み込み"]
-    B --> C["agent instances 生成"]
-    C --> D["round 1 発話"]
-    D --> E["round 2 発話"]
-    E --> F["facilitator 統合"]
-    F --> G["console 出力 or file 保存"]
-```
-
-## モジュール境界
-
-- `models.py`
-  dataclass と session record
-- `agent.py`
-  agent role と provider 呼び出しの薄い境界
-- `orchestrator.py`
-  round 制御、shared context、final synthesis
-- `cli.py`
-  引数処理、file 入出力、実行トリガ
-
-## provider 方針
-
-- 初期版は dependency-free の mock 生成だけを使う
-- 将来の provider は `Agent.generate()` 内で差し替え可能な境界として扱う
-- 本接続時も orchestrator の round contract は変えない
-
-## seed data
-
-- `agent_team.sample.json`
-  役割、表示名、tone、focus を持つ team 定義
-- `brief.md`
-  初回実行確認に使う課題メモ
+- API は候補だけを返す
+- 原本 workbook を直接編集しない
+- 統合結果は preview 用の rows と headers に留める
+- single cell formula は利用者が確認して Excel Online へ貼り戻す

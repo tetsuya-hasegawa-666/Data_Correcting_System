@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>iAgents Shadow Assistant</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <aside class="shadow-bar" id="shadowBar">
+        <button class="shadow-pill" id="shadowToggle" type="button">Shadow</button>
+        <div class="shadow-panel" id="shadowPanel">
+          <h1>Excel Online Shadow Assistant</h1>
+          <p>Excel Online と横並びで開き、範囲選択、貼り付け、統合、グラフ、意図解釈を外部から支援します。</p>
+          <div class="halo-row">
+            <label for="modeSelect">Mode Halo</label>
+            <select id="modeSelect">
+              <option value="入力">入力</option>
+              <option value="編集">編集</option>
+              <option value="数式">数式</option>
+              <option value="選択確認">選択確認</option>
+            </select>
+            <div class="halo-indicator" id="haloIndicator">入力</div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="content">
+        <section class="hero">
+          <div>
+            <p class="eyebrow">External Companion App</p>
+            <h2>Excel は Excel のまま、操作だけを軽くする。</h2>
+            <p>この prototype は Excel Online を改造せず、ブラウザ横の外部 app として動きます。名前ボックスの range や表データを手渡すことで、提案だけを返します。</p>
+          </div>
+          <div class="hero-card">
+            <h3>検証の前提</h3>
+            <ul>
+              <li>Excel Online を別タブまたは別ウィンドウで開く</li>
+              <li>この app をローカルで開く</li>
+              <li>range や貼り付け候補を手元で比較する</li>
+            </ul>
+          </div>
+        </section>
+
+        <section class="grid">
+          <article class="card">
+            <h3>Range Pilot + Smart Snap</h3>
+            <label>現在の range</label>
+            <input id="rangeInput" type="text" placeholder="Sheet1!B3:F12" />
+            <div class="two-up">
+              <div>
+                <label>visible rows</label>
+                <input id="visibleRows" type="number" min="1" value="20" />
+              </div>
+              <div>
+                <label>visible cols</label>
+                <input id="visibleCols" type="number" min="1" value="8" />
+              </div>
+            </div>
+            <div class="button-row">
+              <button id="suggestRangeButton" type="button">提案する</button>
+              <button id="saveRangeHistoryButton" type="button">履歴保存</button>
+            </div>
+            <pre id="rangeResult" class="result"></pre>
+          </article>
+
+          <article class="card">
+            <h3>選択履歴タイムマシン</h3>
+            <p class="hint">手入力した range を 5 件まで保持します。Excel Online の名前ボックス値をそのまま貼り付けて使います。</p>
+            <div id="historyList" class="history-list"></div>
+          </article>
+
+          <article class="card">
+            <h3>Clean Paste</h3>
+            <label>貼り付けたいテキストや表</label>
+            <textarea id="pasteInput" rows="10" placeholder="Markdown table / CSV / TSV / 複数行テキスト"></textarea>
+            <label class="checkbox">
+              <input id="singleCellInput" type="checkbox" />
+              1 セル収容向けに整形する
+            </label>
+            <button id="cleanPasteButton" type="button">浄化する</button>
+            <pre id="pasteResult" class="result"></pre>
+          </article>
+
+          <article class="card">
+            <h3>Data Synthesizer</h3>
+            <label>dataset A</label>
+            <textarea id="datasetA" rows="7" placeholder="header1,header2"></textarea>
+            <label>dataset B</label>
+            <textarea id="datasetB" rows="7" placeholder="header1,header2"></textarea>
+            <button id="synthesizeButton" type="button">統合 preview</button>
+            <pre id="synthesisResult" class="result"></pre>
+          </article>
+
+          <article class="card">
+            <h3>Graph Shadow Editor</h3>
+            <label>表データ</label>
+            <textarea id="graphInput" rows="8" placeholder="Month,Sales&#10;Jan,120&#10;Feb,180"></textarea>
+            <button id="graphSuggestButton" type="button">グラフ候補を出す</button>
+            <pre id="graphResult" class="result"></pre>
+          </article>
+
+          <article class="card">
+            <h3>Semantic Shadow Assist</h3>
+            <label>指示</label>
+            <input id="intentInput" type="text" placeholder="売上を合計 / 一番下まで選択 / 棒グラフにしたい" />
+            <label>現在の range</label>
+            <input id="intentRangeInput" type="text" placeholder="Sheet1!B3:F12" />
+            <button id="interpretButton" type="button">候補を解釈する</button>
+            <pre id="intentResult" class="result"></pre>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>

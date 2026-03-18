@@ -2,34 +2,42 @@
 
 ## 現在の plan set
 
-- active dated plan set: `2026-03-17-001 iAgents bootstrap and mock collaboration foundation`
-- latest completed plan set: `なし`
-- active market release target: `MRL-1 bootstrap and mock collaboration line`
-- latest completed market release target: `なし`
-- active micro release target: `mRL-1-2 CLI execution and evidence baseline`
-- latest completed micro release target: `mRL-1-1 docs and structure bootstrap`
+- active dated plan set: `2026-03-18-003 Excel Online Shadow Assistant prototype delivery`
+- latest completed plan set: `2026-03-18-003 Excel Online Shadow Assistant prototype delivery`
+- active market release target: `なし`
+- latest completed market release target: `MRL-9 semantic shadow assist prototype line`
+- active micro release target: `なし`
+- latest completed micro release target: `mRL-9-1 semantic intent assist prototype`
 
 ## 正本の参照
 
-- 現在の MRL 正本は [develop/plans/2026-03-17-001/market_release_lines.md](/Users/tetsuya/playground/Data_Correcting_System/iAgents/develop/plans/2026-03-17-001/market_release_lines.md) とする。
-- 現在の mRL 正本は [develop/plans/2026-03-17-001/micro_release_lines.md](/Users/tetsuya/playground/Data_Correcting_System/iAgents/develop/plans/2026-03-17-001/micro_release_lines.md) とする。
+- 現在の MRL 正本は [develop/plans/2026-03-18-003/market_release_lines.md](/Users/tetsuya/playground/Data_Correcting_System/iAgents/develop/plans/2026-03-18-003/market_release_lines.md) とする。
+- 現在の mRL 正本は [develop/plans/2026-03-18-003/micro_release_lines.md](/Users/tetsuya/playground/Data_Correcting_System/iAgents/develop/plans/2026-03-18-003/micro_release_lines.md) とする。
 
-## 2026-03-17-001 の重点
+## 2026-03-18-003 の結果
 
-- `MRL-1`
-  - docs / develop / data / src / tests の bootstrap
-  - mock collaboration CLI
-  - seed brief 実行と最小 evidence
-- `MRL-2`
-  - provider adapter seam
-  - local or API lightweight model 接続
-  - config 拡張
-- `MRL-3`
-  - multi-brief evaluation
-  - role tuning
-  - round / output quality 比較
+- `MRL-5`
+  - Shadow Bar web UI
+  - local HTTP server
+  - health endpoint
+- `MRL-6`
+  - Range Pilot prototype
+  - Selection History
+  - Smart Snap
+- `MRL-7`
+  - Clean Paste
+  - Data Synthesizer
+- `MRL-8`
+  - Graph Suggestion
+  - Mode Halo
+- `MRL-9`
+  - Intent Interpreter
+  - CLI subcommands
+  - Excel Online manual validation route
 
 ## 想定 evidence
 
 - `python -m unittest discover -s tests`
-- `python -m iagents.cli --brief-file data/seed/session/brief.md`
+- `python -m iagents serve --port 8765`
+- `GET /api/health`
+- `GET /`

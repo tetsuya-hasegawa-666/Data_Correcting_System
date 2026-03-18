@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "iagents"
 version = "0.1.0"
-description = "Lightweight multi-agent collaboration experiment"
+description = "Excel Online shadow assistant prototype"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = []
@@ -15,3 +15,6 @@ package-dir = {"" = "src"}
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+iagents = ["web/*"]

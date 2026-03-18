@@ -1,0 +1,13 @@
+{
+  "scenario_id": "excel-online-shadow-assistant-prototype",
+  "title": "Excel Online side-by-side support flow",
+  "steps": [
+    "Excel Online をブラウザで開く",
+    "iAgents Shadow Assistant を localhost で開く",
+    "名前ボックスの range を assistant に貼り付ける",
+    "Smart Snap の候補を比較する",
+    "貼り付けたい表データを Clean Paste に通す",
+    "必要なら Data Synthesizer と Graph Suggestion を使う",
+    "自然言語指示を Intent Assist に渡す"
+  ]
+}
