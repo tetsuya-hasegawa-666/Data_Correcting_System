@@ -1,6 +1,8 @@
 const TEXT = {
   eyebrow: "Xperia 5 III / Windows workspace",
   title: "\u30c7\u30fc\u30bf\u30af\u30ed\u30fc\u30f3\u3092\u3059\u3050\u4f7f\u3046",
+  statusGroup: "\u63a5\u7d9a",
+  syncTools: "\u518d\u63a5\u7d9a",
   editorLabel: "\u5165\u529b",
   editorTitle: "\u305d\u306e\u307e\u307e\u30b3\u30d4\u30fc\u3059\u308b",
   browserLabel: "\u95b2\u89a7",
@@ -39,6 +41,8 @@ const TEXT = {
   close: "\u9589\u3058\u308b",
   hardDelete: "\u5b8c\u5168\u6d88\u53bb",
   emptyTrash: "\u4e00\u62ec\u6d88\u53bb",
+  restartServer: "Server\u3092\u8d77\u3053\u3059",
+  reconnectDevice: "\u518d\u63a5\u7d9a",
 };
 
 const state = {
@@ -54,7 +58,11 @@ const state = {
 const refs = {
   topEyebrow: document.getElementById("topEyebrow"),
   topTitle: document.getElementById("topTitle"),
+  statusGroupLabel: document.getElementById("statusGroupLabel"),
+  syncToolsLabel: document.getElementById("syncToolsLabel"),
   statusRail: document.getElementById("statusRail"),
+  serverRestartButton: document.getElementById("serverRestartButton"),
+  deviceReconnectButton: document.getElementById("deviceReconnectButton"),
   editorLabel: document.getElementById("editorLabel"),
   editorTitle: document.getElementById("editorTitle"),
   browserLabel: document.getElementById("browserLabel"),
@@ -108,6 +116,8 @@ function jsonFetch(url, options = {}) {
 function setStaticText() {
   refs.topEyebrow.textContent = TEXT.eyebrow;
   refs.topTitle.textContent = TEXT.title;
+  refs.statusGroupLabel.textContent = TEXT.statusGroup;
+  refs.syncToolsLabel.textContent = TEXT.syncTools;
   refs.editorLabel.textContent = TEXT.editorLabel;
   refs.editorTitle.textContent = TEXT.editorTitle;
   refs.browserLabel.textContent = TEXT.browserLabel;
@@ -131,6 +141,8 @@ function setStaticText() {
   refs.photoClose.textContent = TEXT.close;
   refs.trashClose.textContent = TEXT.close;
   refs.emptyTrashButton.textContent = TEXT.emptyTrash;
+  refs.serverRestartButton.textContent = TEXT.restartServer;
+  refs.deviceReconnectButton.textContent = TEXT.reconnectDevice;
   refs.headlineInput.placeholder = "\u898b\u51fa\u3057\u3092\u77ed\u304f\u5165\u308c\u307e\u3059";
   refs.bodyInput.placeholder = "\u30e1\u30e2\u3092\u305d\u306e\u307e\u307e\u5165\u308c\u307e\u3059";
 }
@@ -156,14 +168,16 @@ function syncSettingsToForm(settings) {
 
 function endpointMarkup(endpoint) {
   const marker = endpoint.checked ? "\u2713" : "\u00d7";
-  return `<span class="status-pill ${endpoint.level}">${marker}${endpoint.label}</span>`;
+  const blink = state.bootstrap?.sync?.reconnecting ? " blink" : "";
+  return `<span class="status-pill ${endpoint.level}${blink}">${marker}${endpoint.label}</span>`;
 }
 
 function renderStatus() {
   const sync = state.bootstrap.sync;
+  const blink = sync.reconnecting || sync.connector.blink ? " blink" : "";
   refs.statusRail.innerHTML = [
     endpointMarkup(sync.mobile),
-    `<span class="status-connector ${sync.connector.level}" title="${sync.connector.label}">${sync.connector.text}</span>`,
+    `<span class="status-connector ${sync.connector.level}${blink}" title="${sync.connector.label}">${sync.connector.text}</span>`,
     endpointMarkup(sync.server),
   ].join("");
 }
@@ -384,6 +398,18 @@ async function saveSettings() {
   refs.actionNote.textContent = "\u8a2d\u5b9a\u3092\u66f4\u65b0\u3057\u307e\u3057\u305f";
 }
 
+async function requestServerRestart() {
+  const result = await jsonFetch("/api/workspace/reconnect/server", { method: "POST" });
+  await reload();
+  refs.actionNote.textContent = result.message || "Server\u518d\u8d77\u52d5\u3092\u4f9d\u983c\u3057\u307e\u3057\u305f";
+}
+
+async function requestDeviceReconnect() {
+  const result = await jsonFetch("/api/workspace/reconnect/device", { method: "POST" });
+  await reload();
+  refs.actionNote.textContent = result.message || "\u518d\u63a5\u7d9a\u3092\u4f9d\u983c\u3057\u307e\u3057\u305f";
+}
+
 function loadPhoto(file) {
   if (!file) {
     state.pendingPhoto = null;
@@ -414,6 +440,8 @@ function bindEvents() {
   refs.memoClose.addEventListener("click", () => setOpenSection(""));
   refs.photoClose.addEventListener("click", () => setOpenSection(""));
   refs.trashClose.addEventListener("click", () => setOpenSection(""));
+  refs.serverRestartButton.addEventListener("click", requestServerRestart);
+  refs.deviceReconnectButton.addEventListener("click", requestDeviceReconnect);
   refs.emptyTrashButton.addEventListener("click", hardDeleteAll);
   refs.headlineInput.addEventListener("input", scheduleSaveAndSync);
   refs.bodyInput.addEventListener("input", scheduleSaveAndSync);

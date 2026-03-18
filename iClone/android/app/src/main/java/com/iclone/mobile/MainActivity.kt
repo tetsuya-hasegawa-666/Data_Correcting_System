@@ -95,6 +95,7 @@ class MainActivity : AppCompatActivity() {
         private val syncOutboxAttachmentsDir = File(syncOutboxDir, "attachments")
         private val syncOutboxDeletesDir = File(syncOutboxDir, "deletes")
         private val syncOutboxSettingsDir = File(syncOutboxDir, "settings")
+        private val syncOutboxCommandsDir = File(syncOutboxDir, "commands")
         private val syncInboxQuestionsDir = File(rootDir, "sync-inbox/questions")
         private val syncInboxEntriesDir = File(rootDir, "sync-inbox/entries")
         private val syncInboxAttachmentsDir = File(rootDir, "sync-inbox/attachments")
@@ -116,6 +117,7 @@ class MainActivity : AppCompatActivity() {
             syncOutboxAttachmentsDir.mkdirs()
             syncOutboxDeletesDir.mkdirs()
             syncOutboxSettingsDir.mkdirs()
+            syncOutboxCommandsDir.mkdirs()
             syncInboxQuestionsDir.mkdirs()
             syncInboxEntriesDir.mkdirs()
             syncInboxAttachmentsDir.mkdirs()
@@ -237,6 +239,18 @@ class MainActivity : AppCompatActivity() {
             settingsFile.writeText(settings.toString(2), Charsets.UTF_8)
             File(syncOutboxSettingsDir, "shared_settings.json").writeText(settings.toString(2), Charsets.UTF_8)
             return settings.toString()
+        }
+
+        @JavascriptInterface
+        fun requestHostRestart(): String {
+            writeCommand("server-restart")
+            return JSONObject().put("message", "Server再起動を依頼しました。").toString()
+        }
+
+        @JavascriptInterface
+        fun requestReconnect(): String {
+            writeCommand("device-reconnect")
+            return JSONObject().put("message", "再接続を依頼しました。").toString()
         }
 
         @JavascriptInterface
@@ -463,6 +477,15 @@ class MainActivity : AppCompatActivity() {
         private fun writeDeleteRequest(entryId: String) {
             val payload = JSONObject().put("entryId", entryId).put("deletedAt", nowIso()).put("source", "mobile")
             File(syncOutboxDeletesDir, "$entryId.json").writeText(payload.toString(2), Charsets.UTF_8)
+        }
+
+        private fun writeCommand(command: String) {
+            val payload =
+                JSONObject()
+                    .put("command", command)
+                    .put("requestedAt", nowIso())
+                    .put("source", "mobile")
+            File(syncOutboxCommandsDir, "$command-${timestampToken()}.json").writeText(payload.toString(2), Charsets.UTF_8)
         }
 
         private fun moveEntryToTrash(entryId: String) {
