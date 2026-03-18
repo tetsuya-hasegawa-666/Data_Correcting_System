@@ -96,6 +96,8 @@ class MainActivity : AppCompatActivity() {
         private val syncAttachmentDir = File(syncOutboxDir, "attachments")
         private val syncInboxQuestionsDir = File(rootDir, "sync-inbox/questions")
         private val syncInboxAcksDir = File(rootDir, "sync-inbox/acks")
+        private val draftFile = File(stateDir, "draft.json")
+        private val autosaveStateFile = File(stateDir, "autosave_entry.json")
 
         init {
             localEntriesDir.mkdirs()
@@ -116,22 +118,12 @@ class MainActivity : AppCompatActivity() {
             val latestEntry = entries.firstOrNull()
             val ackIds = loadAckIds()
 
-            val sync = JSONObject().apply {
-                put("local", latestEntry != null)
-                put("pc", latestEntry != null && ackIds.contains(latestEntry?.optString("entryId")))
-                put("pcSynced", latestQuestion != null)
-                put(
-                    "modeHelp",
-                    when {
-                        latestQuestion != null -> "スマホと PC のワークスペースが同期されています。次の質問まで続けて確認できます。"
-                        latestEntry != null && ackIds.contains(latestEntry.optString("entryId")) ->
-                            "スマホと PC のワークスペースへメモが届いています。次の質問はまだ準備中です。"
-                        latestEntry != null ->
-                            "スマホだけでメモを残せます。PC の質問確認とワークスペース反映はまだできません。"
-                        else -> "まだ端末内に確定メモはありません。"
-                    },
-                )
-            }
+            val sync =
+                JSONObject().apply {
+                    put("local", latestEntry != null)
+                    put("pc", latestEntry != null && ackIds.contains(latestEntry.optString("entryId")))
+                    put("pcSynced", latestQuestion != null)
+                }
 
             return JSONObject().apply {
                 put("draft", draft)
@@ -145,22 +137,31 @@ class MainActivity : AppCompatActivity() {
         @JavascriptInterface
         fun saveDraft(payload: String): String {
             val source = JSONObject(payload)
-            val draft = JSONObject().apply {
-                put("headline", source.optString("headline"))
-                put("body", source.optString("body"))
-                put("updatedAt", nowIso())
-            }
-            File(stateDir, "draft.json").writeText(draft.toString(2), Charsets.UTF_8)
+            val draft =
+                JSONObject().apply {
+                    put("headline", source.optString("headline"))
+                    put("body", source.optString("body"))
+                    put("updatedAt", nowIso())
+                }
+            draftFile.writeText(draft.toString(2), Charsets.UTF_8)
             return draft.toString()
         }
 
         @JavascriptInterface
-        fun saveEntry(payload: String): String {
+        fun autosaveEntry(payload: String): String {
             val source = JSONObject(payload)
-            val entryId = "entry-${timestampToken()}"
-            val capturedAt = nowIso()
-            val headline = buildHeadline(source)
+            val headline = source.optString("headline").trim()
+            val body = source.optString("body").trim()
             val attachment = source.optJSONObject("attachment")
+
+            if (headline.isBlank() && body.isBlank() && attachment == null) {
+                clearAutosaveEntry()
+                return JSONObject().apply { put("cleared", true) }.toString()
+            }
+
+            val entryId = currentAutosaveEntryId()
+            val capturedAt = nowIso()
+            val resolvedHeadline = if (headline.isNotBlank()) headline else if (body.isBlank()) "現場メモ" else body.take(24)
             val attachmentsJson = JSONArray()
             val yamlAttachments = mutableListOf<String>()
             var inputMode = "text"
@@ -182,25 +183,43 @@ class MainActivity : AppCompatActivity() {
 """.trimEnd()
             }
 
+            val syncStage = computeSyncStage(entryId)
             val entryJson =
                 JSONObject().apply {
                     put("entryId", entryId)
-                    put("headline", headline)
-                    put("body", source.optString("body"))
+                    put("headline", resolvedHeadline)
+                    put("body", body)
                     put("inputMode", inputMode)
                     put("updatedAt", capturedAt)
                     put("projectId", projectId)
-                    put("syncStage", "Local")
+                    put("syncStage", syncStage)
                     put("attachments", attachmentsJson)
                 }
-            File(localEntriesDir, "$entryId.json").writeText(entryJson.toString(2), Charsets.UTF_8)
-            writeYamlEntry(entryId, capturedAt, headline, source.optString("body"), inputMode, yamlAttachments)
 
-            File(stateDir, "draft.json").writeText("""{"headline":"","body":""}""", Charsets.UTF_8)
+            File(localEntriesDir, "$entryId.json").writeText(entryJson.toString(2), Charsets.UTF_8)
+            writeYamlEntry(entryId, capturedAt, resolvedHeadline, body, inputMode, yamlAttachments)
+            autosaveStateFile.writeText(
+                JSONObject().apply {
+                    put("entryId", entryId)
+                    put("updatedAt", capturedAt)
+                }.toString(2),
+                Charsets.UTF_8,
+            )
 
             return JSONObject().apply {
-                put("message", "端末へ保存し、PC 側ワークスペースの同期対象に追加しました。")
                 put("entryId", entryId)
+                put("syncStage", syncStage)
+            }.toString()
+        }
+
+        @JavascriptInterface
+        fun saveEntry(payload: String): String {
+            val entryId = currentAutosaveEntryId()
+            val syncStage = computeSyncStage(entryId)
+            return JSONObject().apply {
+                put("entryId", entryId)
+                put("syncStage", syncStage)
+                put("message", "記録しました。")
             }.toString()
         }
 
@@ -222,21 +241,27 @@ class MainActivity : AppCompatActivity() {
         }
 
         private fun loadDraft(): JSONObject {
-            val file = File(stateDir, "draft.json")
-            if (!file.exists()) {
+            if (!draftFile.exists()) {
                 return JSONObject().apply {
                     put("headline", "")
                     put("body", "")
                 }
             }
-            return JSONObject(file.readText(Charsets.UTF_8))
+            return JSONObject(draftFile.readText(Charsets.UTF_8))
         }
 
         private fun loadEntriesList(): List<JSONObject> {
+            val latestQuestion = loadLatestQuestion()
+            val ackIds = loadAckIds()
             return localEntriesDir.listFiles()
                 ?.filter { it.extension == "json" }
                 ?.sortedByDescending { it.lastModified() }
-                ?.map { JSONObject(it.readText(Charsets.UTF_8)) }
+                ?.map { file ->
+                    val item = JSONObject(file.readText(Charsets.UTF_8))
+                    val entryId = item.optString("entryId")
+                    item.put("syncStage", computeSyncStage(entryId, ackIds, latestQuestion))
+                    item
+                }
                 ?: emptyList()
         }
 
@@ -248,10 +273,11 @@ class MainActivity : AppCompatActivity() {
         }
 
         private fun loadLatestQuestion(): JSONObject? {
-            val file = syncInboxQuestionsDir.listFiles()
-                ?.filter { it.extension == "json" }
-                ?.maxByOrNull { it.lastModified() }
-                ?: return null
+            val file =
+                syncInboxQuestionsDir.listFiles()
+                    ?.filter { it.extension == "json" }
+                    ?.maxByOrNull { it.lastModified() }
+                    ?: return null
             return JSONObject(file.readText(Charsets.UTF_8))
         }
 
@@ -269,13 +295,49 @@ class MainActivity : AppCompatActivity() {
                 ?: emptySet()
         }
 
-        private fun buildHeadline(source: JSONObject): String {
-            val explicit = source.optString("headline").trim()
-            if (explicit.isNotBlank()) {
-                return explicit
+        private fun currentAutosaveEntryId(): String {
+            if (!autosaveStateFile.exists()) {
+                val entryId = "entry-${timestampToken()}"
+                autosaveStateFile.writeText(
+                    JSONObject().apply {
+                        put("entryId", entryId)
+                        put("updatedAt", nowIso())
+                    }.toString(2),
+                    Charsets.UTF_8,
+                )
+                return entryId
             }
-            val body = source.optString("body").trim()
-            return if (body.isBlank()) "現場メモ" else body.take(24)
+
+            val state = JSONObject(autosaveStateFile.readText(Charsets.UTF_8))
+            val current = state.optString("entryId").trim()
+            if (current.isNotBlank()) {
+                return current
+            }
+            val entryId = "entry-${timestampToken()}"
+            state.put("entryId", entryId)
+            state.put("updatedAt", nowIso())
+            autosaveStateFile.writeText(state.toString(2), Charsets.UTF_8)
+            return entryId
+        }
+
+        private fun clearAutosaveEntry() {
+            if (autosaveStateFile.exists()) {
+                autosaveStateFile.delete()
+            }
+        }
+
+        private fun computeSyncStage(
+            entryId: String,
+            ackIds: Set<String> = loadAckIds(),
+            latestQuestion: JSONObject? = loadLatestQuestion(),
+        ): String {
+            if (latestQuestion != null) {
+                return "PC synced"
+            }
+            if (ackIds.contains(entryId)) {
+                return "PC"
+            }
+            return "Local"
         }
 
         private fun writeYamlEntry(
@@ -314,11 +376,12 @@ class MainActivity : AppCompatActivity() {
 
         private fun persistAttachment(entryId: String, attachment: JSONObject): AttachmentMeta {
             val mimeType = attachment.optString("mimeType").ifBlank { "image/jpeg" }
-            val extension = when {
-                mimeType.endsWith("png") -> "png"
-                mimeType.endsWith("webp") -> "webp"
-                else -> "jpg"
-            }
+            val extension =
+                when {
+                    mimeType.endsWith("png") -> "png"
+                    mimeType.endsWith("webp") -> "webp"
+                    else -> "jpg"
+                }
             val attachmentId = "photo-$entryId"
             val fileName = "$attachmentId.$extension"
             val target = File(syncAttachmentDir, fileName)
