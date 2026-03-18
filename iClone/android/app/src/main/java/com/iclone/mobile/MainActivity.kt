@@ -102,6 +102,7 @@ class MainActivity : AppCompatActivity() {
         private val syncInboxAttachmentsDir = File(rootDir, "sync-inbox/attachments")
         private val syncInboxDeletesDir = File(rootDir, "sync-inbox/deletes")
         private val syncInboxSettingsDir = File(rootDir, "sync-inbox/settings")
+        private val syncInboxStatusDir = File(rootDir, "sync-inbox/status")
         private val syncInboxAcksDir = File(rootDir, "sync-inbox/acks")
         private val draftFile = File(stateDir, "draft.json")
         private val currentEntryFile = File(stateDir, "current_entry.json")
@@ -121,6 +122,7 @@ class MainActivity : AppCompatActivity() {
             syncInboxAttachmentsDir.mkdirs()
             syncInboxDeletesDir.mkdirs()
             syncInboxSettingsDir.mkdirs()
+            syncInboxStatusDir.mkdirs()
             syncInboxAcksDir.mkdirs()
         }
 
@@ -133,7 +135,7 @@ class MainActivity : AppCompatActivity() {
             val latestQuestion = loadLatestQuestion()
             val entries = loadEntriesList(latestQuestion, loadAckIds())
             val settings = loadSettings()
-            val latestEntry = entries.firstOrNull()
+            val status = loadBridgeStatus()
 
             return JSONObject().apply {
                 put("draft", loadDraft())
@@ -141,15 +143,7 @@ class MainActivity : AppCompatActivity() {
                 put("history", loadHistory())
                 put("latestQuestion", latestQuestion ?: JSONObject.NULL)
                 put("settings", settings)
-                put(
-                    "sync",
-                    JSONObject().apply {
-                        put("local", latestEntry != null)
-                        put("pc", latestEntry != null && latestEntry.optString("syncStage") != "Local")
-                        put("pcSynced", latestEntry != null && latestEntry.optString("syncStage") == "PC synced")
-                        put("nextSyncText", nextSyncText(settings))
-                    },
-                )
+                put("sync", status)
                 put(
                     "counts",
                     JSONObject().apply {
@@ -310,6 +304,37 @@ class MainActivity : AppCompatActivity() {
                     ?.maxByOrNull { it.lastModified() }
                     ?: return null
             return JSONObject(file.readText(Charsets.UTF_8))
+        }
+
+        private fun loadBridgeStatus(): JSONObject {
+            val fallback =
+                JSONObject().apply {
+                    put("mobile", JSONObject().put("label", "Mobile").put("checked", true))
+                    put("server", JSONObject().put("label", "Server").put("checked", false))
+                    put(
+                        "connector",
+                        JSONObject().put("text", "--×--").put("level", "bad").put("label", "圏外 / server停止"),
+                    )
+                    put("nextSyncText", nextSyncText(loadSettings()))
+                }
+
+            val file =
+                syncInboxStatusDir.listFiles()
+                    ?.filter { it.extension == "json" }
+                    ?.maxByOrNull { it.lastModified() }
+                    ?: return fallback
+            val payload = JSONObject(file.readText(Charsets.UTF_8))
+            return JSONObject().apply {
+                put("mobile", JSONObject().put("label", "Mobile").put("checked", true))
+                put(
+                    "server",
+                    JSONObject()
+                        .put("label", "Server")
+                        .put("checked", payload.optBoolean("serverChecked", false)),
+                )
+                put("connector", payload.optJSONObject("connector") ?: fallback.getJSONObject("connector"))
+                put("nextSyncText", payload.optString("nextSyncText", nextSyncText(loadSettings())))
+            }
         }
 
         private fun loadAckIds(): Set<String> =

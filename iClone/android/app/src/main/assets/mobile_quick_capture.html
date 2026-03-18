@@ -14,11 +14,13 @@
       --subtle: #6f685e;
       --accent: #0f766e;
       --accent-soft: rgba(15, 118, 110, 0.1);
-      --ok-bg: rgba(22, 163, 74, 0.12);
-      --ok-ink: #166534;
+      --good-bg: rgba(22, 163, 74, 0.14);
+      --good-ink: #166534;
+      --warn-bg: rgba(234, 179, 8, 0.16);
+      --warn-ink: #a16207;
       --muted-bg: #e4ddd1;
       --muted-ink: #81786c;
-      --bad-bg: rgba(220, 38, 38, 0.12);
+      --bad-bg: rgba(220, 38, 38, 0.14);
       --bad-ink: #b91c1c;
       --shadow: 0 16px 42px rgba(40, 35, 26, 0.09);
     }
@@ -51,6 +53,7 @@
 
     .shell { padding: 16px; }
     .panel { padding: 16px; }
+    .panel + .panel { margin-top: 14px; }
 
     .eyebrow,
     .section-label {
@@ -61,23 +64,29 @@
       text-transform: uppercase;
     }
 
-    h1, h2, p { margin-top: 0; }
+    h1, h2, h3, p { margin-top: 0; }
+    h1, h2, h3 { margin-bottom: 0; }
 
     .status-inline,
     .footer-counts,
     .tab-row,
     .action-row,
-    .tool-row {
+    .tool-row,
+    .record-actions,
+    .record-meta {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
+      align-items: center;
     }
 
     .status-pill,
     .footer-pill,
-    .tab-button {
+    .tab-button,
+    .status-connector {
       display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 6px;
       padding: 8px 12px;
       border-radius: 999px;
@@ -85,9 +94,12 @@
       font-weight: 700;
     }
 
-    .status-pill.current { background: var(--ok-bg); color: var(--ok-ink); }
-    .status-pill.complete { background: var(--muted-bg); color: var(--muted-ink); }
-    .status-pill.pending { background: var(--bad-bg); color: var(--bad-ink); }
+    .status-pill.good { background: var(--good-bg); color: var(--good-ink); }
+    .status-pill.muted { background: var(--muted-bg); color: var(--muted-ink); }
+    .status-pill.bad { background: var(--bad-bg); color: var(--bad-ink); }
+    .status-connector.good { background: var(--good-bg); color: var(--good-ink); }
+    .status-connector.warn { background: var(--warn-bg); color: var(--warn-ink); }
+    .status-connector.bad { background: var(--bad-bg); color: var(--bad-ink); }
 
     .tab-button {
       border: 1px solid var(--line);
@@ -104,8 +116,6 @@
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
-    .panel + .panel { margin-top: 14px; }
-
     .field {
       display: grid;
       gap: 8px;
@@ -113,9 +123,9 @@
     }
 
     .field span,
-    .settings-grid span {
+    .compact-setting span {
       color: var(--subtle);
-      font-size: 13px;
+      font-size: 12px;
     }
 
     input[type="text"],
@@ -123,7 +133,7 @@
     select {
       width: 100%;
       border: 1px solid var(--line);
-      border-radius: 18px;
+      border-radius: 16px;
       background: #fffdf9;
       color: var(--ink);
       font: inherit;
@@ -131,12 +141,12 @@
 
     input[type="text"],
     select {
-      padding: 12px 14px;
+      padding: 11px 12px;
     }
 
     textarea {
       min-height: 148px;
-      padding: 14px;
+      padding: 13px;
       resize: none;
     }
 
@@ -144,16 +154,18 @@
     .subtle-button,
     .primary-button,
     .secondary-button,
-    .danger-button {
+    .danger-button,
+    .mini-button {
       border: 0;
-      border-radius: 16px;
+      border-radius: 14px;
       font: inherit;
       cursor: pointer;
-      padding: 11px 12px;
+      padding: 10px 12px;
     }
 
     .ghost-button,
-    .subtle-button {
+    .subtle-button,
+    .mini-button {
       background: #ece4d8;
       color: var(--ink);
     }
@@ -170,7 +182,8 @@
       font-weight: 700;
     }
 
-    .danger-button {
+    .danger-button,
+    .mini-button.delete {
       background: rgba(220, 38, 38, 0.12);
       color: var(--bad-ink);
     }
@@ -181,34 +194,36 @@
     }
 
     .settings-inline {
+      display: grid;
+      gap: 10px;
       margin-top: 12px;
-      padding: 14px;
-      border-radius: 20px;
+      padding: 12px;
+      border-radius: 18px;
       background: var(--panel);
     }
 
     .settings-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 12px;
+      gap: 8px;
     }
 
-    .settings-grid label {
+    .compact-setting {
       display: grid;
-      gap: 8px;
+      gap: 6px;
     }
 
     .settings-note,
     .action-note,
     .question-inline {
-      margin-top: 12px;
+      margin-top: 10px;
       color: var(--subtle);
-      line-height: 1.6;
+      line-height: 1.5;
     }
 
     .question-inline {
-      padding: 12px 14px;
-      border-radius: 18px;
+      padding: 10px 12px;
+      border-radius: 16px;
       background: var(--panel);
     }
 
@@ -247,28 +262,10 @@
       box-shadow: inset 0 0 0 1px var(--accent);
     }
 
-    .record-meta,
-    .record-actions {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
+    .record-meta {
       color: var(--subtle);
       font-size: 12px;
-    }
-
-    .mini-button {
-      border: 0;
-      border-radius: 12px;
-      background: #ece4d8;
-      color: var(--ink);
-      padding: 8px 10px;
-      font: inherit;
-      cursor: pointer;
-    }
-
-    .mini-button.delete {
-      background: rgba(220, 38, 38, 0.12);
-      color: var(--bad-ink);
+      margin-top: 6px;
     }
 
     .footer-bar {
@@ -289,7 +286,7 @@
       <h1 id="topTitle"></h1>
       <div class="status-inline" id="statusRail"></div>
 
-      <div class="tab-row" id="tabRow">
+      <div class="tab-row">
         <button class="tab-button active" id="tabClone" type="button"></button>
         <button class="tab-button" id="tabHistory" type="button"></button>
       </div>
@@ -302,19 +299,19 @@
 
           <section class="settings-inline hidden" id="settingsPanel">
             <div class="settings-grid">
-              <label>
+              <label class="compact-setting">
                 <span id="autoSaveLabel"></span>
                 <select id="autoSaveEnabled"></select>
               </label>
-              <label>
+              <label class="compact-setting">
                 <span id="autoSaveIntervalLabel"></span>
                 <select id="autoSaveInterval"></select>
               </label>
-              <label>
+              <label class="compact-setting">
                 <span id="autoSyncLabel"></span>
                 <select id="autoSyncEnabled"></select>
               </label>
-              <label>
+              <label class="compact-setting">
                 <span id="autoSyncIntervalLabel"></span>
                 <select id="autoSyncInterval"></select>
               </label>
@@ -376,42 +373,39 @@
   <script>
     const TEXT = {
       eyebrow: "Xperia 5 III / Mobile workspace",
-      title: "\u30c7\u30fc\u30bf\u30af\u30ed\u30fc\u30f3\u3092\u6b8b\u3059",
+      title: "\u30c7\u30fc\u30bf\u30af\u30ed\u30fc\u30f3\u3092\u3059\u3050\u6b8b\u3059",
       tabClone: "\u30af\u30ed\u30fc\u30f3",
       tabHistory: "\u5c65\u6b74",
       listLabel: "\u30ef\u30fc\u30af\u30b9\u30da\u30fc\u30b9",
-      listTitle: "\u3044\u307e\u3042\u308b\u30c7\u30fc\u30bf",
+      listTitle: "\u3059\u3050\u89e6\u308c\u308b\u30c7\u30fc\u30bf",
       historyLabel: "\u5c65\u6b74",
-      historyTitle: "\u898b\u8fd4\u3057\u305f\u8a18\u9332",
+      historyTitle: "\u898b\u8fd4\u3057",
       settingsToggleOpen: "\u8a2d\u5b9a",
       settingsToggleClose: "\u8a2d\u5b9a\u3092\u9589\u3058\u308b",
       autoSave: "\u81ea\u52d5\u4fdd\u5b58",
       autoSaveInterval: "\u4fdd\u5b58\u9593\u9694",
       autoSync: "\u81ea\u52d5\u540c\u671f",
       autoSyncInterval: "\u540c\u671f\u9593\u9694",
-      settingsNote: "\u6b21\u306e\u540c\u671f\u4e88\u5b9a: ",
+      settingsNote: "\u6b21\u306e\u540c\u671f",
       headline: "\u898b\u51fa\u3057",
       body: "\u30e1\u30e2",
-      attach: "\u5199\u771f\u3092\u8ffd\u52a0",
-      detach: "\u5199\u771f\u3092\u5916\u3059",
+      attach: "\u5199\u771f",
+      detach: "\u5916\u3059",
       delete: "\u524a\u9664",
       save: "\u8a18\u9332\u3059\u308b",
       sync: "\u4eca\u3059\u3050\u30b3\u30d4\u30fc",
-      noQuestion: "\u307e\u3060\u8cea\u554f\u306f\u3042\u308a\u307e\u305b\u3093\u3002",
-      questionPrefix: "\u6b21\u306e\u8cea\u554f: ",
-      empty: "\u307e\u3060\u30c7\u30fc\u30bf\u304c\u3042\u308a\u307e\u305b\u3093\u3002",
+      noQuestion: "\u307e\u3060\u306a\u3057",
+      questionPrefix: "\u6b21\u306e\u8cea\u554f",
+      empty: "\u307e\u3060\u30c7\u30fc\u30bf\u304c\u3042\u308a\u307e\u305b\u3093",
       footerRecords: "\u30e1\u30e2",
       footerPhotos: "\u5199\u771f",
       footerQuestions: "\u8cea\u554f",
-      footerNextSync: "\u540c\u671f\u4e88\u5b9a",
+      footerNextSync: "\u6b21\u540c\u671f",
       on: "ON",
       off: "OFF",
       realtime: "\u30ea\u30a2\u30eb\u30bf\u30a4\u30e0",
       tenSec: "10\u79d2",
       oneMin: "1\u5206",
-      statusLocal: "Local",
-      statusPc: "PC",
-      statusPcSynced: "PC synced"
     };
 
     const bridge = window.iCloneBridge;
@@ -421,7 +415,7 @@
       pendingPhoto: null,
       saveTimer: null,
       syncTimer: null,
-      settingsOpen: false
+      settingsOpen: false,
     };
 
     const refs = {
@@ -464,7 +458,7 @@
       historyTitle: document.getElementById("historyTitle"),
       historyList: document.getElementById("historyList"),
       footerCounts: document.getElementById("footerCounts"),
-      footerNextSync: document.getElementById("footerNextSync")
+      footerNextSync: document.getElementById("footerNextSync"),
     };
 
     function bootstrapState() {
@@ -492,8 +486,8 @@
       refs.listTitle.textContent = TEXT.listTitle;
       refs.historyLabel.textContent = TEXT.historyLabel;
       refs.historyTitle.textContent = TEXT.historyTitle;
-      refs.headlineInput.placeholder = "\u898b\u51fa\u3057\u3092\u5165\u308c\u308b\u3068\u898b\u8fd4\u3057\u3084\u3059\u304f\u306a\u308a\u307e\u3059";
-      refs.bodyInput.placeholder = "\u6c17\u3065\u3044\u305f\u3053\u3068\u3092\u305d\u306e\u307e\u307e\u5165\u308c\u307e\u3059";
+      refs.headlineInput.placeholder = "\u898b\u51fa\u3057\u3092\u77ed\u304f\u5165\u308c\u307e\u3059";
+      refs.bodyInput.placeholder = "\u30e1\u30e2\u3092\u305d\u306e\u307e\u307e\u5165\u308c\u307e\u3059";
     }
 
     function fillSelect(select, items) {
@@ -506,12 +500,12 @@
       fillSelect(refs.autoSaveInterval, [
         { value: "realtime", label: TEXT.realtime },
         { value: "10s", label: TEXT.tenSec },
-        { value: "1m", label: TEXT.oneMin }
+        { value: "1m", label: TEXT.oneMin },
       ]);
       fillSelect(refs.autoSyncInterval, [
         { value: "realtime", label: TEXT.realtime },
         { value: "10s", label: TEXT.tenSec },
-        { value: "1m", label: TEXT.oneMin }
+        { value: "1m", label: TEXT.oneMin },
       ]);
     }
 
@@ -520,42 +514,24 @@
       refs.autoSaveInterval.value = settings.autoSaveInterval;
       refs.autoSyncEnabled.value = String(Boolean(settings.autoSyncEnabled));
       refs.autoSyncInterval.value = settings.autoSyncInterval;
-      refs.settingsNote.textContent = `${TEXT.settingsNote}${state.bootstrap.sync.nextSyncText}`;
+      refs.settingsNote.textContent = `${TEXT.settingsNote}: ${state.bootstrap.sync.nextSyncText}`;
     }
 
-    function statusSpec(sync) {
-      if (sync.pcSynced) {
-        return [
-          ["\u2713", TEXT.statusLocal, "complete"],
-          ["\u2713", TEXT.statusPc, "complete"],
-          ["\u2713", TEXT.statusPcSynced, "current"]
-        ];
-      }
-      if (sync.pc) {
-        return [
-          ["\u2713", TEXT.statusLocal, "complete"],
-          ["\u2713", TEXT.statusPc, "current"],
-          ["\u00d7", TEXT.statusPcSynced, "pending"]
-        ];
-      }
-      if (sync.local) {
-        return [
-          ["\u2713", TEXT.statusLocal, "current"],
-          ["\u00d7", TEXT.statusPc, "pending"],
-          ["\u00d7", TEXT.statusPcSynced, "pending"]
-        ];
-      }
-      return [
-        ["\u00d7", TEXT.statusLocal, "pending"],
-        ["\u00d7", TEXT.statusPc, "pending"],
-        ["\u00d7", TEXT.statusPcSynced, "pending"]
-      ];
+    function endpointMarkup(endpoint, muted) {
+      const marker = endpoint.checked ? "\u2611" : "\u00d7";
+      const className = endpoint.checked ? (muted ? "muted" : "good") : "bad";
+      return `<span class="status-pill ${className}">${marker}${endpoint.label}</span>`;
     }
 
     function renderStatus() {
-      refs.statusRail.innerHTML = statusSpec(state.bootstrap.sync)
-        .map(([marker, label, className]) => `<span class="status-pill ${className}">${marker} ${label}</span>`)
-        .join("");
+      const sync = state.bootstrap.sync;
+      const connector = sync.connector || { text: "--×--", level: "bad" };
+      const mobileMuted = Boolean(sync.server && sync.server.checked);
+      refs.statusRail.innerHTML = [
+        endpointMarkup(sync.mobile || { label: "Mobile", checked: true }, mobileMuted),
+        `<span class="status-connector ${connector.level}">${connector.text}</span>`,
+        endpointMarkup(sync.server || { label: "Server", checked: false }, false),
+      ].join("");
     }
 
     function renderFooter() {
@@ -563,7 +539,7 @@
       refs.footerCounts.innerHTML = [
         `${TEXT.footerRecords} ${counts.records}`,
         `${TEXT.footerPhotos} ${counts.photos}`,
-        `${TEXT.footerQuestions} ${counts.questions}`
+        `${TEXT.footerQuestions} ${counts.questions}`,
       ]
         .map((item) => `<span class="footer-pill">${item}</span>`)
         .join("");
@@ -576,8 +552,8 @@
         refs.headlineInput.value = state.bootstrap.draft.headline || "";
         refs.bodyInput.value = state.bootstrap.draft.body || "";
         refs.photoPreviewCard.classList.add("hidden");
-        refs.actionNote.textContent = "\u30c7\u30fc\u30bf\u30af\u30ed\u30fc\u30f3\u3092\u3059\u3050\u59cb\u3081\u3089\u308c\u307e\u3059\u3002";
-        refs.questionInline.textContent = `${TEXT.questionPrefix}${TEXT.noQuestion}`;
+        refs.actionNote.textContent = "\u3059\u3050\u30af\u30ed\u30fc\u30f3\u3067\u304d\u307e\u3059";
+        refs.questionInline.textContent = `${TEXT.questionPrefix}: ${TEXT.noQuestion}`;
         return;
       }
       refs.headlineInput.value = record.headline || "";
@@ -589,12 +565,12 @@
       } else {
         refs.photoPreviewCard.classList.add("hidden");
       }
-      refs.actionNote.textContent = "\u9078\u629e\u4e2d\u306e\u30c7\u30fc\u30bf\u3092\u518d\u540c\u671f\u3067\u304d\u307e\u3059\u3002";
+      refs.actionNote.textContent = "\u9078\u629e\u4e2d\u306e\u30c7\u30fc\u30bf\u3092\u305d\u306e\u307e\u307e\u30b3\u30d4\u30fc\u3067\u304d\u307e\u3059";
       const latestQuestion = state.bootstrap.latestQuestion;
       refs.questionInline.textContent =
         latestQuestion && latestQuestion.body
-          ? `${TEXT.questionPrefix}${latestQuestion.body}`
-          : `${TEXT.questionPrefix}${TEXT.noQuestion}`;
+          ? `${TEXT.questionPrefix}: ${latestQuestion.body}`
+          : `${TEXT.questionPrefix}: ${TEXT.noQuestion}`;
     }
 
     function renderRecords() {
@@ -607,13 +583,10 @@
         const active = record.entryId === state.selectedRecordId ? " active" : "";
         return `
           <article class="record-card${active}" data-entry-id="${record.entryId}">
-            <div class="tool-row">
-              <strong>${record.headline || record.entryId}</strong>
-            </div>
+            <h3>${record.headline || record.entryId}</h3>
             <div class="record-meta">
               <span>${record.updatedAt || "-"}</span>
               <span>${record.inputMode || "text"}</span>
-              <span>${record.syncStage || "Local"}</span>
             </div>
             <p>${record.body || ""}</p>
             <div class="record-actions">
@@ -626,8 +599,8 @@
 
       refs.recordList.querySelectorAll("[data-entry-id]").forEach((element) => {
         element.addEventListener("click", (event) => {
-          const action = event.target.getAttribute("data-action");
           const entryId = element.getAttribute("data-entry-id");
+          const action = event.target.getAttribute("data-action");
           if (action === "sync") {
             event.stopPropagation();
             manualSync(entryId);
@@ -639,8 +612,10 @@
             return;
           }
           state.selectedRecordId = entryId;
+          bridge.markViewed(entryId);
           renderRecords();
           renderSelection();
+          renderHistory();
         });
       });
     }
@@ -666,8 +641,14 @@
       return {
         headline: refs.headlineInput.value,
         body: refs.bodyInput.value,
-        attachment: state.pendingPhoto
+        attachment: state.pendingPhoto,
       };
+    }
+
+    function delayFor(interval) {
+      if (interval === "10s") return 10000;
+      if (interval === "1m") return 60000;
+      return 250;
     }
 
     function scheduleSaveAndSync() {
@@ -675,13 +656,11 @@
       bridge.saveDraft(JSON.stringify(payloadFromForm()));
       if (settings.autoSaveEnabled) {
         window.clearTimeout(state.saveTimer);
-        const delay = settings.autoSaveInterval === "10s" ? 10000 : settings.autoSaveInterval === "1m" ? 60000 : 250;
-        state.saveTimer = window.setTimeout(() => saveEntry(false), delay);
+        state.saveTimer = window.setTimeout(() => saveEntry(false), delayFor(settings.autoSaveInterval));
       }
       if (settings.autoSyncEnabled) {
         window.clearTimeout(state.syncTimer);
-        const delay = settings.autoSyncInterval === "10s" ? 10000 : settings.autoSyncInterval === "1m" ? 60000 : 250;
-        state.syncTimer = window.setTimeout(() => syncEntry(false), delay);
+        state.syncTimer = window.setTimeout(() => syncEntry(false), delayFor(settings.autoSyncInterval));
       }
     }
 
@@ -696,7 +675,7 @@
         state.pendingPhoto = {
           name: file.name,
           mimeType: file.type || "image/jpeg",
-          dataUrl: reader.result
+          dataUrl: reader.result,
         };
         refs.photoPreviewImage.src = reader.result;
         refs.photoPreviewCard.classList.remove("hidden");
@@ -707,18 +686,14 @@
 
     function saveEntry(showMessage) {
       const result = JSON.parse(bridge.saveLocalEntry(JSON.stringify(payloadFromForm())));
-      if (showMessage) {
-        refs.actionNote.textContent = result.message || "\u4fdd\u5b58\u3057\u307e\u3057\u305f\u3002";
-      }
       reload();
+      if (showMessage) refs.actionNote.textContent = result.message || "\u8a18\u9332\u3057\u307e\u3057\u305f";
     }
 
     function syncEntry(showMessage) {
       const result = JSON.parse(bridge.syncEntry(JSON.stringify(payloadFromForm())));
-      if (showMessage) {
-        refs.actionNote.textContent = result.message || "\u30b3\u30d4\u30fc\u3092\u4e88\u7d04\u3057\u307e\u3057\u305f\u3002";
-      }
       reload();
+      if (showMessage) refs.actionNote.textContent = result.message || "\u30b3\u30d4\u30fc\u3092\u4e88\u7d04\u3057\u307e\u3057\u305f";
     }
 
     function manualSync(entryId) {
@@ -736,8 +711,8 @@
         state.selectedRecordId = "";
         state.pendingPhoto = null;
       }
-      refs.actionNote.textContent = result.message || "\u524a\u9664\u3057\u307e\u3057\u305f\u3002";
       reload();
+      refs.actionNote.textContent = result.message || "\u524a\u9664\u3057\u307e\u3057\u305f";
     }
 
     function saveSettings() {
@@ -745,11 +720,11 @@
         autoSaveEnabled: refs.autoSaveEnabled.value === "true",
         autoSaveInterval: refs.autoSaveInterval.value,
         autoSyncEnabled: refs.autoSyncEnabled.value === "true",
-        autoSyncInterval: refs.autoSyncInterval.value
+        autoSyncInterval: refs.autoSyncInterval.value,
       };
       bridge.saveSettings(JSON.stringify(payload));
-      refs.actionNote.textContent = "\u8a2d\u5b9a\u3092\u66f4\u65b0\u3057\u307e\u3057\u305f\u3002";
       reload();
+      refs.actionNote.textContent = "\u8a2d\u5b9a\u3092\u66f4\u65b0\u3057\u307e\u3057\u305f";
     }
 
     function toggleSettings() {

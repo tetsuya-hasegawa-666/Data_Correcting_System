@@ -136,6 +136,26 @@ def push_file(config: BridgeConfig, source_path: Path, remote_path: str) -> None
     adb_command(config, "push", str(source_path), remote_path)
 
 
+def docker_status() -> dict:
+    result = subprocess.run(
+        ["docker", "ps", "--format", "{{.Names}}"],
+        check=False,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="ignore",
+    )
+    if result.returncode != 0:
+        return {"available": False, "ready": False, "running": []}
+    running = {line.strip() for line in result.stdout.splitlines() if line.strip()}
+    required = {"iclone-syncthing", "iclone-observer", "iclone-ollama"}
+    return {
+        "available": True,
+        "ready": required.issubset(running),
+        "running": sorted(running),
+    }
+
+
 def mirror_entries(config: BridgeConfig, state: dict, sync_root: Path) -> int:
     if not sync_root.exists():
         return 0
@@ -309,9 +329,13 @@ def push_host_settings(config: BridgeConfig, state: dict) -> int:
 
 def scan_once(config: BridgeConfig, state: dict) -> None:
     connected = is_connected(config)
+    docker = docker_status()
     payload = {
         "serial": config.serial,
         "connected": connected,
+        "serverReady": docker["ready"],
+        "dockerAvailable": docker["available"],
+        "dockerRunning": docker["running"],
         "generatedAt": datetime.now(timezone.utc).astimezone().isoformat(),
         "hostInbox": str(config.host_inbox),
         "remoteRoot": config.remote_root,
@@ -329,6 +353,36 @@ def scan_once(config: BridgeConfig, state: dict) -> None:
     payload["pushedEntries"] = push_host_entries(config, state)
     payload["pushedDeletes"] = push_host_deletes(config, state)
     payload["pushedSettings"] = push_host_settings(config, state)
+    total_activity = sum(
+        int(payload.get(key, 0) or 0)
+        for key in (
+            "mirroredEntries",
+            "appliedDeletes",
+            "mirroredSettings",
+            "pushedQuestions",
+            "pushedEntries",
+            "pushedDeletes",
+            "pushedSettings",
+        )
+    )
+    if not docker["ready"]:
+        connector = {"text": "--×--", "level": "bad", "label": "圏外 / server停止"}
+    elif total_activity > 0:
+        connector = {"text": "<--->", "level": "good", "label": "同期中"}
+    else:
+        connector = {"text": "- - - -", "level": "warn", "label": "同期環境構築中"}
+    payload["connector"] = connector
+    push_json(
+        config,
+        {
+            "generatedAt": payload["generatedAt"],
+            "mobileChecked": True,
+            "serverChecked": docker["ready"],
+            "connector": connector,
+            "nextSyncText": "すぐ",
+        },
+        f"{config.remote_root}/sync-inbox/status/bridge_status.json",
+    )
     write_state_file(config, payload)
     save_bridge_state(config, state)
 

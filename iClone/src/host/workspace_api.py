@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -25,6 +26,7 @@ DEFAULT_SETTINGS = {
     "autoSyncInterval": "realtime",
 }
 VALID_INTERVALS = {"realtime", "10s", "1m"}
+EXPECTED_CONTAINERS = {"iclone-syncthing", "iclone-observer", "iclone-ollama"}
 
 
 @dataclass(frozen=True)
@@ -36,6 +38,10 @@ class AttachmentPayload:
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).astimezone().isoformat()
+
+
+def parse_iso(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
 def ensure_directories() -> None:
@@ -52,10 +58,6 @@ def ensure_directories() -> None:
         path.mkdir(parents=True, exist_ok=True)
 
 
-def parse_iso(value: str) -> datetime:
-    return datetime.fromisoformat(value.replace("Z", "+00:00"))
-
-
 def default_settings(source: str) -> dict[str, Any]:
     return {
         **DEFAULT_SETTINGS,
@@ -65,15 +67,13 @@ def default_settings(source: str) -> dict[str, Any]:
 
 
 def normalize_settings(payload: dict[str, Any], source: str) -> dict[str, Any]:
+    auto_save_interval = str(payload.get("autoSaveInterval", "realtime"))
+    auto_sync_interval = str(payload.get("autoSyncInterval", "realtime"))
     return {
         "autoSaveEnabled": bool(payload.get("autoSaveEnabled", True)),
-        "autoSaveInterval": payload.get("autoSaveInterval", "realtime")
-        if payload.get("autoSaveInterval", "realtime") in VALID_INTERVALS
-        else "realtime",
+        "autoSaveInterval": auto_save_interval if auto_save_interval in VALID_INTERVALS else "realtime",
         "autoSyncEnabled": bool(payload.get("autoSyncEnabled", True)),
-        "autoSyncInterval": payload.get("autoSyncInterval", "realtime")
-        if payload.get("autoSyncInterval", "realtime") in VALID_INTERVALS
-        else "realtime",
+        "autoSyncInterval": auto_sync_interval if auto_sync_interval in VALID_INTERVALS else "realtime",
         "updatedAt": str(payload.get("updatedAt") or now_iso()),
         "source": source,
     }
@@ -86,7 +86,10 @@ def settings_file(name: str) -> Path:
 def load_json(path: Path) -> dict[str, Any]:
     if not path.exists():
         return {}
-    return json.loads(path.read_text(encoding="utf-8"))
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
 
 
 def write_json(path: Path, payload: dict[str, Any]) -> None:
@@ -169,8 +172,8 @@ def _related_question(path: Path, entry_id: str) -> dict[str, Any] | None:
         project_context = data.get("projectContext") or {}
         if str(project_context.get("relatedEntryId", "")) == entry_id:
             return {
-                "entryId": data.get("entryId", ""),
-                "body": data.get("body", ""),
+                "entryId": str(data.get("entryId", "")),
+                "body": str(data.get("body", "")),
             }
     return None
 
@@ -184,9 +187,9 @@ def _normalize_attachment(path: Path, attachment: dict[str, Any]) -> dict[str, A
     if attachment_path.exists():
         preview_url = "/" + str(attachment_path.relative_to(ROOT)).replace("\\", "/")
     return {
-        "attachmentId": attachment.get("attachmentId", ""),
+        "attachmentId": str(attachment.get("attachmentId", "")),
         "path": relative,
-        "mimeType": attachment.get("mimeType", ""),
+        "mimeType": str(attachment.get("mimeType", "")),
         "previewUrl": preview_url,
     }
 
@@ -207,12 +210,12 @@ def list_records() -> list[dict[str, Any]]:
         records.append(
             {
                 "entryId": entry_id,
-                "headline": entry.get("headline", ""),
-                "body": entry.get("body", ""),
-                "inputMode": entry.get("inputMode", "text"),
-                "projectId": entry.get("projectId", "project-alpha"),
-                "capturedAt": entry.get("capturedAt", ""),
-                "syncState": (entry.get("sync") or {}).get("state", "local_saved"),
+                "headline": str(entry.get("headline", "")),
+                "body": str(entry.get("body", "")),
+                "inputMode": str(entry.get("inputMode", "text")),
+                "projectId": str(entry.get("projectId", "project-alpha")),
+                "capturedAt": str(entry.get("capturedAt", "")),
+                "syncState": str((entry.get("sync") or {}).get("state", "local_saved")),
                 "attachments": attachments,
                 "question": _related_question(path, entry_id),
             }
@@ -347,26 +350,25 @@ def queue_record_for_device(entry_id: str) -> dict[str, Any]:
     ensure_directories()
     for path in _candidate_record_files():
         entry = _load_record(path)
-        if not entry:
+        if not entry or str(entry.get("entryId", "")) != entry_id:
             continue
-        if str(entry.get("entryId", "")) != entry_id:
-            continue
+
         attachments = [
             {
-                "attachmentId": item.get("attachmentId", ""),
-                "path": item.get("path", ""),
-                "mimeType": item.get("mimeType", ""),
+                "attachmentId": str(item.get("attachmentId", "")),
+                "path": str(item.get("path", "")),
+                "mimeType": str(item.get("mimeType", "")),
             }
             for item in entry.get("attachments", [])
             if isinstance(item, dict)
         ]
         payload = {
             "entryId": entry_id,
-            "headline": entry.get("headline", ""),
-            "body": entry.get("body", ""),
-            "inputMode": entry.get("inputMode", "text"),
-            "projectId": entry.get("projectId", "project-alpha"),
-            "capturedAt": entry.get("capturedAt", ""),
+            "headline": str(entry.get("headline", "")),
+            "body": str(entry.get("body", "")),
+            "inputMode": str(entry.get("inputMode", "text")),
+            "projectId": str(entry.get("projectId", "project-alpha")),
+            "capturedAt": str(entry.get("capturedAt", "")),
             "attachments": attachments,
         }
         attachment_source = None
@@ -410,13 +412,121 @@ def delete_record(entry_id: str, propagate: bool = True) -> dict[str, Any]:
     return {"entryId": entry_id, "removed": removed}
 
 
+def _load_bridge_runtime_state() -> dict[str, Any]:
+    path = LOGS / "adb_bridge_state.json"
+    if not path.exists():
+        return {}
+    return load_json(path)
+
+
+def _parse_optional_iso(value: str | None) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return parse_iso(value)
+    except ValueError:
+        return None
+
+
+def docker_status() -> dict[str, Any]:
+    try:
+        result = subprocess.run(
+            ["docker", "ps", "--format", "{{.Names}}"],
+            cwd=ROOT,
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="ignore",
+        )
+    except OSError:
+        return {"available": False, "running": [], "ready": False}
+
+    if result.returncode != 0:
+        return {"available": False, "running": [], "ready": False}
+
+    running = {line.strip() for line in result.stdout.splitlines() if line.strip()}
+    return {
+        "available": True,
+        "running": sorted(running),
+        "ready": EXPECTED_CONTAINERS.issubset(running),
+    }
+
+
+def queue_depths() -> dict[str, int]:
+    def count_files(path: Path, pattern: str) -> int:
+        if not path.exists():
+            return 0
+        return sum(1 for _ in path.rglob(pattern))
+
+    return {
+        "entries": count_files(EDGE_OUTBOX / "entries", "*.json"),
+        "deletes": count_files(EDGE_OUTBOX / "deletes", "*.json"),
+        "settings": count_files(EDGE_OUTBOX / "settings", "*.json"),
+        "attachments": count_files(EDGE_OUTBOX / "attachments", "*.*"),
+    }
+
+
+def _fresh_within(timestamp: datetime | None, seconds: int) -> bool:
+    if timestamp is None:
+        return False
+    return datetime.now(timezone.utc).astimezone() - timestamp <= timedelta(seconds=seconds)
+
+
+def build_sync_badge(records: list[dict[str, Any]], settings: dict[str, Any]) -> dict[str, Any]:
+    bridge = _load_bridge_runtime_state()
+    bridge_at = _parse_optional_iso(str(bridge.get("generatedAt", "")))
+    bridge_fresh = _fresh_within(bridge_at, 15)
+    docker = docker_status()
+    mobile_checked = bool(bridge.get("connected")) and bridge_fresh
+    server_checked = bool(docker.get("ready"))
+    counts = queue_depths()
+    queue_total = sum(counts.values())
+    activity_total = sum(
+        int(bridge.get(key, 0) or 0)
+        for key in (
+            "mirroredEntries",
+            "appliedDeletes",
+            "mirroredSettings",
+            "pushedQuestions",
+            "pushedEntries",
+            "pushedDeletes",
+            "pushedSettings",
+        )
+    )
+    has_synced_record = any(record.get("question") for record in records) or any(
+        str(record.get("syncState", "")).startswith("pc") for record in records
+    )
+
+    if not mobile_checked or not server_checked:
+        connector = {"text": "--×--", "level": "bad", "label": "圏外 / server停止"}
+    elif has_synced_record or activity_total > 0 or (
+        settings.get("autoSyncEnabled", True) and settings.get("autoSyncInterval") == "realtime" and queue_total == 0
+    ):
+        connector = {"text": "<--->", "level": "good", "label": "同期中"}
+    else:
+        connector = {"text": "- - - -", "level": "warn", "label": "同期環境構築中"}
+
+    return {
+        "mobile": {"label": "Mobile", "checked": mobile_checked},
+        "server": {"label": "Server", "checked": server_checked},
+        "connector": connector,
+        "nextSyncText": next_sync_text(settings),
+        "docker": docker,
+        "bridgeFresh": bridge_fresh,
+        "queue": counts,
+    }
+
+
 def build_bootstrap_payload() -> dict[str, Any]:
     records = list_records()
     settings = load_shared_settings()
+    sync = build_sync_badge(records, settings)
     return {
         "generatedAt": now_iso(),
         "settings": settings,
-        "nextSyncText": next_sync_text(settings),
+        "nextSyncText": sync["nextSyncText"],
+        "sync": sync,
         "records": records,
         "counts": footer_counts(records),
         "latestQuestion": records[0].get("question") if records else None,

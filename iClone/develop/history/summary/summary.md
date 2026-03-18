@@ -1,11 +1,6 @@
-# develop 更新履歴
+# develop history summary
 
-## 2026-03-17-001 manager context collection foundation start
-- `iClone/` を独立 project として開始した
-
-## 2026-03-18-014 sync-first copy experience line completion
-- `MRL-7` を完了した
-
-## 2026-03-19-001 clone-first workspace line completion
-- `MRL-8 clone-first workspace line` を追加して完了した
-- clone-first UI、settings、delete、UX 自動検証レポートを develop 正本へ反映した
+- `2026-03-19-001`
+  - `MRL-8` を追加し、clone-first workspace line を完了へ更新
+- `2026-03-19-002`
+  - `MRL-9 mobile-server connector line` を追加し、MRL / mRL を clean rewrite した
