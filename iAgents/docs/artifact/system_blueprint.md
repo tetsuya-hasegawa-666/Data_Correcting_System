@@ -66,3 +66,31 @@ iAgents/
 - 原本 workbook を直接編集しない
 - 統合結果は preview 用の rows と headers に留める
 - single cell formula は利用者が確認して Excel Online へ貼り戻す
+
+## 実装対象の段階化
+
+| phase | target |
+|---|---|
+| prototype phase | `MRL-5` から `MRL-9` の side-by-side companion 実装 |
+| implementation phase | `MRL-10` から `MRL-18` の UX 機能ごとの本実装と実確認 |
+
+## Implementation Evidence
+
+- `MRL-10`
+  launcher 起動成功、Excel Online 検知、自動 companion open
+- `MRL-11`
+  Range Pilot 操作手順、所要時間比較、名前ボックス連携結果
+- `MRL-12`
+  履歴復元成功、Smart Snap 採用結果、範囲漏れ補正例
+- `MRL-13`
+  グラフ候補提示結果、設定導線の確認ログ
+- `MRL-14`
+  Clean Paste の before / after 例
+- `MRL-15`
+  Data Synthesizer の統合 preview 例
+- `MRL-16`
+  mode halo の状態差確認
+- `MRL-17`
+  自然言語指示と候補の対応例
+- `MRL-18`
+  end-to-end UX check と completion evidence

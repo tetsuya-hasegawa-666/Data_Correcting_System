@@ -2,15 +2,15 @@
 
 ## Active Plan Set
 
-- `2026-03-18-003 Excel Online Shadow Assistant prototype delivery`
+- `2026-03-18-004 Excel Online Shadow Assistant implementation roadmap`
 
 ## Active Market Release
 
-- `なし`
+- `MRL-10 shadow bar operationalization line`
 
 ## Active Micro Release
 
-- `なし`
+- `mRL-10-1 launcher, shortcut, and auto-open stabilization`
 
 ## Completed Evidence
 
@@ -30,11 +30,10 @@
 
 ## Pending Change Requests
 
-- bookmarklet、extension、または Office Script 連携へ進めるかの判断
+- なし
 
 ## Next Validation Point
 
-- desktop shortcut からの実起動確認
-- Excel Online 実画面で side-by-side manual UX check
-- 名前ボックスからの range 転記負荷の確認
-- 将来の自動連携方式の選定
+- desktop shortcut からの安定起動確認
+- Excel Online 実画面で `MRL-10` の自動 companion open 確認
+- `MRL-11` 以降の本実装 line 着手

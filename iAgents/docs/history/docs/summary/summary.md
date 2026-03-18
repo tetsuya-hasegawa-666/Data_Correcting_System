@@ -19,3 +19,7 @@
 ## 2026-03-18-005
 
 - Windows launcher、Excel Online 検知ベースの自動 companion オープン、desktop shortcut 導線、UX 重視の確認導線を追加した。
+
+## 2026-03-18-006
+
+- 当初の UX 改善機能を `MRL-10` から `MRL-18` へ本実装・実確認前提で再割付し、implementation roadmap を追加した。
