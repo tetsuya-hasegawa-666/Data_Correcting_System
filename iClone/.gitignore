@@ -23,4 +23,6 @@ runtime/syncthing/config/**
 !runtime/syncthing/config/.gitkeep
 runtime/device-cache/**
 !runtime/device-cache/.gitkeep
+runtime/config/**
+!runtime/config/.gitkeep
 src/host/__pycache__/
