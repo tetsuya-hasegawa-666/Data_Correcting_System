@@ -46,8 +46,35 @@
       selection: findSelectionCandidate(),
       mode: guessMode(),
       ime_state: "auto",
-      table_preview: []
+      table_preview: collectTablePreview()
     };
+  }
+
+  function collectTablePreview() {
+    const rows = [];
+    const gridRows = document.querySelectorAll("[role='row']");
+    for (const row of gridRows) {
+      const cells = Array.from(row.querySelectorAll("[role='gridcell'], [role='columnheader']")).map((cell) =>
+        (cell.textContent || "").trim()
+      );
+      if (cells.some(Boolean)) {
+        rows.push(cells);
+      }
+      if (rows.length >= 6) {
+        return rows;
+      }
+    }
+    const tableRows = document.querySelectorAll("table tr");
+    for (const row of tableRows) {
+      const cells = Array.from(row.querySelectorAll("th, td")).map((cell) => (cell.textContent || "").trim());
+      if (cells.some(Boolean)) {
+        rows.push(cells);
+      }
+      if (rows.length >= 6) {
+        break;
+      }
+    }
+    return rows.slice(0, 6);
   }
 
   async function sendState() {

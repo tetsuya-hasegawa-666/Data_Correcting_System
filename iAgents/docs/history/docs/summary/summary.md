@@ -47,3 +47,7 @@
 ## 2026-03-19-001
 
 - `MRL-19` を進め、bridge state から live Range / Snap / Halo を返す `bridge/assist` 経路を追加した。
+
+## 2026-03-19-002
+
+- selection history、live intent、action handoff、live graph preview、dataset handoff を追加し、`MRL-20` から `MRL-26` の前倒し実装を進めた。

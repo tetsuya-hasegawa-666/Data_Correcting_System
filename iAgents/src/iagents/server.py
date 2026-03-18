@@ -11,11 +11,14 @@ from typing import Any, Callable
 
 from .bridge import BridgeStateStore
 from .logic import (
-    clean_paste,
     build_live_assist,
+    build_dataset_handoff,
+    clean_paste,
     interpret_intent,
+    interpret_intent_with_bridge,
     mode_halo_state,
     selection_time_machine,
+    suggest_chart_live,
     smart_snap_preview,
     suggest_chart,
     suggest_range,
@@ -47,6 +50,9 @@ class ShadowAssistantHandler(BaseHTTPRequestHandler):
         if self.path == "/api/bridge/assist":
             self._send_json(build_live_assist(BRIDGE_STORE.snapshot()))
             return
+        if self.path == "/api/graph/live":
+            self._send_json(suggest_chart_live(BRIDGE_STORE.snapshot()))
+            return
         self.send_error(HTTPStatus.NOT_FOUND, "Not Found")
 
     def do_POST(self) -> None:  # noqa: N802
@@ -56,8 +62,11 @@ class ShadowAssistantHandler(BaseHTTPRequestHandler):
             "/api/snap/preview": self._handle_snap_preview,
             "/api/paste/clean": self._handle_paste_clean,
             "/api/data/synthesize": self._handle_data_synthesize,
+            "/api/data/handoff": self._handle_data_handoff,
             "/api/graph/suggest": self._handle_graph_suggest,
+            "/api/graph/live": self._handle_graph_live,
             "/api/intent/interpret": self._handle_intent_interpret,
+            "/api/intent/live": self._handle_intent_live,
             "/api/halo/state": self._handle_halo_state,
             "/api/bridge/state": self._handle_bridge_state,
             "/api/bridge/assist": self._handle_bridge_assist,
@@ -68,6 +77,13 @@ class ShadowAssistantHandler(BaseHTTPRequestHandler):
             return
         payload = self._read_json()
         self._send_json(handler(payload))
+
+    def do_OPTIONS(self) -> None:  # noqa: N802
+        self.send_response(HTTPStatus.NO_CONTENT)
+        self.send_header("Access-Control-Allow-Origin", "*")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        self.end_headers()
 
     def log_message(self, format: str, *args: object) -> None:
         return
@@ -87,13 +103,6 @@ class ShadowAssistantHandler(BaseHTTPRequestHandler):
         self.send_header("Content-Length", str(len(encoded)))
         self.end_headers()
         self.wfile.write(encoded)
-
-    def do_OPTIONS(self) -> None:  # noqa: N802
-        self.send_response(HTTPStatus.NO_CONTENT)
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.end_headers()
 
     def _serve_file(self, name: str, content_type: str | None = None) -> None:
         path = WEB_ROOT / name
@@ -133,11 +142,23 @@ class ShadowAssistantHandler(BaseHTTPRequestHandler):
     def _handle_data_synthesize(self, payload: dict[str, Any]) -> dict[str, Any]:
         return synthesize_datasets(payload.get("datasets", []))
 
+    def _handle_data_handoff(self, payload: dict[str, Any]) -> dict[str, Any]:
+        synth_payload = synthesize_datasets(payload.get("datasets", []))
+        return build_dataset_handoff(BRIDGE_STORE.snapshot(), synth_payload)
+
     def _handle_graph_suggest(self, payload: dict[str, Any]) -> dict[str, Any]:
         return suggest_chart(payload.get("table_text", ""))
 
+    def _handle_graph_live(self, payload: dict[str, Any]) -> dict[str, Any]:
+        state = BRIDGE_STORE.update(payload) if payload else BRIDGE_STORE.snapshot()
+        return suggest_chart_live(state)
+
     def _handle_intent_interpret(self, payload: dict[str, Any]) -> dict[str, Any]:
         return interpret_intent(payload.get("command", ""), payload.get("current_range"))
+
+    def _handle_intent_live(self, payload: dict[str, Any]) -> dict[str, Any]:
+        state = BRIDGE_STORE.snapshot() if not payload.get("selection") else BRIDGE_STORE.update(payload)
+        return interpret_intent_with_bridge(payload.get("command", ""), state)
 
     def _handle_halo_state(self, payload: dict[str, Any]) -> dict[str, Any]:
         return mode_halo_state(payload.get("mode", ""), payload.get("ime_state", "auto"))
@@ -146,10 +167,7 @@ class ShadowAssistantHandler(BaseHTTPRequestHandler):
         return BRIDGE_STORE.update(payload)
 
     def _handle_bridge_assist(self, payload: dict[str, Any]) -> dict[str, Any]:
-        if payload:
-            state = BRIDGE_STORE.update(payload)
-        else:
-            state = BRIDGE_STORE.snapshot()
+        state = BRIDGE_STORE.snapshot() if not payload else BRIDGE_STORE.update(payload)
         return build_live_assist(state)
 
 

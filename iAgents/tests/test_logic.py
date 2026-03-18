@@ -1,11 +1,15 @@
 import unittest
 
 from iagents.logic import (
+    build_action_handoff,
+    build_dataset_handoff,
     build_live_assist,
     clean_paste,
     interpret_intent,
+    interpret_intent_with_bridge,
     mode_halo_state,
     selection_time_machine,
+    suggest_chart_live,
     smart_snap_preview,
     suggest_chart,
     suggest_range,
@@ -63,10 +67,34 @@ class LogicTest(unittest.TestCase):
         self.assertEqual(result["target_range"], "Sheet1!B3:B10")
 
     def test_live_assist_uses_bridge_selection(self) -> None:
-        result = build_live_assist({"selection": "Sheet1!B3:D5", "mode": "formula", "ime_state": "full"})
+        result = build_live_assist(
+            {"selection": "Sheet1!B3:D5", "mode": "formula", "ime_state": "full", "selection_history": ["Sheet1!B3:D5", "Sheet1!A1"]}
+        )
         self.assertEqual(result["status"], "ready")
         self.assertEqual(result["range_assist"]["smart_snap_range"], "Sheet1!B2:I22")
         self.assertEqual(result["halo"]["mode"], "数式")
+        self.assertEqual(result["selection_recovery"]["restore_offer"], "Sheet1!A1")
+
+    def test_intent_with_bridge_uses_selection_context(self) -> None:
+        result = interpret_intent_with_bridge("sum sales", {"selection": "Sheet1!B3:B10", "workbook_name": "Book1"})
+        self.assertEqual(result["action"], "sum")
+        self.assertEqual(result["bridge_context"]["selection"], "Sheet1!B3:B10")
+        self.assertEqual(result["action_handoff"]["workbook_name"], "Book1")
+
+    def test_build_action_handoff_includes_target_range(self) -> None:
+        result = build_action_handoff("sum sales", {"selection": "Sheet1!B3:B10"}, {"target_range": "Sheet1!B3:B10"})
+        self.assertIn("target range 候補: Sheet1!B3:B10", result["checklist"])
+
+    def test_build_dataset_handoff_uses_bridge_context(self) -> None:
+        synth_payload = synthesize_datasets(["Month,Sales\nJan,120", "Month,Profit\nJan,30"])
+        result = build_dataset_handoff({"workbook_name": "Book1", "worksheet_name": "SheetA"}, synth_payload)
+        self.assertEqual(result["workbook_name"], "Book1")
+        self.assertEqual(result["target"], "new sheet")
+
+    def test_suggest_chart_live_uses_table_preview(self) -> None:
+        result = suggest_chart_live({"table_preview": [["Month", "Sales"], ["Jan", "120"], ["Feb", "180"]], "selection": "Sheet1!A1:B3"})
+        self.assertEqual(result["status"], "ready")
+        self.assertEqual(result["chart_family"], "bar")
 
 
 if __name__ == "__main__":

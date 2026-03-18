@@ -18,6 +18,7 @@ class BridgeStoreTest(unittest.TestCase):
         self.assertEqual(result["source"], "browser_bridge")
         self.assertEqual(result["selection"], "Sheet1!B3:D5")
         self.assertEqual(result["table_preview"][0], ["A", "B"])
+        self.assertEqual(result["selection_history"][0], "Sheet1!B3:D5")
 
 
 if __name__ == "__main__":

@@ -3,7 +3,7 @@ from __future__ import annotations
 import csv
 import io
 import re
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from typing import Iterable
 
 
@@ -195,12 +195,7 @@ def _parse_delimited_table(text: str) -> list[list[str]]:
                 continue
             rows.append(cells)
         return rows
-    if "\t" in stripped:
-        delimiter = "\t"
-    else:
-        comma_count = stripped.count(",")
-        pipe_count = stripped.count("|")
-        delimiter = "," if comma_count >= pipe_count else "|"
+    delimiter = "\t" if "\t" in stripped else ","
     reader = csv.reader(io.StringIO(stripped), delimiter=delimiter)
     return [[cell.strip() for cell in row] for row in reader if any(cell.strip() for cell in row)]
 
@@ -236,9 +231,7 @@ def clean_paste(text: str, single_cell: bool = False) -> dict:
         "column_count": 1,
         "single_cell_formula": _single_cell_formula(normalized),
         "format_suggestions": ["折り返して全体を表示"],
-        "notes": [
-            "改行を保持したまま 1 セルへ入れる式も出せます。",
-        ],
+        "notes": ["改行を保持したまま 1 セルへ入れる式も出せます。"],
     }
 
 
@@ -378,6 +371,67 @@ def mode_halo_state(mode: str, ime_state: str = "auto") -> dict:
     }
 
 
+def build_action_handoff(command: str, bridge_state: dict, assist_payload: dict | None = None) -> dict:
+    selection = str(bridge_state.get("selection", "")).strip()
+    workbook_name = str(bridge_state.get("workbook_name", "")).strip() or "current workbook"
+    worksheet_name = str(bridge_state.get("worksheet_name", "")).strip() or "current sheet"
+    checklist = [
+        f"{workbook_name} / {worksheet_name} を確認する",
+        f"対象 selection を確認する: {selection or '未取得'}",
+        "assistant の提案を見てから Excel Online 側で反映する",
+    ]
+    if assist_payload and assist_payload.get("target_range"):
+        checklist.append(f"target range 候補: {assist_payload['target_range']}")
+    return {
+        "command": command,
+        "workbook_name": workbook_name,
+        "worksheet_name": worksheet_name,
+        "selection": selection,
+        "checklist": checklist,
+        "copy_hint": selection or "",
+    }
+
+
+def build_dataset_handoff(bridge_state: dict, synth_payload: dict) -> dict:
+    workbook_name = str(bridge_state.get("workbook_name", "")).strip() or "current workbook"
+    worksheet_name = str(bridge_state.get("worksheet_name", "")).strip() or "current sheet"
+    return {
+        "workbook_name": workbook_name,
+        "worksheet_name": worksheet_name,
+        "target": "new sheet",
+        "headers": synth_payload.get("headers", []),
+        "row_count": len(synth_payload.get("rows", [])),
+        "checklist": [
+            f"{workbook_name} に新しい sheet を作る",
+            "統合 headers を 1 行目へ貼る",
+            "統合 rows を 2 行目以降へ貼る",
+        ],
+    }
+
+
+def suggest_chart_live(bridge_state: dict) -> dict:
+    table_preview = bridge_state.get("table_preview", [])
+    if not table_preview:
+        return {
+            "status": "waiting_for_table_preview",
+            "notes": ["bridge から table preview がまだ届いていません。"],
+        }
+    table_text = "\n".join(",".join(str(cell) for cell in row) for row in table_preview)
+    result = suggest_chart(table_text)
+    result["status"] = "ready"
+    result["table_preview"] = table_preview
+    result["action_handoff"] = {
+        "workbook_name": bridge_state.get("workbook_name", "") or "current workbook",
+        "selection": bridge_state.get("selection", ""),
+        "checklist": [
+            "グラフ元の表が正しいか確認する",
+            "候補 family を選ぶ",
+            "タイトル、凡例、軸の順に調整する",
+        ],
+    }
+    return result
+
+
 def build_live_assist(bridge_state: dict) -> dict:
     selection = str(bridge_state.get("selection", "")).strip()
     mode = str(bridge_state.get("mode", "")).strip() or "selection"
@@ -387,6 +441,8 @@ def build_live_assist(bridge_state: dict) -> dict:
         "halo": mode_halo_state(mode, ime_state),
         "range_assist": None,
         "snap_assist": None,
+        "selection_recovery": None,
+        "action_handoff": None,
         "status": "idle",
     }
     if not selection:
@@ -395,6 +451,12 @@ def build_live_assist(bridge_state: dict) -> dict:
     try:
         result["range_assist"] = suggest_range(selection)
         result["snap_assist"] = smart_snap_preview(selection)
+        history = bridge_state.get("selection_history", [])
+        result["selection_recovery"] = {
+            "history": history,
+            "restore_offer": history[1] if len(history) > 1 else None,
+        }
+        result["action_handoff"] = build_action_handoff("review current selection", bridge_state, result["range_assist"])
         result["status"] = "ready"
     except ValueError:
         result["status"] = "selection_unreadable"
@@ -418,7 +480,7 @@ def interpret_intent(command: str, current_range: str | None = None) -> dict:
         action = "sum"
         details = "数値列の合計を出したい意図として解釈しました。"
         next_steps = ["合計対象の列を確認", "末尾行または別セルへ SUM を入れる"]
-    elif any(token in normalized for token in ["グラフ", "chart", "棒", "折れ線"]):
+    elif any(token in normalized for token in ["グラフ", "chart", "bar", "line"]):
         action = "chart"
         details = "グラフ作成の意図として解釈しました。"
         next_steps = ["Graph Shadow Editor で候補比較", "ラベルと軸を調整"]
@@ -444,5 +506,14 @@ def interpret_intent(command: str, current_range: str | None = None) -> dict:
     }
 
 
-def to_json_ready(data: dict) -> dict:
-    return {key: asdict(value) if hasattr(value, "__dataclass_fields__") else value for key, value in data.items()}
+def interpret_intent_with_bridge(command: str, bridge_state: dict) -> dict:
+    selection = str(bridge_state.get("selection", "")).strip() or None
+    result = interpret_intent(command, selection)
+    result["bridge_context"] = {
+        "workbook_name": bridge_state.get("workbook_name", ""),
+        "worksheet_name": bridge_state.get("worksheet_name", ""),
+        "selection": selection,
+        "mode": bridge_state.get("mode", ""),
+    }
+    result["action_handoff"] = build_action_handoff(command, bridge_state, result)
+    return result

@@ -76,17 +76,14 @@ async function refreshHalo() {
   showJson("haloResult", result);
 }
 
-function initModeHalo() {
-  $("refreshHaloButton").addEventListener("click", refreshHalo);
-  $("modeSelect").addEventListener("change", refreshHalo);
-  $("imeSelect").addEventListener("change", refreshHalo);
-}
-
 async function refreshBridgeState() {
   const response = await fetch("/api/bridge/state");
   const result = await response.json();
   if (result.selection) {
     syncRangeFields(result.selection);
+    state.history = result.selection_history || state.history;
+    saveHistory();
+    renderHistory();
   }
   showJson("bridgeResult", result);
 }
@@ -98,6 +95,12 @@ async function refreshBridgeAssist() {
     syncRangeFields(result.bridge_state.selection);
   }
   showJson("bridgeAssistResult", result);
+}
+
+function initModeHalo() {
+  $("refreshHaloButton").addEventListener("click", refreshHalo);
+  $("modeSelect").addEventListener("change", refreshHalo);
+  $("imeSelect").addEventListener("change", refreshHalo);
 }
 
 function initRangeAssistant() {
@@ -160,6 +163,12 @@ function initSynthesisAssistant() {
     });
     showJson("synthesisResult", result);
   });
+  $("synthesizeHandoffButton").addEventListener("click", async () => {
+    const result = await postJson("/api/data/handoff", {
+      datasets: [$("datasetA").value, $("datasetB").value],
+    });
+    showJson("synthesisResult", result);
+  });
 }
 
 function initGraphAssistant() {
@@ -169,6 +178,11 @@ function initGraphAssistant() {
     });
     showJson("graphResult", result);
   });
+  $("graphLiveButton").addEventListener("click", async () => {
+    const response = await fetch("/api/graph/live");
+    const result = await response.json();
+    showJson("graphResult", result);
+  });
 }
 
 function initIntentAssistant() {
@@ -176,6 +190,12 @@ function initIntentAssistant() {
     const result = await postJson("/api/intent/interpret", {
       command: $("intentInput").value,
       current_range: $("intentRangeInput").value,
+    });
+    showJson("intentResult", result);
+  });
+  $("interpretLiveButton").addEventListener("click", async () => {
+    const result = await postJson("/api/intent/live", {
+      command: $("intentInput").value,
     });
     showJson("intentResult", result);
   });
