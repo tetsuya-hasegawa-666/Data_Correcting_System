@@ -18,6 +18,8 @@ from workspace_api import (
     ensure_directories,
     move_record_to_trash,
     queue_record_for_device,
+    request_device_reconnect,
+    request_host_restart,
     save_host_settings,
 )
 
@@ -51,6 +53,12 @@ class HostPreviewHandler(BaseHTTPRequestHandler):
             return
         if self.path == "/api/workspace/trash/empty":
             self._write_json(empty_trash(propagate=True))
+            return
+        if self.path == "/api/workspace/reconnect/server":
+            self._write_json(request_host_restart())
+            return
+        if self.path == "/api/workspace/reconnect/device":
+            self._write_json(request_device_reconnect())
             return
         if self.path == "/api/workspace/settings":
             payload = self._read_json_body()
