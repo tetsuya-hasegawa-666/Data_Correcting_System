@@ -1,6 +1,7 @@
 import unittest
 
 from iagents.logic import (
+    build_live_assist,
     clean_paste,
     interpret_intent,
     mode_halo_state,
@@ -60,6 +61,12 @@ class LogicTest(unittest.TestCase):
         result = interpret_intent("売上を合計", "Sheet1!B3:B10")
         self.assertEqual(result["action"], "sum")
         self.assertEqual(result["target_range"], "Sheet1!B3:B10")
+
+    def test_live_assist_uses_bridge_selection(self) -> None:
+        result = build_live_assist({"selection": "Sheet1!B3:D5", "mode": "formula", "ime_state": "full"})
+        self.assertEqual(result["status"], "ready")
+        self.assertEqual(result["range_assist"]["smart_snap_range"], "Sheet1!B2:I22")
+        self.assertEqual(result["halo"]["mode"], "数式")
 
 
 if __name__ == "__main__":

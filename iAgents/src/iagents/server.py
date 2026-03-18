@@ -12,6 +12,7 @@ from typing import Any, Callable
 from .bridge import BridgeStateStore
 from .logic import (
     clean_paste,
+    build_live_assist,
     interpret_intent,
     mode_halo_state,
     selection_time_machine,
@@ -43,6 +44,9 @@ class ShadowAssistantHandler(BaseHTTPRequestHandler):
         if self.path == "/api/bridge/state":
             self._send_json(BRIDGE_STORE.snapshot())
             return
+        if self.path == "/api/bridge/assist":
+            self._send_json(build_live_assist(BRIDGE_STORE.snapshot()))
+            return
         self.send_error(HTTPStatus.NOT_FOUND, "Not Found")
 
     def do_POST(self) -> None:  # noqa: N802
@@ -56,6 +60,7 @@ class ShadowAssistantHandler(BaseHTTPRequestHandler):
             "/api/intent/interpret": self._handle_intent_interpret,
             "/api/halo/state": self._handle_halo_state,
             "/api/bridge/state": self._handle_bridge_state,
+            "/api/bridge/assist": self._handle_bridge_assist,
         }
         handler = routes.get(self.path)
         if handler is None:
@@ -139,6 +144,13 @@ class ShadowAssistantHandler(BaseHTTPRequestHandler):
 
     def _handle_bridge_state(self, payload: dict[str, Any]) -> dict[str, Any]:
         return BRIDGE_STORE.update(payload)
+
+    def _handle_bridge_assist(self, payload: dict[str, Any]) -> dict[str, Any]:
+        if payload:
+            state = BRIDGE_STORE.update(payload)
+        else:
+            state = BRIDGE_STORE.snapshot()
+        return build_live_assist(state)
 
 
 class ServerController:

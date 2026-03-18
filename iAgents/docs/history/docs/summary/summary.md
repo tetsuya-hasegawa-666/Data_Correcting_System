@@ -43,3 +43,7 @@
 ## 2026-03-18-011
 
 - `MRL-19` の bridge scaffold として browser bridge 雛形、bridge state store、bridge API を追加した。
+
+## 2026-03-19-001
+
+- `MRL-19` を進め、bridge state から live Range / Snap / Halo を返す `bridge/assist` 経路を追加した。

@@ -91,6 +91,15 @@ async function refreshBridgeState() {
   showJson("bridgeResult", result);
 }
 
+async function refreshBridgeAssist() {
+  const response = await fetch("/api/bridge/assist");
+  const result = await response.json();
+  if (result.bridge_state && result.bridge_state.selection) {
+    syncRangeFields(result.bridge_state.selection);
+  }
+  showJson("bridgeAssistResult", result);
+}
+
 function initRangeAssistant() {
   $("suggestRangeButton").addEventListener("click", async () => {
     const payload = {
@@ -182,9 +191,11 @@ function bootstrap() {
   initGraphAssistant();
   initIntentAssistant();
   $("refreshBridgeButton").addEventListener("click", refreshBridgeState);
+  $("refreshBridgeAssistButton").addEventListener("click", refreshBridgeAssist);
   renderHistory();
   refreshHalo();
   refreshBridgeState();
+  refreshBridgeAssist();
 }
 
 bootstrap();

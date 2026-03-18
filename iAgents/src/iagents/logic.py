@@ -378,6 +378,29 @@ def mode_halo_state(mode: str, ime_state: str = "auto") -> dict:
     }
 
 
+def build_live_assist(bridge_state: dict) -> dict:
+    selection = str(bridge_state.get("selection", "")).strip()
+    mode = str(bridge_state.get("mode", "")).strip() or "selection"
+    ime_state = str(bridge_state.get("ime_state", "auto")).strip() or "auto"
+    result = {
+        "bridge_state": bridge_state,
+        "halo": mode_halo_state(mode, ime_state),
+        "range_assist": None,
+        "snap_assist": None,
+        "status": "idle",
+    }
+    if not selection:
+        result["status"] = "waiting_for_selection"
+        return result
+    try:
+        result["range_assist"] = suggest_range(selection)
+        result["snap_assist"] = smart_snap_preview(selection)
+        result["status"] = "ready"
+    except ValueError:
+        result["status"] = "selection_unreadable"
+    return result
+
+
 def interpret_intent(command: str, current_range: str | None = None) -> dict:
     normalized = command.strip().lower()
     action = "suggest"
