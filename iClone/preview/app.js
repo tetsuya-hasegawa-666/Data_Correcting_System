@@ -1,17 +1,17 @@
 const TEXT = {
   eyebrow: "Xperia 5 III / Windows workspace",
   title: "\u30c7\u30fc\u30bf\u30af\u30ed\u30fc\u30f3\u3092\u3059\u3050\u4f7f\u3046",
-  editorLabel: "\u30af\u30ed\u30fc\u30f3",
+  editorLabel: "\u5165\u529b",
   editorTitle: "\u305d\u306e\u307e\u307e\u30b3\u30d4\u30fc\u3059\u308b",
-  listLabel: "\u30ef\u30fc\u30af\u30b9\u30da\u30fc\u30b9",
-  listTitle: "\u3059\u3050\u89e6\u308c\u308b\u30c7\u30fc\u30bf",
+  browserLabel: "\u95b2\u89a7",
+  browserTitle: "\u3059\u3050\u89e6\u308c\u308b clone",
   settingsToggleOpen: "\u8a2d\u5b9a",
   settingsToggleClose: "\u8a2d\u5b9a\u3092\u9589\u3058\u308b",
   headline: "\u898b\u51fa\u3057",
   body: "\u30e1\u30e2",
   attach: "\u5199\u771f",
   detach: "\u5916\u3059",
-  delete: "\u524a\u9664",
+  delete: "\u3054\u307f\u7bb1\u3078",
   save: "\u8a18\u9332\u3059\u308b",
   sync: "\u4eca\u3059\u3050\u30b3\u30d4\u30fc",
   autoSave: "\u81ea\u52d5\u4fdd\u5b58",
@@ -26,14 +26,19 @@ const TEXT = {
   footerRecords: "\u30e1\u30e2",
   footerPhotos: "\u5199\u771f",
   footerQuestions: "\u8cea\u554f",
+  footerTrash: "\u3054\u307f\u7bb1",
   footerNextSync: "\u6b21\u540c\u671f",
   on: "ON",
   off: "OFF",
   realtime: "\u30ea\u30a2\u30eb\u30bf\u30a4\u30e0",
   tenSec: "10\u79d2",
   oneMin: "1\u5206",
-  mobile: "Mobile",
-  server: "Server",
+  memoClone: "Memo Clone \u3092\u958b\u304f",
+  photoClone: "Photo Clone \u3092\u958b\u304f",
+  trash: "\u3054\u307f\u7bb1\u3092\u958b\u304f",
+  close: "\u9589\u3058\u308b",
+  hardDelete: "\u5b8c\u5168\u6d88\u53bb",
+  emptyTrash: "\u4e00\u62ec\u6d88\u53bb",
 };
 
 const state = {
@@ -43,6 +48,7 @@ const state = {
   saveTimer: null,
   syncTimer: null,
   settingsOpen: false,
+  openSection: "",
 };
 
 const refs = {
@@ -51,8 +57,8 @@ const refs = {
   statusRail: document.getElementById("statusRail"),
   editorLabel: document.getElementById("editorLabel"),
   editorTitle: document.getElementById("editorTitle"),
-  listLabel: document.getElementById("listLabel"),
-  listTitle: document.getElementById("listTitle"),
+  browserLabel: document.getElementById("browserLabel"),
+  browserTitle: document.getElementById("browserTitle"),
   settingsToggle: document.getElementById("settingsToggle"),
   settingsPanel: document.getElementById("settingsPanel"),
   autoSaveLabel: document.getElementById("autoSaveLabel"),
@@ -78,16 +84,25 @@ const refs = {
   syncButton: document.getElementById("syncButton"),
   actionNote: document.getElementById("actionNote"),
   questionInline: document.getElementById("questionInline"),
-  recordList: document.getElementById("recordList"),
+  memoToggle: document.getElementById("memoToggle"),
+  memoBody: document.getElementById("memoBody"),
+  memoClose: document.getElementById("memoClose"),
+  memoList: document.getElementById("memoList"),
+  photoToggle: document.getElementById("photoToggle"),
+  photoBody: document.getElementById("photoBody"),
+  photoClose: document.getElementById("photoClose"),
+  photoList: document.getElementById("photoList"),
+  trashToggle: document.getElementById("trashToggle"),
+  trashBody: document.getElementById("trashBody"),
+  trashClose: document.getElementById("trashClose"),
+  trashList: document.getElementById("trashList"),
+  emptyTrashButton: document.getElementById("emptyTrashButton"),
   footerCounts: document.getElementById("footerCounts"),
   footerNextSync: document.getElementById("footerNextSync"),
 };
 
 function jsonFetch(url, options = {}) {
-  return fetch(url, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  }).then((response) => response.json());
+  return fetch(url, { headers: { "Content-Type": "application/json" }, ...options }).then((response) => response.json());
 }
 
 function setStaticText() {
@@ -95,8 +110,8 @@ function setStaticText() {
   refs.topTitle.textContent = TEXT.title;
   refs.editorLabel.textContent = TEXT.editorLabel;
   refs.editorTitle.textContent = TEXT.editorTitle;
-  refs.listLabel.textContent = TEXT.listLabel;
-  refs.listTitle.textContent = TEXT.listTitle;
+  refs.browserLabel.textContent = TEXT.browserLabel;
+  refs.browserTitle.textContent = TEXT.browserTitle;
   refs.settingsToggle.textContent = TEXT.settingsToggleOpen;
   refs.autoSaveLabel.textContent = TEXT.autoSave;
   refs.autoSaveIntervalLabel.textContent = TEXT.autoSaveInterval;
@@ -109,35 +124,26 @@ function setStaticText() {
   refs.deleteButton.textContent = TEXT.delete;
   refs.saveButton.textContent = TEXT.save;
   refs.syncButton.textContent = TEXT.sync;
+  refs.memoToggle.textContent = TEXT.memoClone;
+  refs.photoToggle.textContent = TEXT.photoClone;
+  refs.trashToggle.textContent = TEXT.trash;
+  refs.memoClose.textContent = TEXT.close;
+  refs.photoClose.textContent = TEXT.close;
+  refs.trashClose.textContent = TEXT.close;
+  refs.emptyTrashButton.textContent = TEXT.emptyTrash;
   refs.headlineInput.placeholder = "\u898b\u51fa\u3057\u3092\u77ed\u304f\u5165\u308c\u307e\u3059";
   refs.bodyInput.placeholder = "\u30e1\u30e2\u3092\u305d\u306e\u307e\u307e\u5165\u308c\u307e\u3059";
 }
 
 function fillSelect(select, items) {
-  select.innerHTML = items
-    .map((item) => `<option value="${item.value}">${item.label}</option>`)
-    .join("");
+  select.innerHTML = items.map((item) => `<option value="${item.value}">${item.label}</option>`).join("");
 }
 
 function bootstrapSettingsUI() {
-  fillSelect(refs.autoSaveEnabled, [
-    { value: "true", label: TEXT.on },
-    { value: "false", label: TEXT.off },
-  ]);
-  fillSelect(refs.autoSyncEnabled, [
-    { value: "true", label: TEXT.on },
-    { value: "false", label: TEXT.off },
-  ]);
-  fillSelect(refs.autoSaveInterval, [
-    { value: "realtime", label: TEXT.realtime },
-    { value: "10s", label: TEXT.tenSec },
-    { value: "1m", label: TEXT.oneMin },
-  ]);
-  fillSelect(refs.autoSyncInterval, [
-    { value: "realtime", label: TEXT.realtime },
-    { value: "10s", label: TEXT.tenSec },
-    { value: "1m", label: TEXT.oneMin },
-  ]);
+  fillSelect(refs.autoSaveEnabled, [{ value: "true", label: TEXT.on }, { value: "false", label: TEXT.off }]);
+  fillSelect(refs.autoSyncEnabled, [{ value: "true", label: TEXT.on }, { value: "false", label: TEXT.off }]);
+  fillSelect(refs.autoSaveInterval, [{ value: "realtime", label: TEXT.realtime }, { value: "10s", label: TEXT.tenSec }, { value: "1m", label: TEXT.oneMin }]);
+  fillSelect(refs.autoSyncInterval, [{ value: "realtime", label: TEXT.realtime }, { value: "10s", label: TEXT.tenSec }, { value: "1m", label: TEXT.oneMin }]);
 }
 
 function syncSettingsToForm(settings) {
@@ -148,20 +154,17 @@ function syncSettingsToForm(settings) {
   refs.settingsNote.textContent = `${TEXT.settingsNote}: ${state.bootstrap.sync.nextSyncText}`;
 }
 
-function endpointMarkup(endpoint, muted) {
-  const marker = endpoint.checked ? "\u2611" : "\u00d7";
-  const className = endpoint.checked ? (muted ? "muted" : "good") : "bad";
-  return `<span class="status-pill ${className}">${marker}${endpoint.label}</span>`;
+function endpointMarkup(endpoint) {
+  const marker = endpoint.checked ? "\u2713" : "\u00d7";
+  return `<span class="status-pill ${endpoint.level}">${marker}${endpoint.label}</span>`;
 }
 
 function renderStatus() {
   const sync = state.bootstrap.sync;
-  const connector = sync.connector || { text: "--×--", level: "bad", label: "" };
-  const mobileMuted = Boolean(sync.server?.checked);
   refs.statusRail.innerHTML = [
-    endpointMarkup(sync.mobile || { label: TEXT.mobile, checked: false }, mobileMuted),
-    `<span class="status-connector ${connector.level}" title="${connector.label}">${connector.text}</span>`,
-    endpointMarkup(sync.server || { label: TEXT.server, checked: false }, false),
+    endpointMarkup(sync.mobile),
+    `<span class="status-connector ${sync.connector.level}" title="${sync.connector.label}">${sync.connector.text}</span>`,
+    endpointMarkup(sync.server),
   ].join("");
 }
 
@@ -171,9 +174,8 @@ function renderFooter() {
     `${TEXT.footerRecords} ${counts.records}`,
     `${TEXT.footerPhotos} ${counts.photos}`,
     `${TEXT.footerQuestions} ${counts.questions}`,
-  ]
-    .map((item) => `<span class="footer-pill">${item}</span>`)
-    .join("");
+    `${TEXT.footerTrash} ${counts.trash}`,
+  ].map((item) => `<span class="footer-pill">${item}</span>`).join("");
   refs.footerNextSync.textContent = `${TEXT.footerNextSync}: ${state.bootstrap.sync.nextSyncText}`;
 }
 
@@ -183,8 +185,7 @@ function renderQuestion(record) {
 }
 
 function renderSelection() {
-  const records = state.bootstrap.records || [];
-  const record = records.find((item) => item.entryId === state.selectedRecordId) || null;
+  const record = (state.bootstrap.records || []).find((item) => item.entryId === state.selectedRecordId) || null;
   if (!record) {
     refs.headlineInput.value = "";
     refs.bodyInput.value = "";
@@ -193,7 +194,6 @@ function renderSelection() {
     renderQuestion(null);
     return;
   }
-
   refs.headlineInput.value = record.headline || "";
   refs.bodyInput.value = record.body || "";
   const photo = (record.attachments || []).find((item) => String(item.mimeType || "").startsWith("image/"));
@@ -207,38 +207,32 @@ function renderSelection() {
   renderQuestion(record);
 }
 
-function renderRecords() {
-  const records = state.bootstrap.records || [];
-  if (records.length === 0) {
-    refs.recordList.innerHTML = `<div class="record-card">${TEXT.empty}</div>`;
-    return;
-  }
-
-  refs.recordList.innerHTML = records
-    .map((record) => {
-      const active = record.entryId === state.selectedRecordId ? " active" : "";
-      return `
-        <article class="record-card${active}" data-entry-id="${record.entryId}">
-          <div class="record-head">
-            <div>
-              <h3>${record.headline || record.entryId}</h3>
-              <div class="record-meta">
-                <span>${record.capturedAt || "-"}</span>
-                <span>${record.inputMode || "text"}</span>
-              </div>
-            </div>
-            <div class="record-actions">
-              <button class="mini-button sync" type="button" data-action="sync" data-entry-id="${record.entryId}">${TEXT.sync}</button>
-              <button class="mini-button delete" type="button" data-action="delete" data-entry-id="${record.entryId}">${TEXT.delete}</button>
-            </div>
+function cardMarkup(record, mode) {
+  const meta = mode === "trash" ? (record.trashedAt || "-") : (record.capturedAt || "-");
+  const deleteAction = mode === "trash" ? TEXT.hardDelete : TEXT.delete;
+  const deleteName = mode === "trash" ? "hard-delete" : "soft-delete";
+  return `
+    <article class="record-card ${state.selectedRecordId === record.entryId ? "active" : ""}" data-entry-id="${record.entryId}">
+      <div class="record-head">
+        <div>
+          <h3>${record.headline || record.entryId}</h3>
+          <div class="record-meta">
+            <span>${meta}</span>
+            <span>${record.inputMode || "text"}</span>
           </div>
-          <p class="record-body">${record.body || ""}</p>
-        </article>
-      `;
-    })
-    .join("");
+        </div>
+        <div class="record-actions">
+          ${mode === "trash" ? "" : `<button class="mini-button" type="button" data-action="sync" data-entry-id="${record.entryId}">${TEXT.sync}</button>`}
+          <button class="mini-button delete" type="button" data-action="${deleteName}" data-entry-id="${record.entryId}">${deleteAction}</button>
+        </div>
+      </div>
+      <p class="record-body">${record.body || ""}</p>
+    </article>
+  `;
+}
 
-  refs.recordList.querySelectorAll("[data-entry-id]").forEach((element) => {
+function bindListEvents(container, mode) {
+  container.querySelectorAll("[data-entry-id]").forEach((element) => {
     element.addEventListener("click", (event) => {
       const entryId = element.getAttribute("data-entry-id");
       const action = event.target.getAttribute("data-action");
@@ -247,16 +241,45 @@ function renderRecords() {
         syncExisting(entryId);
         return;
       }
-      if (action === "delete") {
+      if (action === "soft-delete") {
         event.stopPropagation();
-        removeEntry(entryId);
+        softDelete(entryId);
         return;
       }
-      state.selectedRecordId = entryId;
-      renderRecords();
-      renderSelection();
+      if (action === "hard-delete") {
+        event.stopPropagation();
+        hardDelete(entryId);
+        return;
+      }
+      if (mode !== "trash") {
+        state.selectedRecordId = entryId;
+        renderAllLists();
+        renderSelection();
+      }
     });
   });
+}
+
+function renderList(container, records, mode) {
+  if (!records || records.length === 0) {
+    container.innerHTML = `<div class="record-card">${TEXT.empty}</div>`;
+    return;
+  }
+  container.innerHTML = records.map((record) => cardMarkup(record, mode)).join("");
+  bindListEvents(container, mode);
+}
+
+function renderAllLists() {
+  renderList(refs.memoList, state.bootstrap.memoRecords || [], "active");
+  renderList(refs.photoList, state.bootstrap.photoRecords || [], "active");
+  renderList(refs.trashList, state.bootstrap.trashRecords || [], "trash");
+}
+
+function setOpenSection(name) {
+  state.openSection = state.openSection === name ? "" : name;
+  refs.memoBody.classList.toggle("hidden", state.openSection !== "memo");
+  refs.photoBody.classList.toggle("hidden", state.openSection !== "photo");
+  refs.trashBody.classList.toggle("hidden", state.openSection !== "trash");
 }
 
 function payloadFromForm() {
@@ -283,7 +306,6 @@ function scheduleSaveAndSync() {
   if (settings.autoSyncEnabled) {
     window.clearTimeout(state.syncTimer);
     state.syncTimer = window.setTimeout(() => syncEntry(false), delayFor(settings.autoSyncInterval));
-    refs.actionNote.textContent = `${TEXT.footerNextSync}: ${state.bootstrap.sync.nextSyncText}`;
   }
 }
 
@@ -294,7 +316,7 @@ async function reload() {
   }
   syncSettingsToForm(state.bootstrap.settings);
   renderStatus();
-  renderRecords();
+  renderAllLists();
   renderSelection();
   renderFooter();
 }
@@ -328,14 +350,26 @@ async function syncExisting(entryId) {
   refs.actionNote.textContent = "\u30b3\u30d4\u30fc\u3092\u4e88\u7d04\u3057\u307e\u3057\u305f";
 }
 
-async function removeEntry(entryId) {
+async function softDelete(entryId) {
   await fetch(`/api/workspace/entries/${entryId}`, { method: "DELETE" });
   if (state.selectedRecordId === entryId) {
     state.selectedRecordId = "";
     state.pendingPhoto = null;
   }
   await reload();
-  refs.actionNote.textContent = "\u524a\u9664\u3057\u307e\u3057\u305f";
+  refs.actionNote.textContent = "\u3054\u307f\u7bb1\u3078\u79fb\u52d5\u3057\u307e\u3057\u305f";
+}
+
+async function hardDelete(entryId) {
+  await fetch(`/api/workspace/trash/${entryId}`, { method: "DELETE" });
+  await reload();
+  refs.actionNote.textContent = "\u5b8c\u5168\u6d88\u53bb\u3057\u307e\u3057\u305f";
+}
+
+async function hardDeleteAll() {
+  await jsonFetch("/api/workspace/trash/empty", { method: "POST" });
+  await reload();
+  refs.actionNote.textContent = "\u4e00\u62ec\u6d88\u53bb\u3057\u307e\u3057\u305f";
 }
 
 async function saveSettings() {
@@ -345,10 +379,7 @@ async function saveSettings() {
     autoSyncEnabled: refs.autoSyncEnabled.value === "true",
     autoSyncInterval: refs.autoSyncInterval.value,
   };
-  state.bootstrap.settings = await jsonFetch("/api/workspace/settings", {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
+  await jsonFetch("/api/workspace/settings", { method: "POST", body: JSON.stringify(payload) });
   await reload();
   refs.actionNote.textContent = "\u8a2d\u5b9a\u3092\u66f4\u65b0\u3057\u307e\u3057\u305f";
 }
@@ -361,11 +392,7 @@ function loadPhoto(file) {
   }
   const reader = new FileReader();
   reader.onload = () => {
-    state.pendingPhoto = {
-      name: file.name,
-      mimeType: file.type || "image/jpeg",
-      dataUrl: reader.result,
-    };
+    state.pendingPhoto = { name: file.name, mimeType: file.type || "image/jpeg", dataUrl: reader.result };
     refs.photoPreviewImage.src = reader.result;
     refs.photoPreviewCard.classList.remove("hidden");
     scheduleSaveAndSync();
@@ -381,6 +408,13 @@ function toggleSettings() {
 
 function bindEvents() {
   refs.settingsToggle.addEventListener("click", toggleSettings);
+  refs.memoToggle.addEventListener("click", () => setOpenSection("memo"));
+  refs.photoToggle.addEventListener("click", () => setOpenSection("photo"));
+  refs.trashToggle.addEventListener("click", () => setOpenSection("trash"));
+  refs.memoClose.addEventListener("click", () => setOpenSection(""));
+  refs.photoClose.addEventListener("click", () => setOpenSection(""));
+  refs.trashClose.addEventListener("click", () => setOpenSection(""));
+  refs.emptyTrashButton.addEventListener("click", hardDeleteAll);
   refs.headlineInput.addEventListener("input", scheduleSaveAndSync);
   refs.bodyInput.addEventListener("input", scheduleSaveAndSync);
   refs.photoButton.addEventListener("click", () => refs.photoInput.click());
@@ -396,7 +430,7 @@ function bindEvents() {
   refs.saveButton.addEventListener("click", () => saveEntry(true));
   refs.syncButton.addEventListener("click", () => syncEntry(true));
   refs.deleteButton.addEventListener("click", () => {
-    if (state.selectedRecordId) removeEntry(state.selectedRecordId);
+    if (state.selectedRecordId) softDelete(state.selectedRecordId);
   });
   [refs.autoSaveEnabled, refs.autoSaveInterval, refs.autoSyncEnabled, refs.autoSyncInterval].forEach((element) => {
     element.addEventListener("change", saveSettings);

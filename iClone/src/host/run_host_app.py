@@ -13,8 +13,10 @@ from workspace_api import (
     ROOT,
     build_bootstrap_payload,
     create_host_entry,
+    empty_trash,
     delete_record,
     ensure_directories,
+    move_record_to_trash,
     queue_record_for_device,
     save_host_settings,
 )
@@ -47,6 +49,9 @@ class HostPreviewHandler(BaseHTTPRequestHandler):
             result = create_host_entry(payload, sync_now=bool(payload.get("syncNow", True)))
             self._write_json(result, status=HTTPStatus.CREATED)
             return
+        if self.path == "/api/workspace/trash/empty":
+            self._write_json(empty_trash(propagate=True))
+            return
         if self.path == "/api/workspace/settings":
             payload = self._read_json_body()
             self._write_json(save_host_settings(payload))
@@ -59,6 +64,10 @@ class HostPreviewHandler(BaseHTTPRequestHandler):
 
     def do_DELETE(self) -> None:  # noqa: N802
         if self.path.startswith("/api/workspace/entries/"):
+            entry_id = self.path.rsplit("/", 1)[-1]
+            self._write_json(move_record_to_trash(entry_id))
+            return
+        if self.path.startswith("/api/workspace/trash/"):
             entry_id = self.path.rsplit("/", 1)[-1]
             self._write_json(delete_record(entry_id, propagate=True))
             return

@@ -18,6 +18,7 @@ import com.iclone.mobile.databinding.ActivityMainBinding
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -30,11 +31,7 @@ class MainActivity : AppCompatActivity() {
     private val filePickerLauncher =
         registerForActivityResult(ActivityResultContracts.GetContent()) { uri ->
             val callback = fileChooserCallback ?: return@registerForActivityResult
-            if (uri != null) {
-                callback.onReceiveValue(arrayOf(uri))
-            } else {
-                callback.onReceiveValue(null)
-            }
+            callback.onReceiveValue(if (uri != null) arrayOf(uri) else null)
             fileChooserCallback = null
         }
 
@@ -90,6 +87,7 @@ class MainActivity : AppCompatActivity() {
         private val projectId = "project-alpha"
         private val rootDir = File(getExternalFilesDir(null), "iclone")
         private val localEntriesDir = File(rootDir, "local/entries")
+        private val localTrashDir = File(rootDir, "local/trash")
         private val localAttachmentsDir = File(rootDir, "local/attachments")
         private val stateDir = File(rootDir, "local/state")
         private val historyFile = File(rootDir, "local/history/history.json")
@@ -110,6 +108,7 @@ class MainActivity : AppCompatActivity() {
 
         init {
             localEntriesDir.mkdirs()
+            localTrashDir.mkdirs()
             localAttachmentsDir.mkdirs()
             stateDir.mkdirs()
             historyFile.parentFile?.mkdirs()
@@ -134,22 +133,27 @@ class MainActivity : AppCompatActivity() {
 
             val latestQuestion = loadLatestQuestion()
             val entries = loadEntriesList(latestQuestion, loadAckIds())
+            val trashEntries = loadTrashEntries()
             val settings = loadSettings()
-            val status = loadBridgeStatus()
+            val sync = loadBridgeStatus(settings)
 
             return JSONObject().apply {
                 put("draft", loadDraft())
                 put("entries", JSONArray(entries))
+                put("memoEntries", JSONArray(entries.filter { it.optString("kind") == "memo" }))
+                put("photoEntries", JSONArray(entries.filter { it.optString("kind") == "photo" }))
+                put("trashEntries", JSONArray(trashEntries))
                 put("history", loadHistory())
                 put("latestQuestion", latestQuestion ?: JSONObject.NULL)
                 put("settings", settings)
-                put("sync", status)
+                put("sync", sync)
                 put(
                     "counts",
                     JSONObject().apply {
                         put("records", entries.size)
                         put("questions", if (latestQuestion != null) 1 else 0)
                         put("photos", countPhotos(entries))
+                        put("trash", trashEntries.size)
                     },
                 )
             }.toString()
@@ -170,48 +174,68 @@ class MainActivity : AppCompatActivity() {
 
         @JavascriptInterface
         fun saveLocalEntry(payload: String): String {
-            val source = JSONObject(payload)
-            val entry = buildOrUpdateEntry(source)
+            val entry = buildOrUpdateEntry(JSONObject(payload))
             return JSONObject().apply {
                 put("entryId", entry.optString("entryId"))
-                put("message", "\u4fdd\u5b58\u3057\u307e\u3057\u305f\u3002")
+                put("message", "記録しました。")
             }.toString()
         }
 
         @JavascriptInterface
         fun syncEntry(payload: String): String {
-            val source = JSONObject(payload)
-            val entry = buildOrUpdateEntry(source)
+            val entry = buildOrUpdateEntry(JSONObject(payload))
             writeSyncPayload(entry)
             return JSONObject().apply {
                 put("entryId", entry.optString("entryId"))
-                put("message", "\u30b3\u30d4\u30fc\u3092\u4e88\u7d04\u3057\u307e\u3057\u305f\u3002")
+                put("message", "コピーを予約しました。")
             }.toString()
         }
 
         @JavascriptInterface
         fun deleteEntry(entryId: String): String {
-            localEntriesDir.listFiles()
-                ?.filter { it.extension == "json" }
-                ?.firstOrNull {
-                    JSONObject(it.readText(Charsets.UTF_8)).optString("entryId") == entryId
-                }
-                ?.delete()
+            moveEntryToTrash(entryId)
+            return JSONObject().apply {
+                put("entryId", entryId)
+                put("message", "ごみ箱へ移動しました。")
+            }.toString()
+        }
+
+        @JavascriptInterface
+        fun hardDeleteEntry(entryId: String): String {
+            deleteEntryFile(localEntriesDir, entryId)
+            deleteEntryFile(localTrashDir, entryId)
             File(syncOutboxDir, "$entryId.yaml").delete()
             writeDeleteRequest(entryId)
             return JSONObject().apply {
                 put("entryId", entryId)
-                put("message", "\u524a\u9664\u3057\u307e\u3057\u305f\u3002")
+                put("message", "完全消去しました。")
+            }.toString()
+        }
+
+        @JavascriptInterface
+        fun emptyTrash(): String {
+            var removed = 0
+            localTrashDir.listFiles()
+                ?.filter { it.extension == "json" }
+                ?.forEach { file ->
+                    val entryId = JSONObject(file.readText(Charsets.UTF_8)).optString("entryId")
+                    if (entryId.isNotBlank()) {
+                        writeDeleteRequest(entryId)
+                    }
+                    file.delete()
+                    removed += 1
+                }
+            return JSONObject().apply {
+                put("removed", removed)
+                put("message", "ごみ箱を空にしました。")
             }.toString()
         }
 
         @JavascriptInterface
         fun saveSettings(payload: String): String {
-            val source = JSONObject(payload)
-            val settings = normalizeSettings(source, "mobile")
+            val settings = normalizeSettings(JSONObject(payload), "mobile")
             settingsFile.writeText(settings.toString(2), Charsets.UTF_8)
-            val target = File(syncOutboxSettingsDir, "shared_settings.json")
-            target.writeText(settings.toString(2), Charsets.UTF_8)
+            File(syncOutboxSettingsDir, "shared_settings.json").writeText(settings.toString(2), Charsets.UTF_8)
             return settings.toString()
         }
 
@@ -232,15 +256,12 @@ class MainActivity : AppCompatActivity() {
             return "ok"
         }
 
-        private fun loadDraft(): JSONObject {
-            if (!draftFile.exists()) {
-                return JSONObject().apply {
-                    put("headline", "")
-                    put("body", "")
-                }
+        private fun loadDraft(): JSONObject =
+            if (draftFile.exists()) {
+                JSONObject(draftFile.readText(Charsets.UTF_8))
+            } else {
+                JSONObject().put("headline", "").put("body", "")
             }
-            return JSONObject(draftFile.readText(Charsets.UTF_8))
-        }
 
         private fun loadSettings(): JSONObject {
             if (!settingsFile.exists()) {
@@ -267,73 +288,71 @@ class MainActivity : AppCompatActivity() {
                 else -> "realtime"
             }
 
-        private fun nextSyncText(settings: JSONObject): String {
+        private fun nextSyncText(settings: JSONObject): String =
             if (!settings.optBoolean("autoSyncEnabled", true)) {
-                return "\u624b\u52d5"
+                "手動"
+            } else {
+                when (settings.optString("autoSyncInterval", "realtime")) {
+                    "10s" -> "10秒後"
+                    "1m" -> "1分後"
+                    else -> "すぐ"
+                }
             }
-            return when (settings.optString("autoSyncInterval", "realtime")) {
-                "10s" -> "10s"
-                "1m" -> "1m"
-                else -> "\u3059\u3050"
-            }
-        }
 
         private fun loadEntriesList(latestQuestion: JSONObject?, ackIds: Set<String>): List<JSONObject> =
             localEntriesDir.listFiles()
                 ?.filter { it.extension == "json" }
                 ?.sortedByDescending { it.lastModified() }
                 ?.map { file ->
-                    val item = JSONObject(file.readText(Charsets.UTF_8))
-                    val entryId = item.optString("entryId")
-                    item.put("syncStage", computeSyncStage(entryId, ackIds, latestQuestion))
-                    item
+                    JSONObject(file.readText(Charsets.UTF_8)).apply {
+                        val entryId = optString("entryId")
+                        put("syncStage", computeSyncStage(entryId, ackIds, latestQuestion))
+                        put("kind", if (hasImageAttachment(optJSONArray("attachments") ?: JSONArray())) "photo" else "memo")
+                    }
                 }
                 ?: emptyList()
 
-        private fun loadHistory(): JSONArray {
-            if (!historyFile.exists()) {
-                return JSONArray()
-            }
-            return JSONArray(historyFile.readText(Charsets.UTF_8))
-        }
+        private fun loadTrashEntries(): List<JSONObject> =
+            localTrashDir.listFiles()
+                ?.filter { it.extension == "json" }
+                ?.sortedByDescending { it.lastModified() }
+                ?.map { file ->
+                    JSONObject(file.readText(Charsets.UTF_8)).apply {
+                        put("kind", if (hasImageAttachment(optJSONArray("attachments") ?: JSONArray())) "photo" else "memo")
+                        put("trashedAt", displayFileTime(file.lastModified()))
+                    }
+                }
+                ?: emptyList()
+
+        private fun loadHistory(): JSONArray =
+            if (historyFile.exists()) JSONArray(historyFile.readText(Charsets.UTF_8)) else JSONArray()
 
         private fun loadLatestQuestion(): JSONObject? {
-            val file =
-                syncInboxQuestionsDir.listFiles()
-                    ?.filter { it.extension == "json" }
-                    ?.maxByOrNull { it.lastModified() }
-                    ?: return null
+            val file = syncInboxQuestionsDir.listFiles()?.filter { it.extension == "json" }?.maxByOrNull { it.lastModified() } ?: return null
             return JSONObject(file.readText(Charsets.UTF_8))
         }
 
-        private fun loadBridgeStatus(): JSONObject {
+        private fun loadBridgeStatus(settings: JSONObject): JSONObject {
             val fallback =
                 JSONObject().apply {
-                    put("mobile", JSONObject().put("label", "Mobile").put("checked", true))
-                    put("server", JSONObject().put("label", "Server").put("checked", false))
-                    put(
-                        "connector",
-                        JSONObject().put("text", "--×--").put("level", "bad").put("label", "圏外 / server停止"),
-                    )
-                    put("nextSyncText", nextSyncText(loadSettings()))
+                    put("mobile", JSONObject().put("label", "Mobile").put("checked", true).put("level", "good"))
+                    put("server", JSONObject().put("label", "Server").put("checked", false).put("level", "bad"))
+                    put("connector", JSONObject().put("text", "--×--").put("level", "bad").put("label", "圏外 / server停止"))
+                    put("nextSyncText", nextSyncText(settings))
                 }
-
-            val file =
-                syncInboxStatusDir.listFiles()
-                    ?.filter { it.extension == "json" }
-                    ?.maxByOrNull { it.lastModified() }
-                    ?: return fallback
+            val file = syncInboxStatusDir.listFiles()?.filter { it.extension == "json" }?.maxByOrNull { it.lastModified() } ?: return fallback
             val payload = JSONObject(file.readText(Charsets.UTF_8))
             return JSONObject().apply {
-                put("mobile", JSONObject().put("label", "Mobile").put("checked", true))
+                put("mobile", JSONObject().put("label", "Mobile").put("checked", true).put("level", payload.optString("mobileLevel", "good")))
                 put(
                     "server",
                     JSONObject()
                         .put("label", "Server")
-                        .put("checked", payload.optBoolean("serverChecked", false)),
+                        .put("checked", payload.optBoolean("serverChecked", false))
+                        .put("level", payload.optString("serverLevel", "bad")),
                 )
                 put("connector", payload.optJSONObject("connector") ?: fallback.getJSONObject("connector"))
-                put("nextSyncText", payload.optString("nextSyncText", nextSyncText(loadSettings())))
+                put("nextSyncText", payload.optString("nextSyncText", nextSyncText(settings)))
             }
         }
 
@@ -341,29 +360,17 @@ class MainActivity : AppCompatActivity() {
             syncInboxAcksDir.listFiles()
                 ?.filter { it.extension == "json" }
                 ?.mapNotNull {
-                    try {
-                        JSONObject(it.readText(Charsets.UTF_8)).optString("entryId")
-                    } catch (_: Exception) {
-                        null
-                    }
+                    runCatching { JSONObject(it.readText(Charsets.UTF_8)).optString("entryId") }.getOrNull()
                 }
                 ?.toSet()
                 ?: emptySet()
 
-        private fun computeSyncStage(
-            entryId: String,
-            ackIds: Set<String>,
-            latestQuestion: JSONObject?,
-        ): String {
+        private fun computeSyncStage(entryId: String, ackIds: Set<String>, latestQuestion: JSONObject?): String {
             if (latestQuestion != null) {
                 val related = latestQuestion.optString("entryId")
-                if (related.contains(entryId.substringAfter("entry-"))) {
-                    return "PC synced"
-                }
+                if (related.contains(entryId.substringAfter("entry-"))) return "PC synced"
             }
-            if (ackIds.contains(entryId)) {
-                return "PC"
-            }
+            if (ackIds.contains(entryId)) return "PC"
             return "Local"
         }
 
@@ -374,28 +381,29 @@ class MainActivity : AppCompatActivity() {
             val attachment = source.optJSONObject("attachment")
             val capturedAt = nowIso()
             val resolvedHeadline =
-                if (headline.isNotBlank()) {
-                    headline
-                } else if (body.isNotBlank()) {
-                    body.take(24)
-                } else {
-                    "\u73fe\u5834\u30e1\u30e2"
+                when {
+                    headline.isNotBlank() -> headline
+                    body.isNotBlank() -> body.take(24)
+                    else -> "現場メモ"
                 }
 
             val attachmentsArray = JSONArray()
             if (attachment != null && attachment.optString("dataUrl").contains(",")) {
                 val mimeType = attachment.optString("mimeType", "image/jpeg")
-                val extension = if (mimeType.endsWith("png")) "png" else if (mimeType.endsWith("webp")) "webp" else "jpg"
+                val extension = when {
+                    mimeType.endsWith("png") -> "png"
+                    mimeType.endsWith("webp") -> "webp"
+                    else -> "jpg"
+                }
                 val fileName = "photo-$entryId.$extension"
                 val bytes = Base64.getDecoder().decode(attachment.optString("dataUrl").substringAfter(","))
                 val localFile = File(localAttachmentsDir, fileName)
                 localFile.writeBytes(bytes)
                 attachmentsArray.put(
-                    JSONObject().apply {
-                        put("attachmentId", "photo-$entryId")
-                        put("path", "attachments/$fileName")
-                        put("mimeType", mimeType)
-                    },
+                    JSONObject()
+                        .put("attachmentId", "photo-$entryId")
+                        .put("path", "attachments/$fileName")
+                        .put("mimeType", mimeType),
                 )
             }
 
@@ -407,11 +415,11 @@ class MainActivity : AppCompatActivity() {
                     put("inputMode", if (attachmentsArray.length() > 0) "photo" else "text")
                     put("updatedAt", capturedAt)
                     put("projectId", projectId)
-                    put("syncStage", "Local")
                     put("attachments", attachmentsArray)
                 }
 
             File(localEntriesDir, "$entryId.json").writeText(entry.toString(2), Charsets.UTF_8)
+            deleteEntryFile(localTrashDir, entryId)
             currentEntryFile.writeText(JSONObject().put("entryId", entryId).put("updatedAt", capturedAt).toString(2), Charsets.UTF_8)
             return entry
         }
@@ -453,13 +461,23 @@ class MainActivity : AppCompatActivity() {
         }
 
         private fun writeDeleteRequest(entryId: String) {
-            val payload =
-                JSONObject().apply {
-                    put("entryId", entryId)
-                    put("deletedAt", nowIso())
-                    put("source", "mobile")
-                }
+            val payload = JSONObject().put("entryId", entryId).put("deletedAt", nowIso()).put("source", "mobile")
             File(syncOutboxDeletesDir, "$entryId.json").writeText(payload.toString(2), Charsets.UTF_8)
+        }
+
+        private fun moveEntryToTrash(entryId: String) {
+            val source = findEntryFile(localEntriesDir, entryId) ?: return
+            source.copyTo(File(localTrashDir, source.name), overwrite = true)
+            source.delete()
+        }
+
+        private fun findEntryFile(root: File, entryId: String): File? =
+            root.listFiles()
+                ?.filter { it.extension == "json" }
+                ?.firstOrNull { JSONObject(it.readText(Charsets.UTF_8)).optString("entryId") == entryId }
+
+        private fun deleteEntryFile(root: File, entryId: String) {
+            findEntryFile(root, entryId)?.delete()
         }
 
         private fun ingestIncomingEntries() {
@@ -474,23 +492,21 @@ class MainActivity : AppCompatActivity() {
                         val item = attachments.getJSONObject(index)
                         val source = File(syncInboxAttachmentsDir, item.optString("path").substringAfter("/"))
                         val target = File(localAttachmentsDir, item.optString("path").substringAfter("/"))
-                        if (source.exists()) {
-                            source.copyTo(target, overwrite = true)
-                        }
+                        if (source.exists()) source.copyTo(target, overwrite = true)
                     }
                     File(localEntriesDir, "$entryId.json").writeText(
-                        JSONObject().apply {
-                            put("entryId", entryId)
-                            put("headline", payload.optString("headline"))
-                            put("body", payload.optString("body"))
-                            put("inputMode", payload.optString("inputMode", "text"))
-                            put("updatedAt", payload.optString("capturedAt"))
-                            put("projectId", payload.optString("projectId", projectId))
-                            put("syncStage", "PC synced")
-                            put("attachments", attachments)
-                        }.toString(2),
+                        JSONObject()
+                            .put("entryId", entryId)
+                            .put("headline", payload.optString("headline"))
+                            .put("body", payload.optString("body"))
+                            .put("inputMode", payload.optString("inputMode", "text"))
+                            .put("updatedAt", payload.optString("capturedAt"))
+                            .put("projectId", payload.optString("projectId", projectId))
+                            .put("attachments", attachments)
+                            .toString(2),
                         Charsets.UTF_8,
                     )
+                    deleteEntryFile(localTrashDir, entryId)
                 }
         }
 
@@ -498,21 +514,14 @@ class MainActivity : AppCompatActivity() {
             syncInboxDeletesDir.listFiles()
                 ?.filter { it.extension == "json" }
                 ?.forEach { file ->
-                    val payload = JSONObject(file.readText(Charsets.UTF_8))
-                    val entryId = payload.optString("entryId")
-                    localEntriesDir.listFiles()
-                        ?.filter { it.extension == "json" }
-                        ?.firstOrNull { JSONObject(it.readText(Charsets.UTF_8)).optString("entryId") == entryId }
-                        ?.delete()
+                    val entryId = JSONObject(file.readText(Charsets.UTF_8)).optString("entryId")
+                    deleteEntryFile(localEntriesDir, entryId)
+                    deleteEntryFile(localTrashDir, entryId)
                 }
         }
 
         private fun applyIncomingSettings() {
-            val incoming =
-                syncInboxSettingsDir.listFiles()
-                    ?.filter { it.extension == "json" }
-                    ?.maxByOrNull { it.lastModified() }
-                    ?: return
+            val incoming = syncInboxSettingsDir.listFiles()?.filter { it.extension == "json" }?.maxByOrNull { it.lastModified() } ?: return
             val incomingPayload = JSONObject(incoming.readText(Charsets.UTF_8))
             val current = loadSettings()
             val incomingAt = OffsetDateTime.parse(incomingPayload.optString("updatedAt", nowIso()))
@@ -526,13 +535,18 @@ class MainActivity : AppCompatActivity() {
             var total = 0
             entries.forEach { item ->
                 val attachments = item.optJSONArray("attachments") ?: JSONArray()
-                for (inner in 0 until attachments.length()) {
-                    if (attachments.getJSONObject(inner).optString("mimeType").startsWith("image/")) {
-                        total += 1
-                    }
+                for (index in 0 until attachments.length()) {
+                    if (attachments.getJSONObject(index).optString("mimeType").startsWith("image/")) total += 1
                 }
             }
             return total
+        }
+
+        private fun hasImageAttachment(attachments: JSONArray): Boolean {
+            for (index in 0 until attachments.length()) {
+                if (attachments.getJSONObject(index).optString("mimeType").startsWith("image/")) return true
+            }
+            return false
         }
 
         private fun currentEntryId(): String {
@@ -545,16 +559,15 @@ class MainActivity : AppCompatActivity() {
             return payload.optString("entryId").ifBlank { "entry-${timestampToken()}" }
         }
 
-        private fun nowIso(): String =
-            OffsetDateTime.now(zoneId).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+        private fun nowIso(): String = OffsetDateTime.now(zoneId).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME)
 
-        private fun nowDisplay(): String =
-            OffsetDateTime.now(zoneId).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
+        private fun nowDisplay(): String = OffsetDateTime.now(zoneId).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
 
-        private fun timestampToken(): String =
-            OffsetDateTime.now(zoneId).format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+        private fun displayFileTime(millis: Long): String =
+            Instant.ofEpochMilli(millis).atZone(zoneId).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"))
 
-        private fun escapeYaml(value: String): String =
-            value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ")
+        private fun timestampToken(): String = OffsetDateTime.now(zoneId).format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+
+        private fun escapeYaml(value: String): String = value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", " ")
     }
 }

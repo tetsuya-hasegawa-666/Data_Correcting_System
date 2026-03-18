@@ -9,10 +9,8 @@
   --accent-soft: rgba(15, 118, 110, 0.1);
   --good-bg: rgba(22, 163, 74, 0.14);
   --good-ink: #166534;
-  --warn-bg: rgba(234, 179, 8, 0.16);
+  --warn-bg: rgba(234, 179, 8, 0.18);
   --warn-ink: #a16207;
-  --muted-bg: #e4ddd1;
-  --muted-ink: #81786c;
   --bad-bg: rgba(220, 38, 38, 0.14);
   --bad-ink: #b91c1c;
   --shadow: 0 18px 48px rgba(40, 35, 26, 0.08);
@@ -60,18 +58,8 @@ body {
   text-transform: uppercase;
 }
 
-h1,
-h2,
-h3,
-p {
-  margin-top: 0;
-}
-
-h1,
-h2,
-h3 {
-  margin-bottom: 0;
-}
+h1, h2, h3, p { margin-top: 0; }
+h1, h2, h3 { margin-bottom: 0; }
 
 .status-inline,
 .footer-counts,
@@ -96,41 +84,24 @@ h3 {
 }
 
 .status-pill,
-.footer-pill {
+.footer-pill,
+.status-connector {
   padding: 7px 11px;
 }
 
-.status-pill.good {
-  background: var(--good-bg);
-  color: var(--good-ink);
-}
-
-.status-pill.muted {
-  background: var(--muted-bg);
-  color: var(--muted-ink);
-}
-
-.status-pill.bad {
-  background: var(--bad-bg);
-  color: var(--bad-ink);
-}
-
-.status-connector {
-  min-width: 72px;
-  padding: 7px 10px;
-  letter-spacing: 0.08em;
-}
-
+.status-pill.good,
 .status-connector.good {
   background: var(--good-bg);
   color: var(--good-ink);
 }
 
+.status-pill.warn,
 .status-connector.warn {
   background: var(--warn-bg);
   color: var(--warn-ink);
 }
 
+.status-pill.bad,
 .status-connector.bad {
   background: var(--bad-bg);
   color: var(--bad-ink);
@@ -138,7 +109,7 @@ h3 {
 
 .workspace-main {
   display: grid;
-  grid-template-columns: minmax(380px, 0.95fr) minmax(0, 1.05fr);
+  grid-template-columns: minmax(390px, 0.9fr) minmax(0, 1.1fr);
   gap: 18px;
   margin-top: 18px;
 }
@@ -148,7 +119,8 @@ h3 {
 }
 
 .panel-head,
-.record-head {
+.record-head,
+.section-body-head {
   display: flex;
   justify-content: space-between;
   gap: 12px;
@@ -160,7 +132,10 @@ h3 {
 .primary-button,
 .secondary-button,
 .danger-button,
-.mini-button {
+.mini-button,
+.section-toggle,
+.trash-toggle,
+.section-close {
   border: 0;
   border-radius: 14px;
   font: inherit;
@@ -169,7 +144,8 @@ h3 {
 
 .ghost-button,
 .subtle-button,
-.mini-button {
+.mini-button,
+.section-close {
   background: #ece4d8;
   color: var(--ink);
   padding: 9px 11px;
@@ -179,6 +155,10 @@ h3 {
 .mini-button.delete {
   background: rgba(220, 38, 38, 0.12);
   color: var(--bad-ink);
+}
+
+.danger-button.compact {
+  padding: 8px 11px;
 }
 
 .field {
@@ -270,7 +250,8 @@ textarea {
 }
 
 .settings-inline.hidden,
-.preview-card.hidden {
+.preview-card.hidden,
+.section-body.hidden {
   display: none;
 }
 
@@ -291,10 +272,47 @@ textarea {
   font-size: 12px;
 }
 
+.clone-section,
+.trash-section {
+  margin-top: 12px;
+}
+
+.section-toggle,
+.trash-toggle {
+  width: 100%;
+  padding: 13px 15px;
+  background: #efe6da;
+  color: var(--ink);
+  text-align: left;
+  font-weight: 700;
+}
+
+.trash-toggle {
+  background: rgba(220, 38, 38, 0.08);
+}
+
+.section-body {
+  margin-top: 8px;
+  padding: 8px 0 0;
+}
+
+.section-body-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-bottom: 8px;
+  background: linear-gradient(180deg, var(--paper) 0%, rgba(255, 250, 242, 0.92) 100%);
+}
+
+.scroll-pane {
+  max-height: 360px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
 .record-list {
   display: grid;
   gap: 10px;
-  margin-top: 14px;
 }
 
 .record-card {

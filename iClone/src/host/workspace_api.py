@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import shutil
 import subprocess
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -15,6 +16,8 @@ from yaml_tools import load_yaml, write_yaml
 ROOT = Path(__file__).resolve().parents[2]
 RUNTIME = ROOT / "runtime"
 RECORDS = RUNTIME / "records"
+TRASH = RUNTIME / "trash"
+TRASH_RECORDS = TRASH / "records"
 EDGE_OUTBOX = RUNTIME / "edge-outbox"
 CONFIG_ROOT = RUNTIME / "config"
 LOGS = RUNTIME / "logs"
@@ -47,6 +50,8 @@ def parse_iso(value: str) -> datetime:
 def ensure_directories() -> None:
     for path in (
         RECORDS,
+        TRASH,
+        TRASH_RECORDS,
         EDGE_OUTBOX,
         EDGE_OUTBOX / "entries",
         EDGE_OUTBOX / "deletes",
@@ -59,11 +64,7 @@ def ensure_directories() -> None:
 
 
 def default_settings(source: str) -> dict[str, Any]:
-    return {
-        **DEFAULT_SETTINGS,
-        "updatedAt": now_iso(),
-        "source": source,
-    }
+    return {**DEFAULT_SETTINGS, "updatedAt": now_iso(), "source": source}
 
 
 def normalize_settings(payload: dict[str, Any], source: str) -> dict[str, Any]:
@@ -135,21 +136,8 @@ def next_sync_text(settings: dict[str, Any]) -> str:
     return "1分後"
 
 
-def footer_counts(records: list[dict[str, Any]]) -> dict[str, int]:
-    return {
-        "records": len(records),
-        "photos": sum(
-            1
-            for record in records
-            for item in record.get("attachments", [])
-            if str(item.get("mimeType", "")).startswith("image/")
-        ),
-        "questions": sum(1 for record in records if record.get("question")),
-    }
-
-
-def _candidate_record_files() -> list[Path]:
-    return sorted(RECORDS.rglob("*.yaml"))
+def _candidate_record_files(root: Path = RECORDS) -> list[Path]:
+    return sorted(root.rglob("*.yaml"))
 
 
 def _load_record(path: Path) -> dict[str, Any] | None:
@@ -171,10 +159,7 @@ def _related_question(path: Path, entry_id: str) -> dict[str, Any] | None:
             continue
         project_context = data.get("projectContext") or {}
         if str(project_context.get("relatedEntryId", "")) == entry_id:
-            return {
-                "entryId": str(data.get("entryId", "")),
-                "body": str(data.get("body", "")),
-            }
+            return {"entryId": str(data.get("entryId", "")), "body": str(data.get("body", ""))}
     return None
 
 
@@ -194,33 +179,49 @@ def _normalize_attachment(path: Path, attachment: dict[str, Any]) -> dict[str, A
     }
 
 
+def _record_card(path: Path, entry: dict[str, Any], trashed: bool = False) -> dict[str, Any]:
+    entry_id = str(entry.get("entryId", path.stem))
+    attachments = [
+        _normalize_attachment(path, item)
+        for item in entry.get("attachments", [])
+        if isinstance(item, dict)
+    ]
+    captured_at = str(entry.get("capturedAt", ""))
+    return {
+        "entryId": entry_id,
+        "headline": str(entry.get("headline", "")),
+        "body": str(entry.get("body", "")),
+        "inputMode": str(entry.get("inputMode", "text")),
+        "projectId": str(entry.get("projectId", "project-alpha")),
+        "capturedAt": captured_at,
+        "syncState": str((entry.get("sync") or {}).get("state", "local_saved")),
+        "attachments": attachments,
+        "question": _related_question(path, entry_id),
+        "kind": "photo" if any(item["mimeType"].startswith("image/") for item in attachments) else "memo",
+        "trashed": trashed,
+        "trashedAt": datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc).astimezone().isoformat() if trashed else "",
+    }
+
+
 def list_records() -> list[dict[str, Any]]:
     ensure_directories()
     records: list[dict[str, Any]] = []
-    for path in _candidate_record_files():
+    for path in _candidate_record_files(RECORDS):
         entry = _load_record(path)
-        if not entry:
-            continue
-        entry_id = str(entry.get("entryId", path.stem))
-        attachments = [
-            _normalize_attachment(path, item)
-            for item in entry.get("attachments", [])
-            if isinstance(item, dict)
-        ]
-        records.append(
-            {
-                "entryId": entry_id,
-                "headline": str(entry.get("headline", "")),
-                "body": str(entry.get("body", "")),
-                "inputMode": str(entry.get("inputMode", "text")),
-                "projectId": str(entry.get("projectId", "project-alpha")),
-                "capturedAt": str(entry.get("capturedAt", "")),
-                "syncState": str((entry.get("sync") or {}).get("state", "local_saved")),
-                "attachments": attachments,
-                "question": _related_question(path, entry_id),
-            }
-        )
+        if entry:
+            records.append(_record_card(path, entry, trashed=False))
     records.sort(key=lambda item: str(item.get("capturedAt", "")), reverse=True)
+    return records
+
+
+def list_trash_records() -> list[dict[str, Any]]:
+    ensure_directories()
+    records: list[dict[str, Any]] = []
+    for path in _candidate_record_files(TRASH_RECORDS):
+        entry = _load_record(path)
+        if entry:
+            records.append(_record_card(path, entry, trashed=True))
+    records.sort(key=lambda item: str(item.get("trashedAt", "")), reverse=True)
     return records
 
 
@@ -308,7 +309,7 @@ def create_host_entry(payload: dict[str, Any], sync_now: bool = True) -> dict[st
         },
         "sync": {
             "peerId": "HOST-DESKTOP",
-            "state": "pc_saved",
+            "state": "pc_saved" if sync_now else "local_saved",
         },
         "headline": headline,
     }
@@ -348,11 +349,10 @@ def create_host_entry(payload: dict[str, Any], sync_now: bool = True) -> dict[st
 
 def queue_record_for_device(entry_id: str) -> dict[str, Any]:
     ensure_directories()
-    for path in _candidate_record_files():
+    for path in _candidate_record_files(RECORDS):
         entry = _load_record(path)
         if not entry or str(entry.get("entryId", "")) != entry_id:
             continue
-
         attachments = [
             {
                 "attachmentId": str(item.get("attachmentId", "")),
@@ -383,10 +383,9 @@ def queue_record_for_device(entry_id: str) -> dict[str, Any]:
     return {"entryId": entry_id, "queued": False}
 
 
-def delete_record(entry_id: str, propagate: bool = True) -> dict[str, Any]:
-    ensure_directories()
-    removed = 0
-    for path in _candidate_record_files():
+def _matching_record_files(root: Path, entry_id: str) -> list[Path]:
+    matched: list[Path] = []
+    for path in _candidate_record_files(root):
         data = load_yaml(path)
         if not isinstance(data, dict):
             continue
@@ -401,9 +400,27 @@ def delete_record(entry_id: str, propagate: bool = True) -> dict[str, Any]:
             or related_entry_id == entry_id
             or entry_id in evidence
         ):
-            path.unlink(missing_ok=True)
-            removed += 1
+            matched.append(path)
+    return matched
 
+
+def move_record_to_trash(entry_id: str) -> dict[str, Any]:
+    ensure_directories()
+    moved = 0
+    for path in _matching_record_files(RECORDS, entry_id):
+        target = TRASH_RECORDS / path.relative_to(RECORDS)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(path), str(target))
+        moved += 1
+    return {"entryId": entry_id, "moved": moved}
+
+
+def delete_record(entry_id: str, propagate: bool = True) -> dict[str, Any]:
+    ensure_directories()
+    removed = 0
+    for path in _matching_record_files(TRASH_RECORDS, entry_id):
+        path.unlink(missing_ok=True)
+        removed += 1
     if propagate:
         write_json(
             EDGE_OUTBOX / "deletes" / f"{entry_id}.json",
@@ -412,11 +429,29 @@ def delete_record(entry_id: str, propagate: bool = True) -> dict[str, Any]:
     return {"entryId": entry_id, "removed": removed}
 
 
+def empty_trash(propagate: bool = True) -> dict[str, Any]:
+    ensure_directories()
+    deleted_ids: list[str] = []
+    for path in _candidate_record_files(TRASH_RECORDS):
+        data = load_yaml(path)
+        if not isinstance(data, dict):
+            continue
+        entry_id = str(data.get("entryId", ""))
+        if entry_id and entry_id not in deleted_ids:
+            deleted_ids.append(entry_id)
+        path.unlink(missing_ok=True)
+    if propagate:
+        for entry_id in deleted_ids:
+            write_json(
+                EDGE_OUTBOX / "deletes" / f"{entry_id}.json",
+                {"entryId": entry_id, "deletedAt": now_iso(), "source": "desktop"},
+            )
+    return {"removed": len(deleted_ids)}
+
+
 def _load_bridge_runtime_state() -> dict[str, Any]:
     path = LOGS / "adb_bridge_state.json"
-    if not path.exists():
-        return {}
-    return load_json(path)
+    return load_json(path) if path.exists() else {}
 
 
 def _parse_optional_iso(value: str | None) -> datetime | None:
@@ -455,9 +490,7 @@ def docker_status() -> dict[str, Any]:
 
 def queue_depths() -> dict[str, int]:
     def count_files(path: Path, pattern: str) -> int:
-        if not path.exists():
-            return 0
-        return sum(1 for _ in path.rglob(pattern))
+        return sum(1 for _ in path.rglob(pattern)) if path.exists() else 0
 
     return {
         "entries": count_files(EDGE_OUTBOX / "entries", "*.json"),
@@ -468,9 +501,7 @@ def queue_depths() -> dict[str, int]:
 
 
 def _fresh_within(timestamp: datetime | None, seconds: int) -> bool:
-    if timestamp is None:
-        return False
-    return datetime.now(timezone.utc).astimezone() - timestamp <= timedelta(seconds=seconds)
+    return False if timestamp is None else datetime.now(timezone.utc).astimezone() - timestamp <= timedelta(seconds=seconds)
 
 
 def build_sync_badge(records: list[dict[str, Any]], settings: dict[str, Any]) -> dict[str, Any]:
@@ -478,10 +509,8 @@ def build_sync_badge(records: list[dict[str, Any]], settings: dict[str, Any]) ->
     bridge_at = _parse_optional_iso(str(bridge.get("generatedAt", "")))
     bridge_fresh = _fresh_within(bridge_at, 15)
     docker = docker_status()
-    mobile_checked = bool(bridge.get("connected")) and bridge_fresh
     server_checked = bool(docker.get("ready"))
-    counts = queue_depths()
-    queue_total = sum(counts.values())
+    queue_total = sum(queue_depths().values())
     activity_total = sum(
         int(bridge.get(key, 0) or 0)
         for key in (
@@ -494,32 +523,39 @@ def build_sync_badge(records: list[dict[str, Any]], settings: dict[str, Any]) ->
             "pushedSettings",
         )
     )
-    has_synced_record = any(record.get("question") for record in records) or any(
-        str(record.get("syncState", "")).startswith("pc") for record in records
-    )
+    any_active = bool(records)
 
-    if not mobile_checked or not server_checked:
-        connector = {"text": "--×--", "level": "bad", "label": "圏外 / server停止"}
-    elif has_synced_record or activity_total > 0 or (
-        settings.get("autoSyncEnabled", True) and settings.get("autoSyncInterval") == "realtime" and queue_total == 0
-    ):
+    if server_checked and (activity_total > 0 or any_active and settings.get("autoSyncEnabled", True) and settings.get("autoSyncInterval") == "realtime"):
         connector = {"text": "<--->", "level": "good", "label": "同期中"}
-    else:
+        mobile_level = "good"
+        server_level = "good"
+        server_checked_value = True
+    elif server_checked and (bridge_fresh or queue_total >= 0):
         connector = {"text": "- - - -", "level": "warn", "label": "同期環境構築中"}
+        mobile_level = "good"
+        server_level = "warn"
+        server_checked_value = True
+    else:
+        connector = {"text": "--×--", "level": "bad", "label": "圏外 / server停止"}
+        mobile_level = "good"
+        server_level = "bad"
+        server_checked_value = False
 
     return {
-        "mobile": {"label": "Mobile", "checked": mobile_checked},
-        "server": {"label": "Server", "checked": server_checked},
+        "mobile": {"label": "Mobile", "checked": True, "level": mobile_level},
+        "server": {"label": "Server", "checked": server_checked_value, "level": server_level},
         "connector": connector,
         "nextSyncText": next_sync_text(settings),
         "docker": docker,
         "bridgeFresh": bridge_fresh,
-        "queue": counts,
     }
 
 
 def build_bootstrap_payload() -> dict[str, Any]:
     records = list_records()
+    trash_records = list_trash_records()
+    memo_records = [record for record in records if record.get("kind") == "memo"]
+    photo_records = [record for record in records if record.get("kind") == "photo"]
     settings = load_shared_settings()
     sync = build_sync_badge(records, settings)
     return {
@@ -528,6 +564,14 @@ def build_bootstrap_payload() -> dict[str, Any]:
         "nextSyncText": sync["nextSyncText"],
         "sync": sync,
         "records": records,
-        "counts": footer_counts(records),
+        "memoRecords": memo_records,
+        "photoRecords": photo_records,
+        "trashRecords": trash_records,
+        "counts": {
+            "records": len(records),
+            "photos": len(photo_records),
+            "questions": sum(1 for record in records if record.get("question")),
+            "trash": len(trash_records),
+        },
         "latestQuestion": records[0].get("question") if records else None,
     }

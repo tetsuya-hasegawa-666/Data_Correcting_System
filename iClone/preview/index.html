@@ -52,7 +52,6 @@
           <span id="headlineLabel"></span>
           <input id="headlineInput" type="text">
         </label>
-
         <label class="field">
           <span id="bodyLabel"></span>
           <textarea id="bodyInput"></textarea>
@@ -78,14 +77,44 @@
         <p class="question-inline" id="questionInline"></p>
       </section>
 
-      <section class="panel list-panel">
+      <section class="panel browser-panel">
         <div class="panel-head">
           <div>
-            <p class="section-label" id="listLabel"></p>
-            <h2 id="listTitle"></h2>
+            <p class="section-label" id="browserLabel"></p>
+            <h2 id="browserTitle"></h2>
           </div>
         </div>
-        <div class="record-list" id="recordList"></div>
+
+        <section class="clone-section">
+          <button class="section-toggle" id="memoToggle" type="button"></button>
+          <div class="section-body hidden" id="memoBody">
+            <div class="section-body-head">
+              <button class="section-close" id="memoClose" type="button"></button>
+            </div>
+            <div class="record-list scroll-pane" id="memoList"></div>
+          </div>
+        </section>
+
+        <section class="clone-section">
+          <button class="section-toggle" id="photoToggle" type="button"></button>
+          <div class="section-body hidden" id="photoBody">
+            <div class="section-body-head">
+              <button class="section-close" id="photoClose" type="button"></button>
+            </div>
+            <div class="record-list scroll-pane" id="photoList"></div>
+          </div>
+        </section>
+
+        <section class="trash-section">
+          <button class="trash-toggle" id="trashToggle" type="button"></button>
+          <div class="section-body hidden" id="trashBody">
+            <div class="section-body-head">
+              <button class="section-close" id="trashClose" type="button"></button>
+              <button class="danger-button compact" id="emptyTrashButton" type="button"></button>
+            </div>
+            <div class="record-list scroll-pane" id="trashList"></div>
+          </div>
+        </section>
       </section>
     </section>
 

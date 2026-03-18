@@ -367,10 +367,16 @@ def scan_once(config: BridgeConfig, state: dict) -> None:
     )
     if not docker["ready"]:
         connector = {"text": "--×--", "level": "bad", "label": "圏外 / server停止"}
+        mobile_level = "good"
+        server_level = "bad"
     elif total_activity > 0:
         connector = {"text": "<--->", "level": "good", "label": "同期中"}
+        mobile_level = "good"
+        server_level = "good"
     else:
         connector = {"text": "- - - -", "level": "warn", "label": "同期環境構築中"}
+        mobile_level = "good"
+        server_level = "warn"
     payload["connector"] = connector
     push_json(
         config,
@@ -378,6 +384,8 @@ def scan_once(config: BridgeConfig, state: dict) -> None:
             "generatedAt": payload["generatedAt"],
             "mobileChecked": True,
             "serverChecked": docker["ready"],
+            "mobileLevel": mobile_level,
+            "serverLevel": server_level,
             "connector": connector,
             "nextSyncText": "すぐ",
         },
