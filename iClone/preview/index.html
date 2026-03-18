@@ -13,7 +13,19 @@
         <p class="eyebrow" id="topEyebrow"></p>
         <h1 id="topTitle"></h1>
       </div>
-      <div class="status-inline" id="statusRail"></div>
+      <div class="sync-cluster">
+        <div class="sync-box">
+          <p class="mini-label" id="statusGroupLabel"></p>
+          <div class="status-inline" id="statusRail"></div>
+        </div>
+        <div class="sync-box">
+          <p class="mini-label" id="syncToolsLabel"></p>
+          <div class="sync-tool-row">
+          <button class="subtle-button compact" id="serverRestartButton" type="button"></button>
+          <button class="subtle-button compact" id="deviceReconnectButton" type="button"></button>
+          </div>
+        </div>
+      </div>
     </header>
 
     <section class="workspace-main">

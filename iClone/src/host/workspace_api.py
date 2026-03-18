@@ -21,6 +21,7 @@ TRASH_RECORDS = TRASH / "records"
 EDGE_OUTBOX = RUNTIME / "edge-outbox"
 CONFIG_ROOT = RUNTIME / "config"
 LOGS = RUNTIME / "logs"
+RECONNECT_STATE = CONFIG_ROOT / "reconnect_state.json"
 
 DEFAULT_SETTINGS = {
     "autoSaveEnabled": True,
@@ -96,6 +97,52 @@ def load_json(path: Path) -> dict[str, Any]:
 def write_json(path: Path, payload: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def load_reconnect_state() -> dict[str, Any]:
+    return load_json(RECONNECT_STATE)
+
+
+def mark_reconnecting(action: str, seconds: int = 20) -> dict[str, Any]:
+    payload = {
+        "action": action,
+        "startedAt": now_iso(),
+        "until": (datetime.now(timezone.utc).astimezone() + timedelta(seconds=seconds)).isoformat(),
+    }
+    write_json(RECONNECT_STATE, payload)
+    return payload
+
+
+def reconnect_active() -> bool:
+    state = load_reconnect_state()
+    until = state.get("until")
+    if not until:
+        return False
+    try:
+        return parse_iso(str(until)) > datetime.now(timezone.utc).astimezone()
+    except ValueError:
+        return False
+
+
+def request_host_restart() -> dict[str, Any]:
+    mark_reconnecting("server-restart")
+    subprocess.Popen(  # noqa: S603
+        [
+            "powershell",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            str(ROOT / "scripts" / "start_host_stack.ps1"),
+        ],
+        cwd=ROOT,
+    )
+    return {"requested": True, "action": "server-restart"}
+
+
+def request_device_reconnect() -> dict[str, Any]:
+    mark_reconnecting("device-reconnect")
+    subprocess.run(["adb", "reconnect"], cwd=ROOT, check=False, capture_output=True, text=True)
+    return {"requested": True, "action": "device-reconnect"}
 
 
 def load_shared_settings() -> dict[str, Any]:
@@ -509,6 +556,7 @@ def build_sync_badge(records: list[dict[str, Any]], settings: dict[str, Any]) ->
     bridge_at = _parse_optional_iso(str(bridge.get("generatedAt", "")))
     bridge_fresh = _fresh_within(bridge_at, 15)
     docker = docker_status()
+    reconnecting = reconnect_active()
     server_checked = bool(docker.get("ready"))
     queue_total = sum(queue_depths().values())
     activity_total = sum(
@@ -525,7 +573,12 @@ def build_sync_badge(records: list[dict[str, Any]], settings: dict[str, Any]) ->
     )
     any_active = bool(records)
 
-    if server_checked and (activity_total > 0 or any_active and settings.get("autoSyncEnabled", True) and settings.get("autoSyncInterval") == "realtime"):
+    if reconnecting:
+        connector = {"text": "- - - -", "level": "warn", "label": "再接続中", "blink": True}
+        mobile_level = "warn"
+        server_level = "warn"
+        server_checked_value = True
+    elif server_checked and (activity_total > 0 or any_active and settings.get("autoSyncEnabled", True) and settings.get("autoSyncInterval") == "realtime"):
         connector = {"text": "<--->", "level": "good", "label": "同期中"}
         mobile_level = "good"
         server_level = "good"
@@ -548,6 +601,7 @@ def build_sync_badge(records: list[dict[str, Any]], settings: dict[str, Any]) ->
         "nextSyncText": next_sync_text(settings),
         "docker": docker,
         "bridgeFresh": bridge_fresh,
+        "reconnecting": reconnecting,
     }
 
 
