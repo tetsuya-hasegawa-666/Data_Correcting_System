@@ -11,7 +11,6 @@
 ## 位置づけ
 
 この手順は、Excel Online を横に置いて Shadow Assistant companion app を確認するための workflow である。
-これは現時点の確認手順であり、最終目標そのものではない。
 
 ## 事前条件
 
@@ -55,12 +54,6 @@
 8. Graph Shadow Editor で chart family と editor label を確認する。
 9. Input Mode Halo で mode と IME 状態を切り替えて確認する。
 10. Semantic Shadow Assist で合計、拡張、グラフ、貼り付け、統合、復元の指示を試す。
-
-## 最終目標との関係
-
-- 上の確認で現時点の companion foundation は確認できる。
-- ただし project の最終目標は、Excel Online の実状態を読み、機能すべてを本実装することである。
-- companion app の確認完了は、full implementation への中間到達でしかない。
 
 ## 完了条件
 

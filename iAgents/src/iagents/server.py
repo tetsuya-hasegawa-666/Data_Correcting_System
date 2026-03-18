@@ -9,7 +9,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable
 
-from .logic import clean_paste, interpret_intent, suggest_chart, suggest_range, synthesize_datasets
+from .logic import (
+    clean_paste,
+    interpret_intent,
+    mode_halo_state,
+    selection_time_machine,
+    smart_snap_preview,
+    suggest_chart,
+    suggest_range,
+    synthesize_datasets,
+)
 
 
 WEB_ROOT = Path(__file__).with_name("web")
@@ -34,10 +43,13 @@ class ShadowAssistantHandler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:  # noqa: N802
         routes: dict[str, Callable[[dict[str, Any]], dict[str, Any]]] = {
             "/api/range/suggest": self._handle_range_suggest,
+            "/api/history/record": self._handle_history_record,
+            "/api/snap/preview": self._handle_snap_preview,
             "/api/paste/clean": self._handle_paste_clean,
             "/api/data/synthesize": self._handle_data_synthesize,
             "/api/graph/suggest": self._handle_graph_suggest,
             "/api/intent/interpret": self._handle_intent_interpret,
+            "/api/halo/state": self._handle_halo_state,
         }
         handler = routes.get(self.path)
         if handler is None:
@@ -84,6 +96,16 @@ class ShadowAssistantHandler(BaseHTTPRequestHandler):
             visible_cols=int(payload.get("visible_cols", 8)),
         )
 
+    def _handle_history_record(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return selection_time_machine(payload.get("history", []), payload.get("new_range", ""))
+
+    def _handle_snap_preview(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return smart_snap_preview(
+            payload.get("range_text", ""),
+            occupied_rows=int(payload.get("occupied_rows", 20)),
+            occupied_cols=int(payload.get("occupied_cols", 8)),
+        )
+
     def _handle_paste_clean(self, payload: dict[str, Any]) -> dict[str, Any]:
         return clean_paste(payload.get("text", ""), single_cell=bool(payload.get("single_cell", False)))
 
@@ -95,6 +117,9 @@ class ShadowAssistantHandler(BaseHTTPRequestHandler):
 
     def _handle_intent_interpret(self, payload: dict[str, Any]) -> dict[str, Any]:
         return interpret_intent(payload.get("command", ""), payload.get("current_range"))
+
+    def _handle_halo_state(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return mode_halo_state(payload.get("mode", ""), payload.get("ime_state", "auto"))
 
 
 class ServerController:

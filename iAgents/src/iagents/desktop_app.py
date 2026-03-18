@@ -17,8 +17,8 @@ class DesktopApp:
         self.server = ServerController(host=host, port=port)
         self.root = tk.Tk()
         self.root.title("iAgents Shadow Assistant")
-        self.root.geometry("620x640")
-        self.root.minsize(580, 560)
+        self.root.geometry("640x680")
+        self.root.minsize(600, 600)
 
         self.status_var = tk.StringVar(value="Stopped")
         self.detected_title_var = tk.StringVar(value="未検知")
@@ -37,22 +37,19 @@ class DesktopApp:
         frame = ttk.Frame(self.root, padding=18)
         frame.pack(fill="both", expand=True)
 
-        title = ttk.Label(frame, text="Excel Online Shadow Assistant", font=("Segoe UI", 18, "bold"))
-        title.pack(anchor="w")
-
-        summary = ttk.Label(
+        ttk.Label(frame, text="Excel Online Shadow Assistant", font=("Segoe UI", 18, "bold")).pack(anchor="w")
+        ttk.Label(
             frame,
-            text="Excel Online を開いたら companion app を横で使うための Windows launcher です。",
-            wraplength=500,
-        )
-        summary.pack(anchor="w", pady=(8, 18))
+            text="Excel Online の横で companion app を使うための Windows launcher です。",
+            wraplength=540,
+        ).pack(anchor="w", pady=(8, 18))
 
         status_box = ttk.LabelFrame(frame, text="Status", padding=14)
         status_box.pack(fill="x")
         ttk.Label(status_box, text="Server").grid(row=0, column=0, sticky="w")
         ttk.Label(status_box, textvariable=self.status_var).grid(row=0, column=1, sticky="w", padx=(10, 0))
         ttk.Label(status_box, text="Excel Online").grid(row=1, column=0, sticky="w", pady=(8, 0))
-        ttk.Label(status_box, textvariable=self.detected_title_var, wraplength=360).grid(
+        ttk.Label(status_box, textvariable=self.detected_title_var, wraplength=380).grid(
             row=1, column=1, sticky="w", padx=(10, 0), pady=(8, 0)
         )
         ttk.Label(status_box, text="Health").grid(row=2, column=0, sticky="w", pady=(8, 0))
@@ -78,12 +75,12 @@ class DesktopApp:
         notes_box.pack(fill="both", expand=True, pady=(16, 0))
         notes = (
             "1. この launcher が local server を起動します。\n"
-            "2. Excel Online を browser で開きます。\n"
-            "3. window title に Excel を含む browser を検知すると、必要なら companion を自動で開きます。\n"
-            "4. range や表データは assistant 側へ手渡して使います。\n"
-            "5. セットアップ確認を押すと、server health と次の手順を案内します。"
+            "2. Excel Online をブラウザで開きます。\n"
+            "3. Excel を含むウィンドウタイトルを検知すると companion を自動表示できます。\n"
+            "4. companion app で Range Pilot、Smart Snap、Clean Paste、Graph、Semantic Assist を使います。\n"
+            "5. 問題があればセットアップ確認で server health を確認します。"
         )
-        ttk.Label(notes_box, text=notes, wraplength=500, justify="left").pack(anchor="w")
+        ttk.Label(notes_box, text=notes, wraplength=520, justify="left").pack(anchor="w")
 
     def _ensure_server(self) -> None:
         url = self.server.start()
@@ -100,26 +97,25 @@ class DesktopApp:
             self._ensure_server()
         webbrowser.open(self.server.url)
         self.shadow_opened = True
-        self.next_step_var.set("2. Excel Online 側の名前ボックス range を assistant へ入力")
+        self.next_step_var.set("2. companion app で機能を試し、Excel Online 側へ反映する")
 
     def open_excel_online(self) -> None:
         webbrowser.open(EXCEL_ONLINE_URL)
-        self.next_step_var.set("1. Excel Online にサインインしてブックを開く")
+        self.next_step_var.set("1. Microsoft アカウントでサインインしてブックを開く")
 
     def check_setup(self) -> None:
         try:
             with urllib.request.urlopen(self.server.url + "api/health", timeout=5) as response:
                 payload = response.read().decode("utf-8")
             self.health_var.set("正常")
-            detected = self.detected_title_var.get()
-            if detected == "未検知":
-                self.next_step_var.set("1. Excel Online を開く。2. 自動で開かなければ『Shadow Assistant を開く』を押す")
+            if self.detected_title_var.get() == "未検知":
+                self.next_step_var.set("1. Excel Online を開く 2. 開かなければ Shadow Assistant を手動で開く")
             else:
-                self.next_step_var.set("次は range を assistant に入れて『提案する』を押す")
+                self.next_step_var.set("次は companion app の各機能を順番に確認する")
             messagebox.showinfo("セットアップ確認", "Shadow Assistant は起動しています。\n\n" + payload)
         except Exception as exc:  # noqa: BLE001
             self.health_var.set("異常")
-            messagebox.showerror("セットアップ確認", f"local server へ接続できませんでした。\n\n{exc}")
+            messagebox.showerror("セットアップ確認", f"local server に接続できませんでした。\n\n{exc}")
 
     def _poll_excel_window(self) -> None:
         title = detect_excel_online_window()
@@ -127,7 +123,7 @@ class DesktopApp:
         if title and self.auto_launch_var.get() and not self.shadow_opened:
             self.open_shadow_assistant()
         if title and self.shadow_opened:
-            self.next_step_var.set("Excel Online を検知済みです。名前ボックス range を assistant に貼り付けてください")
+            self.next_step_var.set("Excel Online を検知中です。companion app の候補を見ながら作業できます。")
         self.root.after(3000, self._poll_excel_window)
 
     def _bring_to_front(self) -> None:
