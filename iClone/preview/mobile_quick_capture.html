@@ -6,16 +6,15 @@
   <title>iClone Mobile</title>
   <style>
     :root {
-      --bg: #f3efe7;
+      --bg: #f4efe6;
       --paper: #fffaf2;
-      --panel: #f6efe4;
+      --panel: #f7f1e7;
       --line: #d9cfbf;
       --ink: #1d2421;
       --subtle: #6f685e;
       --accent: #0f766e;
-      --history-soft: #edf4fb;
-      --workspace-soft: #eef8f0;
-      --ok-bg: rgba(22, 163, 74, 0.14);
+      --accent-soft: rgba(15, 118, 110, 0.1);
+      --ok-bg: rgba(22, 163, 74, 0.12);
       --ok-ink: #166534;
       --muted-bg: #e4ddd1;
       --muted-ink: #81786c;
@@ -43,69 +42,80 @@
     }
 
     .shell,
-    .panel,
-    .tab-button {
+    .panel {
       border: 1px solid var(--line);
-      border-radius: 24px;
+      border-radius: 26px;
+      background: var(--paper);
       box-shadow: var(--shadow);
     }
 
-    .shell,
-    .panel { background: var(--paper); }
-
-    .shell { padding: 18px; }
-
-    h1, h2, p { margin-top: 0; }
+    .shell { padding: 16px; }
+    .panel { padding: 16px; }
 
     .eyebrow,
-    .compose-label,
-    .section-label,
-    .status-title {
-      margin-bottom: 8px;
+    .section-label {
+      margin: 0 0 8px;
       color: var(--subtle);
       font-size: 12px;
       letter-spacing: 0.08em;
       text-transform: uppercase;
     }
 
-    h1 {
-      margin-bottom: 8px;
-      font-size: 28px;
-      line-height: 1.1;
-    }
+    h1, h2, p { margin-top: 0; }
 
-    .lede {
-      margin-bottom: 16px;
-      color: #4d4b45;
-      line-height: 1.6;
-    }
-
-    .tab-row {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+    .status-inline,
+    .footer-counts,
+    .tab-row,
+    .action-row,
+    .tool-row {
+      display: flex;
       gap: 8px;
-      margin-bottom: 16px;
+      flex-wrap: wrap;
     }
+
+    .status-pill,
+    .footer-pill,
+    .tab-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .status-pill.current { background: var(--ok-bg); color: var(--ok-ink); }
+    .status-pill.complete { background: var(--muted-bg); color: var(--muted-ink); }
+    .status-pill.pending { background: var(--bad-bg); color: var(--bad-ink); }
 
     .tab-button {
-      padding: 10px 12px;
+      border: 1px solid var(--line);
       background: #eee5d9;
       color: var(--ink);
-      font: inherit;
-      font-weight: 700;
       cursor: pointer;
     }
 
-    .tab-button.history { background: var(--history-soft); color: #3e607f; }
-    .tab-button.workspace { background: var(--workspace-soft); color: #3d684d; }
-    .tab-button.active { box-shadow: inset 0 0 0 2px rgba(29, 36, 33, 0.08), var(--shadow); }
+    .tab-button.active {
+      background: var(--accent-soft);
+      color: var(--accent);
+    }
 
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
 
-    .compose-panel {
-      padding: 18px;
-      background: linear-gradient(180deg, rgba(15, 118, 110, 0.06), rgba(255, 250, 242, 0));
+    .panel + .panel { margin-top: 14px; }
+
+    .field {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .field span,
+    .settings-grid span {
+      color: var(--subtle);
+      font-size: 13px;
     }
 
     input[type="text"],
@@ -119,464 +129,532 @@
       font: inherit;
     }
 
-    input[type="text"] {
-      padding: 13px 14px;
-      margin-bottom: 12px;
+    input[type="text"],
+    select {
+      padding: 12px 14px;
     }
 
     textarea {
-      min-height: 152px;
+      min-height: 148px;
       padding: 14px;
       resize: none;
     }
 
-    .panel-help {
-      color: var(--subtle);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .tray {
-      display: flex;
-      gap: 10px;
-      margin-top: 14px;
-    }
-
-    .tray button,
-    .primary {
+    .ghost-button,
+    .subtle-button,
+    .primary-button,
+    .secondary-button,
+    .danger-button {
       border: 0;
-      border-radius: 18px;
+      border-radius: 16px;
       font: inherit;
       cursor: pointer;
+      padding: 11px 12px;
     }
 
-    .tray button {
-      flex: 1;
-      padding: 11px 12px;
+    .ghost-button,
+    .subtle-button {
       background: #ece4d8;
       color: var(--ink);
     }
 
-    .primary {
-      width: 100%;
-      margin-top: 14px;
-      padding: 15px;
+    .primary-button {
       background: var(--accent);
       color: #fff;
       font-weight: 700;
     }
 
-    .toast {
-      min-height: 24px;
-      margin-top: 10px;
+    .secondary-button {
+      background: var(--accent-soft);
       color: var(--accent);
-      font-size: 13px;
       font-weight: 700;
     }
 
-    .preview {
+    .danger-button {
+      background: rgba(220, 38, 38, 0.12);
+      color: var(--bad-ink);
+    }
+
+    .settings-inline.hidden,
+    .preview-card.hidden {
       display: none;
-      margin-top: 14px;
-      overflow: hidden;
-      border: 1px solid var(--line);
+    }
+
+    .settings-inline {
+      margin-top: 12px;
+      padding: 14px;
       border-radius: 20px;
       background: var(--panel);
     }
 
-    .preview img {
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .settings-grid label {
+      display: grid;
+      gap: 8px;
+    }
+
+    .settings-note,
+    .action-note,
+    .question-inline {
+      margin-top: 12px;
+      color: var(--subtle);
+      line-height: 1.6;
+    }
+
+    .question-inline {
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: var(--panel);
+    }
+
+    .preview-card {
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+
+    .preview-card img {
       display: block;
       width: 100%;
       aspect-ratio: 16 / 10;
       object-fit: cover;
     }
 
-    .followup-panel,
-    .status-panel,
-    .list-panel {
-      margin-top: 16px;
-      padding: 16px;
-    }
-
-    .followup-box {
-      min-height: 132px;
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      background: var(--panel);
-      padding: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      line-height: 1.6;
-    }
-
-    .followup-box.ready {
-      justify-content: flex-start;
-      align-items: flex-start;
-      text-align: left;
-    }
-
-    .followup-box.waiting { color: var(--subtle); }
-
-    .status-grid {
+    .record-list,
+    .history-list {
       display: grid;
       gap: 10px;
+      margin-top: 12px;
     }
 
-    .status-item {
-      padding: 12px 14px;
-      border-radius: 18px;
-      border: 1px solid transparent;
-      background: #efe7da;
-    }
-
-    .status-name {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 4px;
-      font-weight: 700;
-    }
-
-    .status-copy {
-      color: var(--subtle);
-      font-size: 13px;
-      line-height: 1.5;
-    }
-
-    .status-item.current {
-      background: var(--ok-bg);
-      border-color: rgba(22, 163, 74, 0.18);
-      color: var(--ok-ink);
-    }
-
-    .status-item.current .status-copy { color: var(--ok-ink); }
-
-    .status-item.complete {
-      background: var(--muted-bg);
-      color: var(--muted-ink);
-    }
-
-    .status-item.complete .status-copy { color: var(--muted-ink); }
-
-    .status-item.pending {
-      background: var(--bad-bg);
-      color: var(--bad-ink);
-    }
-
-    .status-item.pending .status-copy { color: var(--bad-ink); }
-
-    .panel-head {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .history-list,
-    .memo-list {
-      display: grid;
-      gap: 10px;
-    }
-
-    .history-item,
-    .memo-item {
-      padding: 13px 14px;
-      border-radius: 18px;
+    .record-card,
+    .history-card {
       border: 1px solid var(--line);
+      border-radius: 20px;
       background: #fffdf8;
+      padding: 14px;
     }
 
-    .item-title {
-      margin-bottom: 4px;
-      font-weight: 700;
+    .record-card.active {
+      border-color: var(--accent);
+      box-shadow: inset 0 0 0 1px var(--accent);
     }
 
-    .item-body { line-height: 1.55; }
-
-    .item-meta {
+    .record-meta,
+    .record-actions {
       display: flex;
-      flex-wrap: wrap;
       gap: 8px;
-      margin-top: 8px;
+      flex-wrap: wrap;
       color: var(--subtle);
       font-size: 12px;
     }
 
-    .tag {
-      display: inline-flex;
-      align-items: center;
-      padding: 4px 8px;
-      border-radius: 999px;
-      background: var(--panel);
-      color: #554f45;
+    .mini-button {
+      border: 0;
+      border-radius: 12px;
+      background: #ece4d8;
+      color: var(--ink);
+      padding: 8px 10px;
+      font: inherit;
+      cursor: pointer;
     }
 
-    .empty {
-      padding: 18px;
-      border: 1px dashed var(--line);
-      border-radius: 18px;
+    .mini-button.delete {
+      background: rgba(220, 38, 38, 0.12);
+      color: var(--bad-ink);
+    }
+
+    .footer-bar {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      margin-top: 14px;
       color: var(--subtle);
-      text-align: center;
-      line-height: 1.6;
-      background: rgba(255, 255, 255, 0.45);
+      font-size: 12px;
     }
   </style>
 </head>
 <body>
   <main class="phone">
     <section class="shell">
-      <p class="eyebrow">Xperia 5 III / Mobile workspace</p>
-      <h1>その場で残す</h1>
-      <p class="lede">言葉でも写真でも、いまの気づきをそのまま置いて、あとで PC ワークスペースへコピーします。</p>
+      <p class="eyebrow" id="topEyebrow"></p>
+      <h1 id="topTitle"></h1>
+      <div class="status-inline" id="statusRail"></div>
 
-      <div class="tab-row">
-        <button class="tab-button active" id="tabCapture" type="button">入力</button>
-        <button class="tab-button history" id="tabHistory" type="button">履歴</button>
-        <button class="tab-button workspace" id="tabWorkspace" type="button">ワークスペース</button>
+      <div class="tab-row" id="tabRow">
+        <button class="tab-button active" id="tabClone" type="button"></button>
+        <button class="tab-button" id="tabHistory" type="button"></button>
       </div>
 
-      <section class="tab-panel active" id="panelCapture">
-        <section class="panel compose-panel">
-          <p class="compose-label">メモ</p>
-          <input id="headlineInput" type="text" placeholder="見出しを入れると、あとで探しやすくなります">
-          <textarea id="memoInput" placeholder="気づいたことをそのまま書きます。音声の文字起こしもここへ入る想定です。"></textarea>
-
-          <div class="preview" id="photoPreview">
-            <img id="photoPreviewImage" alt="選択した写真のプレビュー">
+      <section class="tab-panel active" id="panelClone">
+        <section class="panel">
+          <div class="tool-row">
+            <button class="ghost-button" type="button" id="settingsToggle"></button>
           </div>
 
-          <input id="photoInput" type="file" accept="image/*" hidden>
-          <div class="tray">
-            <button type="button" id="photoButton">写真を添付</button>
-            <button type="button" id="clearPhotoButton">写真を外す</button>
+          <section class="settings-inline hidden" id="settingsPanel">
+            <div class="settings-grid">
+              <label>
+                <span id="autoSaveLabel"></span>
+                <select id="autoSaveEnabled"></select>
+              </label>
+              <label>
+                <span id="autoSaveIntervalLabel"></span>
+                <select id="autoSaveInterval"></select>
+              </label>
+              <label>
+                <span id="autoSyncLabel"></span>
+                <select id="autoSyncEnabled"></select>
+              </label>
+              <label>
+                <span id="autoSyncIntervalLabel"></span>
+                <select id="autoSyncInterval"></select>
+              </label>
+            </div>
+            <p class="settings-note" id="settingsNote"></p>
+          </section>
+
+          <label class="field">
+            <span id="headlineLabel"></span>
+            <input id="headlineInput" type="text">
+          </label>
+          <label class="field">
+            <span id="bodyLabel"></span>
+            <textarea id="bodyInput"></textarea>
+          </label>
+
+          <div class="tool-row">
+            <input id="photoInput" type="file" accept="image/*" hidden>
+            <button class="subtle-button" type="button" id="photoButton"></button>
+            <button class="subtle-button" type="button" id="clearPhotoButton"></button>
+            <button class="danger-button" type="button" id="deleteButton"></button>
           </div>
-          <button class="primary" type="button" id="saveButton">記録を確定</button>
-          <p class="toast" id="statusText"></p>
+
+          <div class="preview-card hidden" id="photoPreviewCard">
+            <img id="photoPreviewImage" alt="attachment preview">
+          </div>
+
+          <div class="action-row">
+            <button class="primary-button" type="button" id="saveButton"></button>
+            <button class="secondary-button" type="button" id="syncButton"></button>
+          </div>
+
+          <p class="action-note" id="actionNote"></p>
+          <p class="question-inline" id="questionInline"></p>
         </section>
 
-        <section class="panel followup-panel">
-          <p class="section-label">次の質問</p>
-          <div class="followup-box waiting" id="followupBody">PC 同期待ち</div>
-        </section>
-
-        <section class="panel status-panel">
-          <p class="status-title">コピー状況</p>
-          <div class="status-grid">
-            <article class="status-item pending" id="localCard">
-              <div class="status-name" id="localLabel">× Local</div>
-              <div class="status-copy">スマホだけでメモできます。</div>
-            </article>
-            <article class="status-item pending" id="pcCard">
-              <div class="status-name" id="pcLabel">× PC</div>
-              <div class="status-copy">PC ワークスペースへコピーされます。</div>
-            </article>
-            <article class="status-item pending" id="pcSyncedCard">
-              <div class="status-name" id="pcSyncedLabel">× PC synced</div>
-              <div class="status-copy">次の質問まで続けて見返せます。</div>
-            </article>
-          </div>
+        <section class="panel">
+          <p class="section-label" id="listLabel"></p>
+          <h2 id="listTitle"></h2>
+          <div class="record-list" id="recordList"></div>
         </section>
       </section>
 
       <section class="tab-panel" id="panelHistory">
-        <section class="panel list-panel">
-          <div class="panel-head">
-            <div>
-              <p class="section-label">履歴</p>
-              <h2>見返したメモ</h2>
-            </div>
-          </div>
-          <p class="panel-help">確認した順に並びます。</p>
+        <section class="panel">
+          <p class="section-label" id="historyLabel"></p>
+          <h2 id="historyTitle"></h2>
           <div class="history-list" id="historyList"></div>
         </section>
       </section>
 
-      <section class="tab-panel" id="panelWorkspace">
-        <section class="panel list-panel">
-          <div class="panel-head">
-            <div>
-              <p class="section-label">ワークスペース</p>
-              <h2>端末にあるメモ</h2>
-            </div>
-            <select id="sortSelect">
-              <option value="updated_desc">新しい順</option>
-              <option value="updated_asc">古い順</option>
-              <option value="mode">種別順</option>
-            </select>
-          </div>
-          <p class="panel-help">あとで PC へコピーされるメモです。</p>
-          <div class="memo-list" id="memoList"></div>
-        </section>
-      </section>
+      <footer class="footer-bar">
+        <div class="footer-counts" id="footerCounts"></div>
+        <div class="footer-next-sync" id="footerNextSync"></div>
+      </footer>
     </section>
   </main>
 
   <script>
-    const bridge = window.iCloneBridge || {
-      bootstrapState() {
-        return JSON.stringify({
-          draft: { headline: "", body: "" },
-          entries: [],
-          history: [],
-          latestQuestion: null,
-          sync: { local: false, pc: false, pcSynced: false }
-        });
-      },
-      saveDraft(payload) { return payload; },
-      autosaveEntry(payload) { return payload; },
-      saveEntry(payload) { return payload; },
-      markViewed() { return ""; }
+    const TEXT = {
+      eyebrow: "Xperia 5 III / Mobile workspace",
+      title: "\u30c7\u30fc\u30bf\u30af\u30ed\u30fc\u30f3\u3092\u6b8b\u3059",
+      tabClone: "\u30af\u30ed\u30fc\u30f3",
+      tabHistory: "\u5c65\u6b74",
+      listLabel: "\u30ef\u30fc\u30af\u30b9\u30da\u30fc\u30b9",
+      listTitle: "\u3044\u307e\u3042\u308b\u30c7\u30fc\u30bf",
+      historyLabel: "\u5c65\u6b74",
+      historyTitle: "\u898b\u8fd4\u3057\u305f\u8a18\u9332",
+      settingsToggleOpen: "\u8a2d\u5b9a",
+      settingsToggleClose: "\u8a2d\u5b9a\u3092\u9589\u3058\u308b",
+      autoSave: "\u81ea\u52d5\u4fdd\u5b58",
+      autoSaveInterval: "\u4fdd\u5b58\u9593\u9694",
+      autoSync: "\u81ea\u52d5\u540c\u671f",
+      autoSyncInterval: "\u540c\u671f\u9593\u9694",
+      settingsNote: "\u6b21\u306e\u540c\u671f\u4e88\u5b9a: ",
+      headline: "\u898b\u51fa\u3057",
+      body: "\u30e1\u30e2",
+      attach: "\u5199\u771f\u3092\u8ffd\u52a0",
+      detach: "\u5199\u771f\u3092\u5916\u3059",
+      delete: "\u524a\u9664",
+      save: "\u8a18\u9332\u3059\u308b",
+      sync: "\u4eca\u3059\u3050\u30b3\u30d4\u30fc",
+      noQuestion: "\u307e\u3060\u8cea\u554f\u306f\u3042\u308a\u307e\u305b\u3093\u3002",
+      questionPrefix: "\u6b21\u306e\u8cea\u554f: ",
+      empty: "\u307e\u3060\u30c7\u30fc\u30bf\u304c\u3042\u308a\u307e\u305b\u3093\u3002",
+      footerRecords: "\u30e1\u30e2",
+      footerPhotos: "\u5199\u771f",
+      footerQuestions: "\u8cea\u554f",
+      footerNextSync: "\u540c\u671f\u4e88\u5b9a",
+      on: "ON",
+      off: "OFF",
+      realtime: "\u30ea\u30a2\u30eb\u30bf\u30a4\u30e0",
+      tenSec: "10\u79d2",
+      oneMin: "1\u5206",
+      statusLocal: "Local",
+      statusPc: "PC",
+      statusPcSynced: "PC synced"
     };
 
+    const bridge = window.iCloneBridge;
     const state = {
       bootstrap: null,
-      selectedPhoto: null,
-      autosaveTimer: null,
-      toastTimer: null
+      selectedRecordId: "",
+      pendingPhoto: null,
+      saveTimer: null,
+      syncTimer: null,
+      settingsOpen: false
     };
 
     const refs = {
-      headline: document.getElementById("headlineInput"),
-      memo: document.getElementById("memoInput"),
-      followupBody: document.getElementById("followupBody"),
-      statusText: document.getElementById("statusText"),
-      historyList: document.getElementById("historyList"),
-      memoList: document.getElementById("memoList"),
-      sortSelect: document.getElementById("sortSelect"),
-      localCard: document.getElementById("localCard"),
-      pcCard: document.getElementById("pcCard"),
-      pcSyncedCard: document.getElementById("pcSyncedCard"),
-      localLabel: document.getElementById("localLabel"),
-      pcLabel: document.getElementById("pcLabel"),
-      pcSyncedLabel: document.getElementById("pcSyncedLabel"),
+      topEyebrow: document.getElementById("topEyebrow"),
+      topTitle: document.getElementById("topTitle"),
+      statusRail: document.getElementById("statusRail"),
+      tabClone: document.getElementById("tabClone"),
+      tabHistory: document.getElementById("tabHistory"),
+      panelClone: document.getElementById("panelClone"),
+      panelHistory: document.getElementById("panelHistory"),
+      settingsToggle: document.getElementById("settingsToggle"),
+      settingsPanel: document.getElementById("settingsPanel"),
+      autoSaveLabel: document.getElementById("autoSaveLabel"),
+      autoSaveEnabled: document.getElementById("autoSaveEnabled"),
+      autoSaveIntervalLabel: document.getElementById("autoSaveIntervalLabel"),
+      autoSaveInterval: document.getElementById("autoSaveInterval"),
+      autoSyncLabel: document.getElementById("autoSyncLabel"),
+      autoSyncEnabled: document.getElementById("autoSyncEnabled"),
+      autoSyncIntervalLabel: document.getElementById("autoSyncIntervalLabel"),
+      autoSyncInterval: document.getElementById("autoSyncInterval"),
+      settingsNote: document.getElementById("settingsNote"),
+      headlineLabel: document.getElementById("headlineLabel"),
+      headlineInput: document.getElementById("headlineInput"),
+      bodyLabel: document.getElementById("bodyLabel"),
+      bodyInput: document.getElementById("bodyInput"),
       photoInput: document.getElementById("photoInput"),
-      photoPreview: document.getElementById("photoPreview"),
-      photoPreviewImage: document.getElementById("photoPreviewImage")
+      photoButton: document.getElementById("photoButton"),
+      clearPhotoButton: document.getElementById("clearPhotoButton"),
+      deleteButton: document.getElementById("deleteButton"),
+      photoPreviewCard: document.getElementById("photoPreviewCard"),
+      photoPreviewImage: document.getElementById("photoPreviewImage"),
+      saveButton: document.getElementById("saveButton"),
+      syncButton: document.getElementById("syncButton"),
+      actionNote: document.getElementById("actionNote"),
+      questionInline: document.getElementById("questionInline"),
+      listLabel: document.getElementById("listLabel"),
+      listTitle: document.getElementById("listTitle"),
+      recordList: document.getElementById("recordList"),
+      historyLabel: document.getElementById("historyLabel"),
+      historyTitle: document.getElementById("historyTitle"),
+      historyList: document.getElementById("historyList"),
+      footerCounts: document.getElementById("footerCounts"),
+      footerNextSync: document.getElementById("footerNextSync")
     };
 
-    function parseBootstrap() {
-      try {
-        return JSON.parse(bridge.bootstrapState());
-      } catch (error) {
-        return {
-          draft: { headline: "", body: "" },
-          entries: [],
-          history: [],
-          latestQuestion: null,
-          sync: { local: false, pc: false, pcSynced: false }
-        };
+    function bootstrapState() {
+      return JSON.parse(bridge.bootstrapState());
+    }
+
+    function setStaticText() {
+      refs.topEyebrow.textContent = TEXT.eyebrow;
+      refs.topTitle.textContent = TEXT.title;
+      refs.tabClone.textContent = TEXT.tabClone;
+      refs.tabHistory.textContent = TEXT.tabHistory;
+      refs.settingsToggle.textContent = TEXT.settingsToggleOpen;
+      refs.autoSaveLabel.textContent = TEXT.autoSave;
+      refs.autoSaveIntervalLabel.textContent = TEXT.autoSaveInterval;
+      refs.autoSyncLabel.textContent = TEXT.autoSync;
+      refs.autoSyncIntervalLabel.textContent = TEXT.autoSyncInterval;
+      refs.headlineLabel.textContent = TEXT.headline;
+      refs.bodyLabel.textContent = TEXT.body;
+      refs.photoButton.textContent = TEXT.attach;
+      refs.clearPhotoButton.textContent = TEXT.detach;
+      refs.deleteButton.textContent = TEXT.delete;
+      refs.saveButton.textContent = TEXT.save;
+      refs.syncButton.textContent = TEXT.sync;
+      refs.listLabel.textContent = TEXT.listLabel;
+      refs.listTitle.textContent = TEXT.listTitle;
+      refs.historyLabel.textContent = TEXT.historyLabel;
+      refs.historyTitle.textContent = TEXT.historyTitle;
+      refs.headlineInput.placeholder = "\u898b\u51fa\u3057\u3092\u5165\u308c\u308b\u3068\u898b\u8fd4\u3057\u3084\u3059\u304f\u306a\u308a\u307e\u3059";
+      refs.bodyInput.placeholder = "\u6c17\u3065\u3044\u305f\u3053\u3068\u3092\u305d\u306e\u307e\u307e\u5165\u308c\u307e\u3059";
+    }
+
+    function fillSelect(select, items) {
+      select.innerHTML = items.map((item) => `<option value="${item.value}">${item.label}</option>`).join("");
+    }
+
+    function bootstrapSettingsUI() {
+      fillSelect(refs.autoSaveEnabled, [{ value: "true", label: TEXT.on }, { value: "false", label: TEXT.off }]);
+      fillSelect(refs.autoSyncEnabled, [{ value: "true", label: TEXT.on }, { value: "false", label: TEXT.off }]);
+      fillSelect(refs.autoSaveInterval, [
+        { value: "realtime", label: TEXT.realtime },
+        { value: "10s", label: TEXT.tenSec },
+        { value: "1m", label: TEXT.oneMin }
+      ]);
+      fillSelect(refs.autoSyncInterval, [
+        { value: "realtime", label: TEXT.realtime },
+        { value: "10s", label: TEXT.tenSec },
+        { value: "1m", label: TEXT.oneMin }
+      ]);
+    }
+
+    function syncSettingsToForm(settings) {
+      refs.autoSaveEnabled.value = String(Boolean(settings.autoSaveEnabled));
+      refs.autoSaveInterval.value = settings.autoSaveInterval;
+      refs.autoSyncEnabled.value = String(Boolean(settings.autoSyncEnabled));
+      refs.autoSyncInterval.value = settings.autoSyncInterval;
+      refs.settingsNote.textContent = `${TEXT.settingsNote}${state.bootstrap.sync.nextSyncText}`;
+    }
+
+    function statusSpec(sync) {
+      if (sync.pcSynced) {
+        return [
+          ["\u2713", TEXT.statusLocal, "complete"],
+          ["\u2713", TEXT.statusPc, "complete"],
+          ["\u2713", TEXT.statusPcSynced, "current"]
+        ];
       }
+      if (sync.pc) {
+        return [
+          ["\u2713", TEXT.statusLocal, "complete"],
+          ["\u2713", TEXT.statusPc, "current"],
+          ["\u00d7", TEXT.statusPcSynced, "pending"]
+        ];
+      }
+      if (sync.local) {
+        return [
+          ["\u2713", TEXT.statusLocal, "current"],
+          ["\u00d7", TEXT.statusPc, "pending"],
+          ["\u00d7", TEXT.statusPcSynced, "pending"]
+        ];
+      }
+      return [
+        ["\u00d7", TEXT.statusLocal, "pending"],
+        ["\u00d7", TEXT.statusPc, "pending"],
+        ["\u00d7", TEXT.statusPcSynced, "pending"]
+      ];
     }
 
-    function setTab(tabName) {
-      const map = {
-        capture: ["tabCapture", "panelCapture"],
-        history: ["tabHistory", "panelHistory"],
-        workspace: ["tabWorkspace", "panelWorkspace"]
-      };
-      Object.entries(map).forEach(([name, ids]) => {
-        document.getElementById(ids[0]).classList.toggle("active", name === tabName);
-        document.getElementById(ids[1]).classList.toggle("active", name === tabName);
-      });
+    function renderStatus() {
+      refs.statusRail.innerHTML = statusSpec(state.bootstrap.sync)
+        .map(([marker, label, className]) => `<span class="status-pill ${className}">${marker} ${label}</span>`)
+        .join("");
     }
 
-    function syncStage(sync) {
-      if (sync.pcSynced) return "pcSynced";
-      if (sync.pc) return "pc";
-      if (sync.local) return "local";
-      return "none";
+    function renderFooter() {
+      const counts = state.bootstrap.counts;
+      refs.footerCounts.innerHTML = [
+        `${TEXT.footerRecords} ${counts.records}`,
+        `${TEXT.footerPhotos} ${counts.photos}`,
+        `${TEXT.footerQuestions} ${counts.questions}`
+      ]
+        .map((item) => `<span class="footer-pill">${item}</span>`)
+        .join("");
+      refs.footerNextSync.textContent = `${TEXT.footerNextSync}: ${state.bootstrap.sync.nextSyncText}`;
     }
 
-    function applyStatusCard(card, label, marker, className) {
-      card.className = `status-item ${className}`;
-      label.textContent = `${marker} ${label.dataset.name}`;
-    }
-
-    function renderSync(sync) {
-      refs.localLabel.dataset.name = "Local";
-      refs.pcLabel.dataset.name = "PC";
-      refs.pcSyncedLabel.dataset.name = "PC synced";
-
-      const stage = syncStage(sync);
-      if (stage === "pcSynced") {
-        applyStatusCard(refs.localCard, refs.localLabel, "✓", "complete");
-        applyStatusCard(refs.pcCard, refs.pcLabel, "✓", "complete");
-        applyStatusCard(refs.pcSyncedCard, refs.pcSyncedLabel, "✓", "current");
+    function renderSelection() {
+      const record = (state.bootstrap.entries || []).find((item) => item.entryId === state.selectedRecordId);
+      if (!record) {
+        refs.headlineInput.value = state.bootstrap.draft.headline || "";
+        refs.bodyInput.value = state.bootstrap.draft.body || "";
+        refs.photoPreviewCard.classList.add("hidden");
+        refs.actionNote.textContent = "\u30c7\u30fc\u30bf\u30af\u30ed\u30fc\u30f3\u3092\u3059\u3050\u59cb\u3081\u3089\u308c\u307e\u3059\u3002";
+        refs.questionInline.textContent = `${TEXT.questionPrefix}${TEXT.noQuestion}`;
         return;
       }
-      if (stage === "pc") {
-        applyStatusCard(refs.localCard, refs.localLabel, "✓", "complete");
-        applyStatusCard(refs.pcCard, refs.pcLabel, "✓", "current");
-        applyStatusCard(refs.pcSyncedCard, refs.pcSyncedLabel, "×", "pending");
-        return;
-      }
-      if (stage === "local") {
-        applyStatusCard(refs.localCard, refs.localLabel, "✓", "current");
-        applyStatusCard(refs.pcCard, refs.pcLabel, "×", "pending");
-        applyStatusCard(refs.pcSyncedCard, refs.pcSyncedLabel, "×", "pending");
-        return;
-      }
-      applyStatusCard(refs.localCard, refs.localLabel, "×", "pending");
-      applyStatusCard(refs.pcCard, refs.pcLabel, "×", "pending");
-      applyStatusCard(refs.pcSyncedCard, refs.pcSyncedLabel, "×", "pending");
-    }
-
-    function renderQuestion(question) {
-      const hasQuestion = question && question.body;
-      refs.followupBody.classList.toggle("ready", hasQuestion);
-      refs.followupBody.classList.toggle("waiting", !hasQuestion);
-      refs.followupBody.textContent = hasQuestion ? question.body : "PC 同期待ち";
-    }
-
-    function renderWorkspace(entries) {
-      const sorted = [...entries];
-      const mode = refs.sortSelect.value;
-      if (mode === "updated_asc") {
-        sorted.sort((a, b) => String(a.updatedAt).localeCompare(String(b.updatedAt)));
-      } else if (mode === "mode") {
-        sorted.sort((a, b) => String(a.inputMode).localeCompare(String(b.inputMode)));
+      refs.headlineInput.value = record.headline || "";
+      refs.bodyInput.value = record.body || "";
+      const photo = (record.attachments || []).find((item) => String(item.mimeType || "").startsWith("image/"));
+      if (photo) {
+        refs.photoPreviewImage.src = photo.path;
+        refs.photoPreviewCard.classList.remove("hidden");
       } else {
-        sorted.sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+        refs.photoPreviewCard.classList.add("hidden");
       }
+      refs.actionNote.textContent = "\u9078\u629e\u4e2d\u306e\u30c7\u30fc\u30bf\u3092\u518d\u540c\u671f\u3067\u304d\u307e\u3059\u3002";
+      const latestQuestion = state.bootstrap.latestQuestion;
+      refs.questionInline.textContent =
+        latestQuestion && latestQuestion.body
+          ? `${TEXT.questionPrefix}${latestQuestion.body}`
+          : `${TEXT.questionPrefix}${TEXT.noQuestion}`;
+    }
 
-      if (sorted.length === 0) {
-        refs.memoList.innerHTML = '<div class="empty">まだメモがありません。</div>';
+    function renderRecords() {
+      const records = state.bootstrap.entries || [];
+      if (records.length === 0) {
+        refs.recordList.innerHTML = `<div class="record-card">${TEXT.empty}</div>`;
         return;
       }
+      refs.recordList.innerHTML = records.map((record) => {
+        const active = record.entryId === state.selectedRecordId ? " active" : "";
+        return `
+          <article class="record-card${active}" data-entry-id="${record.entryId}">
+            <div class="tool-row">
+              <strong>${record.headline || record.entryId}</strong>
+            </div>
+            <div class="record-meta">
+              <span>${record.updatedAt || "-"}</span>
+              <span>${record.inputMode || "text"}</span>
+              <span>${record.syncStage || "Local"}</span>
+            </div>
+            <p>${record.body || ""}</p>
+            <div class="record-actions">
+              <button class="mini-button" type="button" data-action="sync" data-entry-id="${record.entryId}">${TEXT.sync}</button>
+              <button class="mini-button delete" type="button" data-action="delete" data-entry-id="${record.entryId}">${TEXT.delete}</button>
+            </div>
+          </article>
+        `;
+      }).join("");
 
-      refs.memoList.innerHTML = sorted.map((entry) => `
-        <article class="memo-item" data-entry-id="${entry.entryId || ""}">
-          <div class="item-title">${entry.headline || entry.entryId}</div>
-          <div class="item-body">${entry.body || ""}</div>
-          <div class="item-meta">
-            <span class="tag">${entry.inputMode || "text"}</span>
-            <span>${entry.updatedAt || "-"}</span>
-            <span>${entry.syncStage || "Local"}</span>
-          </div>
-        </article>
-      `).join("");
-
-      refs.memoList.querySelectorAll("[data-entry-id]").forEach((element) => {
-        element.addEventListener("click", () => {
-          bridge.markViewed(element.getAttribute("data-entry-id"));
-          refresh();
-          setTab("history");
+      refs.recordList.querySelectorAll("[data-entry-id]").forEach((element) => {
+        element.addEventListener("click", (event) => {
+          const action = event.target.getAttribute("data-action");
+          const entryId = element.getAttribute("data-entry-id");
+          if (action === "sync") {
+            event.stopPropagation();
+            manualSync(entryId);
+            return;
+          }
+          if (action === "delete") {
+            event.stopPropagation();
+            removeEntry(entryId);
+            return;
+          }
+          state.selectedRecordId = entryId;
+          renderRecords();
+          renderSelection();
         });
       });
     }
 
-    function renderHistory(history) {
-      if (!history || history.length === 0) {
-        refs.historyList.innerHTML = '<div class="empty">まだ履歴がありません。</div>';
+    function renderHistory() {
+      const history = state.bootstrap.history || [];
+      if (history.length === 0) {
+        refs.historyList.innerHTML = `<div class="history-card">${TEXT.empty}</div>`;
         return;
       }
-
       refs.historyList.innerHTML = history.map((item) => `
-        <article class="history-item">
-          <div class="item-title">${item.headline || item.entryId}</div>
-          <div class="item-meta">
+        <article class="history-card">
+          <strong>${item.headline || item.entryId}</strong>
+          <div class="record-meta">
             <span>${item.viewedAt || "-"}</span>
             <span>${item.projectId || "-"}</span>
           </div>
@@ -584,102 +662,153 @@
       `).join("");
     }
 
-    function renderDraft(draft) {
-      refs.headline.value = draft.headline || "";
-      refs.memo.value = draft.body || "";
-    }
-
-    function toast(text) {
-      refs.statusText.textContent = text;
-      if (state.toastTimer) {
-        window.clearTimeout(state.toastTimer);
-      }
-      state.toastTimer = window.setTimeout(() => {
-        refs.statusText.textContent = "";
-      }, 1600);
-    }
-
-    function currentPayload() {
+    function payloadFromForm() {
       return {
-        headline: refs.headline.value,
-        body: refs.memo.value,
-        attachment: state.selectedPhoto
+        headline: refs.headlineInput.value,
+        body: refs.bodyInput.value,
+        attachment: state.pendingPhoto
       };
     }
 
-    function persistDraftAndEntry() {
-      const payload = JSON.stringify(currentPayload());
-      bridge.saveDraft(payload);
-      bridge.autosaveEntry(payload);
-    }
-
-    function queueAutosave() {
-      if (state.autosaveTimer) {
-        window.clearTimeout(state.autosaveTimer);
+    function scheduleSaveAndSync() {
+      const settings = state.bootstrap.settings;
+      bridge.saveDraft(JSON.stringify(payloadFromForm()));
+      if (settings.autoSaveEnabled) {
+        window.clearTimeout(state.saveTimer);
+        const delay = settings.autoSaveInterval === "10s" ? 10000 : settings.autoSaveInterval === "1m" ? 60000 : 250;
+        state.saveTimer = window.setTimeout(() => saveEntry(false), delay);
       }
-      state.autosaveTimer = window.setTimeout(() => {
-        persistDraftAndEntry();
-        refresh();
-      }, 350);
+      if (settings.autoSyncEnabled) {
+        window.clearTimeout(state.syncTimer);
+        const delay = settings.autoSyncInterval === "10s" ? 10000 : settings.autoSyncInterval === "1m" ? 60000 : 250;
+        state.syncTimer = window.setTimeout(() => syncEntry(false), delay);
+      }
     }
 
-    function readSelectedPhoto(file) {
+    function loadPhoto(file) {
       if (!file) {
-        state.selectedPhoto = null;
-        refs.photoPreview.style.display = "none";
-        queueAutosave();
+        state.pendingPhoto = null;
+        refs.photoPreviewCard.classList.add("hidden");
         return;
       }
       const reader = new FileReader();
       reader.onload = () => {
-        state.selectedPhoto = {
+        state.pendingPhoto = {
           name: file.name,
           mimeType: file.type || "image/jpeg",
           dataUrl: reader.result
         };
         refs.photoPreviewImage.src = reader.result;
-        refs.photoPreview.style.display = "block";
-        queueAutosave();
+        refs.photoPreviewCard.classList.remove("hidden");
+        scheduleSaveAndSync();
       };
       reader.readAsDataURL(file);
     }
 
-    function saveEntryGesture() {
-      try {
-        const response = JSON.parse(bridge.saveEntry(JSON.stringify(currentPayload())));
-        toast(response.message || "記録しました。");
-      } catch (error) {
-        toast("記録しました。");
+    function saveEntry(showMessage) {
+      const result = JSON.parse(bridge.saveLocalEntry(JSON.stringify(payloadFromForm())));
+      if (showMessage) {
+        refs.actionNote.textContent = result.message || "\u4fdd\u5b58\u3057\u307e\u3057\u305f\u3002";
       }
+      reload();
     }
 
-    function refresh() {
-      state.bootstrap = parseBootstrap();
-      renderDraft(state.bootstrap.draft || {});
-      renderQuestion(state.bootstrap.latestQuestion || null);
-      renderSync(state.bootstrap.sync || { local: false, pc: false, pcSynced: false });
-      renderWorkspace(state.bootstrap.entries || []);
-      renderHistory(state.bootstrap.history || []);
+    function syncEntry(showMessage) {
+      const result = JSON.parse(bridge.syncEntry(JSON.stringify(payloadFromForm())));
+      if (showMessage) {
+        refs.actionNote.textContent = result.message || "\u30b3\u30d4\u30fc\u3092\u4e88\u7d04\u3057\u307e\u3057\u305f\u3002";
+      }
+      reload();
     }
 
-    refs.headline.addEventListener("input", queueAutosave);
-    refs.memo.addEventListener("input", queueAutosave);
-    refs.sortSelect.addEventListener("change", () => renderWorkspace((state.bootstrap || {}).entries || []));
-    refs.photoInput.addEventListener("change", (event) => {
-      const file = event.target.files && event.target.files[0];
-      readSelectedPhoto(file);
-    });
-    document.getElementById("photoButton").addEventListener("click", () => refs.photoInput.click());
-    document.getElementById("clearPhotoButton").addEventListener("click", () => {
-      refs.photoInput.value = "";
-      readSelectedPhoto(null);
-    });
-    document.getElementById("saveButton").addEventListener("click", saveEntryGesture);
-    document.getElementById("tabCapture").addEventListener("click", () => setTab("capture"));
-    document.getElementById("tabHistory").addEventListener("click", () => setTab("history"));
-    document.getElementById("tabWorkspace").addEventListener("click", () => setTab("workspace"));
+    function manualSync(entryId) {
+      const record = (state.bootstrap.entries || []).find((item) => item.entryId === entryId);
+      if (!record) return;
+      state.selectedRecordId = entryId;
+      refs.headlineInput.value = record.headline || "";
+      refs.bodyInput.value = record.body || "";
+      syncEntry(true);
+    }
 
-    refresh();
+    function removeEntry(entryId) {
+      const result = JSON.parse(bridge.deleteEntry(entryId));
+      if (state.selectedRecordId === entryId) {
+        state.selectedRecordId = "";
+        state.pendingPhoto = null;
+      }
+      refs.actionNote.textContent = result.message || "\u524a\u9664\u3057\u307e\u3057\u305f\u3002";
+      reload();
+    }
+
+    function saveSettings() {
+      const payload = {
+        autoSaveEnabled: refs.autoSaveEnabled.value === "true",
+        autoSaveInterval: refs.autoSaveInterval.value,
+        autoSyncEnabled: refs.autoSyncEnabled.value === "true",
+        autoSyncInterval: refs.autoSyncInterval.value
+      };
+      bridge.saveSettings(JSON.stringify(payload));
+      refs.actionNote.textContent = "\u8a2d\u5b9a\u3092\u66f4\u65b0\u3057\u307e\u3057\u305f\u3002";
+      reload();
+    }
+
+    function toggleSettings() {
+      state.settingsOpen = !state.settingsOpen;
+      refs.settingsPanel.classList.toggle("hidden", !state.settingsOpen);
+      refs.settingsToggle.textContent = state.settingsOpen ? TEXT.settingsToggleClose : TEXT.settingsToggleOpen;
+    }
+
+    function setTab(name) {
+      const cloneActive = name === "clone";
+      refs.tabClone.classList.toggle("active", cloneActive);
+      refs.tabHistory.classList.toggle("active", !cloneActive);
+      refs.panelClone.classList.toggle("active", cloneActive);
+      refs.panelHistory.classList.toggle("active", !cloneActive);
+    }
+
+    function reload() {
+      state.bootstrap = bootstrapState();
+      if (!state.selectedRecordId && state.bootstrap.entries.length > 0) {
+        state.selectedRecordId = state.bootstrap.entries[0].entryId;
+      }
+      syncSettingsToForm(state.bootstrap.settings);
+      renderStatus();
+      renderRecords();
+      renderSelection();
+      renderHistory();
+      renderFooter();
+    }
+
+    function bindEvents() {
+      refs.settingsToggle.addEventListener("click", toggleSettings);
+      refs.tabClone.addEventListener("click", () => setTab("clone"));
+      refs.tabHistory.addEventListener("click", () => setTab("history"));
+      refs.headlineInput.addEventListener("input", scheduleSaveAndSync);
+      refs.bodyInput.addEventListener("input", scheduleSaveAndSync);
+      refs.photoButton.addEventListener("click", () => refs.photoInput.click());
+      refs.clearPhotoButton.addEventListener("click", () => {
+        refs.photoInput.value = "";
+        state.pendingPhoto = null;
+        refs.photoPreviewCard.classList.add("hidden");
+      });
+      refs.photoInput.addEventListener("change", (event) => {
+        const file = event.target.files && event.target.files[0];
+        loadPhoto(file);
+      });
+      refs.saveButton.addEventListener("click", () => saveEntry(true));
+      refs.syncButton.addEventListener("click", () => syncEntry(true));
+      refs.deleteButton.addEventListener("click", () => {
+        if (state.selectedRecordId) removeEntry(state.selectedRecordId);
+      });
+      [refs.autoSaveEnabled, refs.autoSaveInterval, refs.autoSyncEnabled, refs.autoSyncInterval].forEach((element) => {
+        element.addEventListener("change", saveSettings);
+      });
+    }
+
+    setStaticText();
+    bootstrapSettingsUI();
+    bindEvents();
+    reload();
   </script>
 </body>
 </html>
