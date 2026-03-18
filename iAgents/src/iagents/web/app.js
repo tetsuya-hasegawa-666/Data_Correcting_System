@@ -82,6 +82,15 @@ function initModeHalo() {
   $("imeSelect").addEventListener("change", refreshHalo);
 }
 
+async function refreshBridgeState() {
+  const response = await fetch("/api/bridge/state");
+  const result = await response.json();
+  if (result.selection) {
+    syncRangeFields(result.selection);
+  }
+  showJson("bridgeResult", result);
+}
+
 function initRangeAssistant() {
   $("suggestRangeButton").addEventListener("click", async () => {
     const payload = {
@@ -172,8 +181,10 @@ function bootstrap() {
   initSynthesisAssistant();
   initGraphAssistant();
   initIntentAssistant();
+  $("refreshBridgeButton").addEventListener("click", refreshBridgeState);
   renderHistory();
   refreshHalo();
+  refreshBridgeState();
 }
 
 bootstrap();

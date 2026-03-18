@@ -39,3 +39,7 @@
 ## 2026-03-18-010
 
 - external companion scope を最終目標から外し、full implementation を唯一の終着点とする新 plan set `2026-03-18-005` を起こした。
+
+## 2026-03-18-011
+
+- `MRL-19` の bridge scaffold として browser bridge 雛形、bridge state store、bridge API を追加した。
