@@ -10,7 +10,14 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-from workspace_api import delete_record, ensure_directories as ensure_workspace_dirs, save_device_settings
+from workspace_api import (
+    delete_record,
+    ensure_directories as ensure_workspace_dirs,
+    reconnect_active,
+    request_device_reconnect,
+    request_host_restart,
+    save_device_settings,
+)
 from yaml_tools import load_yaml
 
 
@@ -54,7 +61,7 @@ def ensure_directories(config: BridgeConfig) -> None:
     ensure_workspace_dirs()
     for path in (config.host_inbox, config.edge_outbox, config.device_cache, config.logs_root):
         path.mkdir(parents=True, exist_ok=True)
-    for subdir in ("attachments", "deletes", "settings"):
+    for subdir in ("attachments", "deletes", "settings", "commands"):
         (config.host_inbox / subdir).mkdir(parents=True, exist_ok=True)
 
 
@@ -239,6 +246,29 @@ def mirror_settings(config: BridgeConfig, state: dict, sync_root: Path) -> int:
     return processed
 
 
+def mirror_commands(config: BridgeConfig, state: dict, sync_root: Path) -> int:
+    commands_root = sync_root / "commands"
+    if not commands_root.exists():
+        return 0
+    tracked: dict[str, str] = state.setdefault("commands", {})
+    processed = 0
+    for source_path in sorted(commands_root.glob("*.json")):
+        digest = stable_hash(source_path)
+        key = source_path.name
+        if tracked.get(key) == digest:
+            continue
+        payload = json.loads(source_path.read_text(encoding="utf-8"))
+        command = str(payload.get("command", ""))
+        if command == "server-restart":
+            request_host_restart()
+        elif command == "device-reconnect":
+            request_device_reconnect()
+        tracked[key] = digest
+        processed += 1
+        append_log(config, f"processed device command {command}")
+    return processed
+
+
 def push_questions(config: BridgeConfig, state: dict) -> int:
     tracked_questions: dict[str, str] = state.setdefault("questions", {})
     pushed = 0
@@ -349,6 +379,7 @@ def scan_once(config: BridgeConfig, state: dict) -> None:
     payload["mirroredEntries"] = mirror_entries(config, state, sync_root)
     payload["appliedDeletes"] = mirror_deletes(config, state, sync_root)
     payload["mirroredSettings"] = mirror_settings(config, state, sync_root)
+    payload["processedCommands"] = mirror_commands(config, state, sync_root)
     payload["pushedQuestions"] = push_questions(config, state)
     payload["pushedEntries"] = push_host_entries(config, state)
     payload["pushedDeletes"] = push_host_deletes(config, state)
@@ -365,7 +396,11 @@ def scan_once(config: BridgeConfig, state: dict) -> None:
             "pushedSettings",
         )
     )
-    if not docker["ready"]:
+    if reconnect_active():
+        connector = {"text": "- - - -", "level": "warn", "label": "再接続中", "blink": True}
+        mobile_level = "warn"
+        server_level = "warn"
+    elif not docker["ready"]:
         connector = {"text": "--×--", "level": "bad", "label": "圏外 / server停止"}
         mobile_level = "good"
         server_level = "bad"
