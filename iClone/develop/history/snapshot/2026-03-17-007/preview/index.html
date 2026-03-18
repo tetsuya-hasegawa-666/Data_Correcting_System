@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>iClone Host Preview</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <p class="eyebrow">Tezy-GT37 / Xperia 5 III</p>
+      <h1>Local Sync Hub Preview</h1>
+      <p class="lede">同期、処理、文脈化の現在地を 1 画面で追うための PC 側 UX 骨格。</p>
+    </header>
+    <section class="grid">
+      <article class="card">
+        <h2>Inbox</h2>
+        <p id="hostInboxYaml">-</p>
+      </article>
+      <article class="card">
+        <h2>Records</h2>
+        <p id="recordsYaml">-</p>
+      </article>
+      <article class="card">
+        <h2>LLM Inbox</h2>
+        <p id="llmInboxYaml">-</p>
+      </article>
+    </section>
+    <section class="panel">
+      <h2>Services</h2>
+      <ul id="services"></ul>
+    </section>
+    <section class="panel">
+      <h2>Context Records</h2>
+      <div id="records"></div>
+    </section>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>

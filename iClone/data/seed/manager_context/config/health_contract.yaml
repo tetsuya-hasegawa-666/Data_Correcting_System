@@ -1,0 +1,14 @@
+schemaVersion: "1.0.0"
+contractId: "host-health-contract"
+signals:
+  - id: "observer_tail"
+    source: "runtime/logs/observer.log"
+  - id: "analysis_tail"
+    source: "runtime/logs/analysis.log"
+  - id: "reverse_sync_ready"
+    source: "runtime/edge-outbox"
+  - id: "dead_letter_present"
+    source: "runtime/dead-letter"
+thresholds:
+  reverseSyncReady: "at_least_one_question_yaml"
+  deadLetterPresent: "zero_is_expected"

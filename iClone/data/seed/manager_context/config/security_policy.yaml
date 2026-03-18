@@ -1,0 +1,19 @@
+schemaVersion: "1.0.0"
+policyId: "host-security-policy"
+hostDeviceId: "windows-host-primary"
+rules:
+  mountPolicy:
+    hostInbox: "read_write"
+    records: "read_write"
+    llmInbox: "read_only_for_llm"
+    edgeOutbox: "write_only_for_host_generated_payload"
+  deadLetter:
+    enabled: true
+    destination: "runtime/dead-letter"
+  trust:
+    requiredFields:
+      - "deviceId"
+      - "projectId"
+      - "sessionId"
+      - "capturedAt"
+    knownDevicesConfig: "data/seed/manager_context/config/known_devices.yaml"

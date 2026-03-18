@@ -1,0 +1,56 @@
+schemaVersion: "1.0.0"
+screenId: "quick-capture-screen"
+targetDevice: "Xperia 5 III"
+autosave:
+  mode: "implicit_draft"
+  trigger:
+    - "text_changed"
+    - "voice_segment_closed"
+    - "photo_attached"
+  guarantee: "保存ボタン未押下でも端末内へ必ず仮保存する"
+  promotionAction: "記録を確定"
+states:
+  - id: "idle"
+    questionCard: "今いちばん気になっている遅れや詰まりは何ですか。"
+    statusChip: "drafted"
+    primaryAction: "記録を確定"
+  - id: "capturing_voice"
+    questionCard: "そのまま話してください。あとで整理されます。"
+    statusChip: "recording"
+    primaryAction: "録音停止"
+  - id: "syncing"
+    questionCard: "記録を確定しました。PCへ同期しています。"
+    statusChip: "syncing"
+    primaryAction: "閉じる"
+  - id: "attention"
+    questionCard: "端末には仮保存済みです。PCへの同期はまだです。"
+    statusChip: "attention"
+    primaryAction: "再試行"
+attachments:
+  - "text"
+  - "voice"
+  - "photo"
+localCollections:
+  workspaceList:
+    sortOptions:
+      - "新しい順"
+      - "古い順"
+      - "種別順"
+    requiredFields:
+      - "headline"
+      - "updatedAt"
+      - "inputMode"
+      - "syncStage"
+  viewHistory:
+    requiredFields:
+      - "headline"
+      - "viewedAt"
+      - "projectId"
+headlineRule:
+  text: "先頭 24 文字をそのまま見出し候補に使う"
+  voice: "文字起こし結果の先頭要約を見出しに使う"
+  photo: "利用者入力または補助ラベルから文字見出しを付ける"
+successCriteria:
+  - "入力開始から保存完了まで 5 秒以内"
+  - "保存ボタン未押下でも仮保存が失われない"
+  - "一覧と閲覧履歴で端末内メモを見返せる"

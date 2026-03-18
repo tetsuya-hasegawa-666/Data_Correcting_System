@@ -1,0 +1,13 @@
+schemaVersion: "1.0.0"
+projectId: "project-alpha"
+name: "Field Service KPI Discovery"
+ownerRole: "manager"
+topics:
+  - "onsite_delay"
+  - "handover_quality"
+  - "customer_reaction"
+phase: "pilot"
+questionPolicy:
+  maxOpenQuestions: 3
+  preferredLanguage: "ja"
+

@@ -1,0 +1,10 @@
+schemaVersion: "1.0.0"
+candidateId: "kpi-candidate-20260317-091500"
+projectId: "project-alpha"
+generatedAt: "2026-03-17T09:15:00+09:00"
+hypothesis: "引き継ぎ時間よりも、現場開始前の判断待ち時間の短縮が初期 KPI 候補である。"
+evidenceEntryIds:
+  - "entry-20260317-090512"
+suggestedMetric: "平均現場開始前待ち時間（分）"
+nextQuestion: "待ち時間の大半は、物理移動と判断待ちのどちらで占めていますか。"
+

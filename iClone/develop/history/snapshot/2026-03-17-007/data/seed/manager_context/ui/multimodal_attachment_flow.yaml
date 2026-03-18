@@ -1,0 +1,22 @@
+schemaVersion: "1.0.0"
+flowId: "multimodal-attachment-flow"
+targetDevice: "Xperia 5 III"
+steps:
+  - id: "text_entry"
+    action: "text"
+    result: "draft body updated"
+  - id: "voice_capture"
+    action: "voice"
+    result: "audio file queued and linked to draft"
+  - id: "photo_capture"
+    action: "photo"
+    result: "photo file queued and linked to draft"
+  - id: "save_entry"
+    action: "persist"
+    result: "entry YAML and attachment metadata saved"
+statusTransitions:
+  - "saved"
+  - "syncing"
+  - "synced"
+  - "attention"
+

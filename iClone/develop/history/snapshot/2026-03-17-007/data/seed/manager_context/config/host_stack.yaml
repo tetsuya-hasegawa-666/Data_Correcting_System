@@ -1,0 +1,35 @@
+schemaVersion: "1.0.0"
+hostProfiles:
+  - hostId: "windows-host-primary"
+    machineName: "Tezy-GT37"
+    os: "Windows 11"
+    runtime: "WSL2 + Docker"
+    discovery:
+      primary: "mDNS"
+      endpoint: "http://pc-name.local"
+      optionalRemote: "Tailscale"
+    sync:
+      engine: "Syncthing"
+      deployment: "docker"
+      folders:
+        edgeOutbox: "edge-outbox/"
+        hostInbox: "host-inbox/xperia5iii-edge-001/"
+        curatedRecords: "records/project-alpha/"
+    llmHub:
+      preferred: "Ollama"
+      alternatives:
+        - "LocalAI"
+  - hostId: "ubuntu-host-primary"
+    os: "Ubuntu 22.04+"
+    runtime: "Docker"
+    discovery:
+      primary: "mDNS"
+      endpoint: "http://pc-name.local"
+      optionalRemote: "Tailscale"
+    sync:
+      engine: "Syncthing"
+      deployment: "docker"
+    llmHub:
+      preferred: "Ollama"
+      alternatives:
+        - "LocalAI"

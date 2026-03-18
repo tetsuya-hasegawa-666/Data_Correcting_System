@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>iClone Workspace</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Xperia 5 III / Windows workspace</p>
+        <h1>iClone Workspace</h1>
+        <p class="lede">スマホで残したメモと写真を、そのまま PC 側ワークスペースで読み返し、次の問いへつなげる画面です。</p>
+      </div>
+      <section class="hero-status">
+        <div class="status-chip" id="deviceChip">端末接続を確認中</div>
+        <div class="status-chip" id="syncChip">同期の準備中</div>
+      </section>
+    </header>
+
+    <section class="summary-grid">
+      <article class="summary-card">
+        <p class="summary-label">受信メモ</p>
+        <h2 id="memoCount">-</h2>
+      </article>
+      <article class="summary-card">
+        <p class="summary-label">写真添付</p>
+        <h2 id="photoCount">-</h2>
+      </article>
+      <article class="summary-card">
+        <p class="summary-label">次の質問</p>
+        <h2 id="questionCount">-</h2>
+      </article>
+      <article class="summary-card">
+        <p class="summary-label">逆同期</p>
+        <h2 id="reverseSyncCount">-</h2>
+      </article>
+    </section>
+
+    <section class="panel focus-panel">
+      <div class="panel-head">
+        <div>
+          <p class="panel-label">最新の流れ</p>
+          <h2 id="latestHeadline">最新メモ</h2>
+        </div>
+        <p class="panel-meta" id="latestMeta">-</p>
+      </div>
+      <div class="focus-grid">
+        <article class="focus-card">
+          <h3>メモ本文</h3>
+          <p id="latestBody">-</p>
+        </article>
+        <article class="focus-card">
+          <h3>次の質問</h3>
+          <p id="latestQuestion">まだ質問は届いていません。</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="workspace-grid">
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <p class="panel-label">ワークスペース</p>
+            <h2>メモ一覧</h2>
+          </div>
+        </div>
+        <div id="workspaceList" class="record-list"></div>
+      </section>
+
+      <section class="panel side-panel">
+        <div class="panel-head">
+          <div>
+            <p class="panel-label">添付写真</p>
+            <h2>最近の写真</h2>
+          </div>
+        </div>
+        <div id="photoGallery" class="photo-gallery"></div>
+
+        <div class="divider"></div>
+
+        <div class="panel-head">
+          <div>
+            <p class="panel-label">同期状態</p>
+            <h2>接続と反映</h2>
+          </div>
+        </div>
+        <ul id="syncList" class="sync-list"></ul>
+      </section>
+    </section>
+  </main>
+
+  <script src="../runtime/logs/status_snapshot.js"></script>
+  <script src="../runtime/logs/review_snapshot.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
