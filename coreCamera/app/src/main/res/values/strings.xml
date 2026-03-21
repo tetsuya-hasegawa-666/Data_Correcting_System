@@ -1,6 +1,0 @@
-<resources>
-    <string name="app_name">coreCamera</string>
-    <string name="start_skeleton">Start Skeleton</string>
-    <string name="stop_skeleton">Stop Skeleton</string>
-    <string name="refresh">Refresh</string>
-</resources>
